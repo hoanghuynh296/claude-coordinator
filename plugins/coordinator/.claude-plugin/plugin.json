@@ -1,0 +1,12 @@
+{
+  "name": "coordinator",
+  "displayName": "Coordinator",
+  "version": "0.1.0",
+  "description": "Run a software project with parallel Claude sessions: /kickoff (plan + bootstrap), /milestone-start, /ticket, /review-merge, /milestone-close, /handover, /status; Reviewer agent; a hook that keeps the coordinator session out of product code.",
+  "author": {
+    "name": "hoanghuynh296"
+  },
+  "repository": "https://github.com/hoanghuynh296/claude-coordinator",
+  "license": "MIT",
+  "keywords": ["coordination", "multi-agent", "project-management", "github"]
+}

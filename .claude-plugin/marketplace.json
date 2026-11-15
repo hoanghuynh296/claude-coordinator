@@ -1,0 +1,14 @@
+{
+  "name": "coordinator-marketplace",
+  "owner": {
+    "name": "hoanghuynh296"
+  },
+  "description": "Multi-agent project coordination for Claude Code: owner + coordinator + lanes + Platform + QA + Reviewer.",
+  "plugins": [
+    {
+      "name": "coordinator",
+      "source": "./plugins/coordinator",
+      "description": "Run a software project with parallel Claude sessions: /kickoff (plan + bootstrap), /milestone-start, /ticket, /review-merge, /milestone-close, /handover, /status; Reviewer agent; a hook that keeps the coordinator session out of product code."
+    }
+  ]
+}
