@@ -33,5 +33,8 @@
 13. **Template placeholders left behind.** `{{API_DIR}}` etc. also live in
     `.github/workflows/ci.yml`; unfilled, CI filters match nothing. The bootstrap script fails if
     any placeholder remains and deletes `TEMPLATE.md` only after all are filled.
-14. **Branch protection on private repos** needs a paid GitHub plan; bootstrap fails loudly. Use
-    `--no-protect` and tell the owner, or make the repo public.
+14. **Branch protection on private repos** needs a paid GitHub plan. On GitHub's 403 ("Upgrade to
+    GitHub Pro") bootstrap warns, continues without protection and prints an ACTION line: record an
+    owner decision `C-xxx` in the ledger (upgrade / make public / accept no protection).
+15. **Scripts lose their exec bit** when rewritten by a tool. Commands call them with `bash <path>`;
+    `tests/exec-bits-test.sh` fails if any plugin `*.sh` is not 100755 in git.

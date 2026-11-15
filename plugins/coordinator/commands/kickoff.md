@@ -33,15 +33,16 @@ the owner approves in a later message.**
 ## Step 4 - bootstrap (after approval)
 Run:
 ```sh
-"${CLAUDE_PLUGIN_ROOT}/scripts/bootstrap.sh" <owner/repo> <local-dir> --values <scratchpad>/values.env --plan <scratchpad>/PLAN.md --milestones "M0 M1 ..." --lanes "<lanes> platform qa"
+bash "${CLAUDE_PLUGIN_ROOT}/scripts/bootstrap.sh" <owner/repo> <local-dir> --values <scratchpad>/values.env --plan <scratchpad>/PLAN.md --milestones "M0 M1 ..." --lanes "<lanes> platform qa"
 ```
-Add `--check <job>` for each CI job that must be required besides `changes`. If branch
-protection fails on a private repo without a paid plan, report it and rerun with `--no-protect`
-only after the owner agrees. The script is idempotent: rerun after fixing a failure.
+Add `--check <job>` for each CI job that must be required besides `changes`. Run it once with
+`--dry-run` first and skim the plan of actions. If GitHub refuses branch protection (private repo
+on a free plan), the script warns and continues; record the owner decision it asks for (C-xxx) in
+the ledger. The script is idempotent: rerun after fixing a failure.
 
 ## Step 5 - register this session
 ```sh
-"${CLAUDE_PLUGIN_ROOT}/scripts/register.sh" "${CLAUDE_SESSION_ID}" <local-dir>-coordination <local-dir>
+bash "${CLAUDE_PLUGIN_ROOT}/scripts/register.sh" "${CLAUDE_SESSION_ID}" <local-dir>-coordination <local-dir>
 ```
 From now on the guard hook stops you from editing code. Then fill the ledger (`COORDINATION.md`:
 milestones from the plan, Sessions table, owner-side tasks), commit + push the ledger repo, and

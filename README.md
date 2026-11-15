@@ -95,7 +95,11 @@ plugins/coordinator/
   agents/{reviewer,oneoff-builder}.md
   hooks/hooks.json, hooks/{lib,coordinator-guard,session-start}.sh
   scripts/{bootstrap,register,check-context}.sh
-tests/hooks-test.sh
+tests/{hooks,bootstrap,exec-bits}-test.sh
 ```
 
-Run `bash tests/hooks-test.sh` to test the hooks with sample inputs.
+Tests: `bash tests/hooks-test.sh` (guard + SessionStart with sample inputs, jq and python3 paths),
+`bash tests/bootstrap-test.sh` (full bootstrap against local bare repos and a fake `gh`, including
+the 403 branch-protection fallback and an idempotent rerun), `bash tests/exec-bits-test.sh`
+(every plugin `*.sh` is executable in git). `bootstrap.sh --dry-run` prints every action without
+changing anything.

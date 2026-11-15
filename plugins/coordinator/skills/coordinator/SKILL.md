@@ -21,7 +21,7 @@ lifecycle, `references/pitfalls.md` before every milestone start. Templates are 
 2. If you are not registered yet and the project exists, run `/coordinator:coordinator-register`.
    For a new project, `/coordinator:kickoff` registers you after bootstrap.
 3. On every owner message, measure contexts:
-   `"${CLAUDE_PLUGIN_ROOT}/scripts/check-context.sh" <session ids from the ledger>` (or the
+   `bash "${CLAUDE_PLUGIN_ROOT}/scripts/check-context.sh" <session ids from the ledger>` (or the
    session tools if available). Any session at ~250k, yours included, gets rotated
    (`/coordinator:handover`).
 

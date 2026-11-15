@@ -5,7 +5,7 @@ argument-hint: "[session name]"
 
 Write a handover for `$ARGUMENTS` (empty = this coordinator session).
 
-1. Measure context: `"${CLAUDE_PLUGIN_ROOT}/scripts/check-context.sh" ${CLAUDE_SESSION_ID}` (or the
+1. Measure context: `bash "${CLAUDE_PLUGIN_ROOT}/scripts/check-context.sh" ${CLAUDE_SESSION_ID}` (or the
    given session's id from the ledger Sessions table).
 2. For another session: send it one message asking it to write its handover note from
    `references/templates/handover.md` into the ledger repo `handover/<date>-<slug>.md`, commit and
