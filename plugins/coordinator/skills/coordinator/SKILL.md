@@ -83,6 +83,11 @@ Batch questions into one message, decisions first. Never send status pings.
    `<plugin>/scripts/check-context.sh`), yours included, against the profile's two
    thresholds. `SOFT`: no new issue; it finishes the current one, writes its handover and is
    replaced after that PR. `HARD`: it stops at the next safe point and is replaced now.
+4. Keep the sessions flat: every session of the project sits at the top level of the sidebar
+   ("Sessions" below). A session nested under you that you started: detach it. One you cannot
+   detach: ask the owner to drag it to the top level. A PR still bound to you after its merge:
+   unbind it. A new coordinator sends every live agent one message with its name, "Coordinator:
+   <project>", so their reports reach it.
 
 ## The eight principles (short)
 
@@ -139,11 +144,28 @@ for an agent what that agent's permissions denied: take it to the owner.
 - No ack-only or status-ping messages, either way. Silence means "working".
 - One batched message per agent per round: findings, answers and the next issues, sent once.
 - Reports within the profile's length. Your own status to the owner: short, decisions first.
+- Agents report by message to the coordinator session by name ("Coordinator: <project>"), for
+  every outcome: PR ready and gate green, blocked or decision needed, handover written. Sessions
+  are top-level peers, so no turn-end note reaches the coordinator; a report not sent as a
+  message is lost.
 - Agents do their own git plumbing (branch, push, PR, worktree clean-up).
 - Never subscribe to idle notices. Never message an archived session.
 
 ## Sessions
 
+- **All sessions are top-level peers.** Whoever starts a session (the coordinator starting an
+  agent or its own replacement) detaches it to the top level right away
+  (`mcp__ccd_session_mgmt__detach_session`, the sidebar's "Detach to top level"). Nested
+  sessions build a chain on every rotation, and archiving a parent archives everything under it.
+  Start each agent in its own worktree: a side session that shares another's worktree cannot be
+  detached.
+- A replacement is never started by the session it replaces. An agent's replacement is started
+  by the coordinator; a coordinator's by the old coordinator (then detached) or by the owner
+  from the sidebar.
+- A session the starter could not detach detaches itself (`detach_session` with `self`); if
+  that is refused too, ask the owner to drag it to the top level.
+- After merging a PR, unbind it from your session (`mcp__ccd_pr__unbind_pr`): the app archives a
+  session bound to a PR when that PR closes, and a coordinator that merged would be archived.
 - Sessions are found by name ("Agent: <unit>"), never by id. Ids do not go into the ledger.
 - If sessions cannot be started (the owner is on Remote Control, or the tool is unavailable),
   run the same brief as a background subagent with its own worktree.

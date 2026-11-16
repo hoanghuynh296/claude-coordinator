@@ -92,13 +92,22 @@ Read before starting a stretch of work. Each entry: what went wrong, then the fi
 28. **Subagents inherit the coordinator's edit guard.** A coordinator gave writing work to a
     subagent; the guard denied its edits too. → One-off work that writes files runs as its own session,
     not as a subagent of the coordinator.
+29. **A merging coordinator was archived with its PR.** The coordinator bound the PR it merged
+    to its session; the app auto-archived the session when the PR closed, the project had no
+    coordinator, and the agents' reports to it failed. → Unbind every PR from the coordinator's
+    session after merging it (`mcp__ccd_pr__unbind_pr`).
+30. **Nested chains on rotation.** Each session started by another nested under it; rotations
+    built chains (coordinator under coordinator, agent under replaced agent), and archiving a
+    parent archived its side sessions. → All sessions are top-level peers: the starter detaches
+    each one right away; a replacement is never started by the session it replaces; agents
+    report by message to "Coordinator: <project>".
 
 ## Tooling
 
-29. **`ubuntu-latest` moved** and broke a pinned tool. → Pin runner images and tool versions.
-30. **Branch protection on private repos** needs a paid GitHub plan. → On GitHub's 403 the
+31. **`ubuntu-latest` moved** and broke a pinned tool. → Pin runner images and tool versions.
+32. **Branch protection on private repos** needs a paid GitHub plan. → On GitHub's 403 the
     bootstrap script warns and continues; record the owner's choice in `DECISIONS.md`.
-31. **Scripts lose their exec bit** when a tool rewrites them. → Commands call scripts with
+33. **Scripts lose their exec bit** when a tool rewrites them. → Commands call scripts with
     `bash <path>`; `tests/exec-bits-test.sh` checks the mode in git.
-32. **Template placeholders left behind** in CI files matched nothing. → The bootstrap script
+34. **Template placeholders left behind** in CI files matched nothing. → The bootstrap script
     fails while any placeholder remains.

@@ -35,6 +35,10 @@ verification gate, who may release it, and its integration limit.
 `per-issue` only works if the unit's `AGENTS.md` and docs carry everything a cold start needs.
 If a per-issue agent keeps asking the same questions, fix the docs, not the mode.
 
+In either mode every session sits at the top level of the sidebar: whoever starts it detaches
+it right away, and it reports by message to "Coordinator: <project>". This is not a profile
+choice; nested sessions are archived with their parent and lose their reports at rotation.
+
 **Gate.** The command (or CI job) that must be green before a PR may merge, plus any manual
 check that CI cannot do (for example a browser pass for UI). Write the exact command.
 
