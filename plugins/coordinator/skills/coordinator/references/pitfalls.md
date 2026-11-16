@@ -92,10 +92,16 @@ Read before starting a stretch of work. Each entry: what went wrong, then the fi
 28. **Subagents inherit the coordinator's edit guard.** A coordinator gave writing work to a
     subagent; the guard denied its edits too. → One-off work that writes files runs as its own session,
     not as a subagent of the coordinator.
-29. **A merging coordinator was archived with its PR.** The coordinator bound the PR it merged
-    to its session; the app auto-archived the session when the PR closed, the project had no
-    coordinator, and the agents' reports to it failed. → Unbind every PR from the coordinator's
-    session after merging it (`mcp__ccd_pr__unbind_pr`).
+29. **A merging coordinator was archived with its PR.** The app binds every PR a session
+    touches with `gh` (create, view, review, merge), not only PRs it creates; with the setting
+    "Auto-archive sessions when their pull request closes" on, it archived the session when the
+    PR closed, the project had no coordinator, and the agents' reports to it failed. The first
+    fix, "unbind every PR after merging it" (`mcp__ccd_pr__unbind_pr`), was not followed in
+    practice: on 2026-11-16 two coordinators were archived anyway, one bound to 7 merged PRs
+    it never unbound. A rule that depends on memory failed (principle 7). → The app setting
+    `auto_archive_on_pr_close` is off (`coordinator-register.md` checks it), and the
+    coordinator archives each `per-issue` agent's session itself after merging its PR
+    (`mcp__ccd_session_mgmt__archive_session`); a hook after `gh pr merge` reminds it.
 30. **Nested chains on rotation.** Each session started by another nested under it; rotations
     built chains (coordinator under coordinator, agent under replaced agent), and archiving a
     parent archived its side sessions. → All sessions are top-level peers: the starter detaches

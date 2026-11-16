@@ -8,8 +8,8 @@ handover carries only what is in flight; see `references/state-files.md`.
 1. Measure the context (session tools, or
    `bash "<plugin>/scripts/check-context.sh" <session id>`). `SOFT`: send it no new issue and
    let it finish the current one; the handover is due before that PR merges. `HARD`: now.
-   Either way the note must exist before the session's last PR merges, since a session whose
-   PR merged may be archived by the app.
+   Either way the note must exist before the session's last PR merges, since the coordinator
+   archives a `per-issue` session right after its PR merges.
 2. **A unit's `standing` session:** send it one message asking it to (a) at `SOFT`, finish the
    current issue first (PR, gate green; at `HARD`, stop at the next safe point), commit and push
    its work, (b) move what it learned about the code into the unit's docs (in its open PR or a
@@ -34,6 +34,6 @@ handover carries only what is in flight; see `references/state-files.md`.
    if that is refused, the new session detaches itself (`self`) or the owner drags it out.
    Reports go by name, so two sessions must never share it: before the new session takes the
    name, rename the old one "<name> (old)" (`mcp__ccd_session_mgmt__set_session_title`) or
-   archive it. Before archiving the old coordinator, unbind every PR from it and check that no
-   session still nests under it. A fresh coordinator then follows the `coordinator-register`
+   archive it. Before archiving the old coordinator, check that no session still nests under
+   it (archiving a parent archives its side sessions). A fresh coordinator then follows the `coordinator-register`
    procedure. Archive the old session after the new one has started; never message it again.

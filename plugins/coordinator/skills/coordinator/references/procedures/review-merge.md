@@ -24,10 +24,15 @@ Review and merge the named pull request. Read the unit's row and the
    what you checked. Not done → the merge is allowed only if the profile defers that check to
    release time; then add a row to "Verification debt" in `ROADMAP.md`.
 6. **Merge** with the profile's method, deleting the branch:
-   `gh pr merge <n> --repo <repo> --merge --delete-branch` (or `--squash`). Then unbind the PR
-   from your session if it is bound (`mcp__ccd_pr__unbind_pr` with the PR's URL): the app
-   archives a session bound to a PR when that PR closes, which would leave the project without
-   a coordinator.
+   `gh pr merge <n> --repo <repo> --merge --delete-branch` (or `--squash`).
+   - The author is a `per-issue` agent: archive its session now
+     (`mcp__ccd_session_mgmt__archive_session`, found by name "Agent: <unit> #<issue>"). Its
+     work is in the PR; anything left for a next session is in the PR or the issue.
+   - The author is a `standing` session: leave it running; it is archived only on rotation.
+   - Fallback, only while the app setting `auto_archive_on_pr_close` is still on: the app has
+     bound this PR to your session (any `gh` touch binds it) and archives you when it closes.
+     Check `mcp__ccd_pr__get_status`, unbind (`mcp__ccd_pr__unbind_pr`) every merged PR bound to you,
+     and ask the owner again to turn the setting off.
 7. **Ledger.** Update the unit's row in `COORDINATION.md` (in progress, "integration ahead
    by"); remove the issue from `ROADMAP.md`. Do not add a line about the merged PR. Lint,
    commit and push.

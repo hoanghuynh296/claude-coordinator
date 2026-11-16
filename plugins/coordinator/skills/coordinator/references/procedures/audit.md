@@ -31,6 +31,10 @@ working day, before every handover, and whenever the ledger feels wrong.
    (an issue or a docs PR).
 10. **Profile fit:** does a recurring problem point at a profile choice
     (`references/profile.md`, "Changing the profile")? Propose one change to the owner.
+11. **Sessions:** the app setting `auto_archive_on_pr_close` is off
+    (`mcp__ccd_settings__get_settings`; on → ask the owner to turn it off). No `per-issue`
+    agent session is still live after its PR merged; archive it
+    (`mcp__ccd_session_mgmt__archive_session`).
 
 Commit and push the ledger. Report in at most 8 lines: what was wrong, what you fixed, what
 needs the owner.

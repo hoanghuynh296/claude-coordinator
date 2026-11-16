@@ -74,7 +74,8 @@ for f in SKILL.md references/workflow.md references/procedures/handover.md refer
 done
 
 # Sessions are top-level peers: starters detach what they start, agents report by message to
-# the coordinator by name, and the coordinator unbinds a PR after merging it.
+# the coordinator by name, the app setting auto_archive_on_pr_close is checked at registration,
+# and the coordinator archives a per-issue agent's session after merging its PR.
 has() { tr '\n' ' ' <"$skill/$1" | tr -s ' ' | grep -q -- "$2"; }
 for f in SKILL.md references/workflow.md references/procedures/milestone-start.md \
          references/procedures/handover.md references/procedures/coordinator-register.md \
@@ -88,10 +89,39 @@ for f in SKILL.md references/workflow.md references/roles.md references/template
   has "$f" 'Coordinator: <project>\|Coordinator: {{PROJECT_NAME}}' && ok "$f names the coordinator session reports go to" \
     || bad "$f does not name \"Coordinator: <project>\" as where reports go"
 done
+for f in SKILL.md references/procedures/coordinator-register.md references/procedures/kickoff.md \
+         references/procedures/adopt.md references/procedures/audit.md references/templates/PROFILE.md; do
+  has "$f" 'auto_archive_on_pr_close' && ok "$f names the setting auto_archive_on_pr_close" \
+    || bad "$f does not name auto_archive_on_pr_close"
+done
+has references/procedures/coordinator-register.md 'get_settings' \
+  && has references/procedures/coordinator-register.md 'set_setting' \
+  && ok "coordinator-register reads the setting and asks the owner to turn it off" \
+  || bad "coordinator-register does not read (get_settings) and change (set_setting) the setting"
+for f in SKILL.md references/workflow.md references/procedures/review-merge.md; do
+  has "$f" 'archive_session' && ok "$f archives a per-issue agent's session after its merge" \
+    || bad "$f does not name archive_session"
+  has "$f" 'archived only' && ok "$f archives a standing session only on rotation" \
+    || bad "$f does not say a standing session is archived only on rotation"
+done
+for f in references/profile.md references/roles.md SKILL.md; do
+  has "$f" 'archive.\{0,30\}per-issue\|per-issue.\{0,60\}archived by the coordinator' \
+    && ok "$f: the coordinator archives per-issue sessions" || bad "$f does not say the coordinator archives per-issue sessions"
+done
+for f in references/procedures/handover.md references/templates/handover.md SKILL.md; do
+  has "$f" 'coordinator archives a `per-issue` session right after its PR merges' \
+    && ok "$f: handover before the last merge, since the coordinator archives right after" \
+    || bad "$f does not tie the handover timing to the coordinator's archive"
+done
+# unbind_pr survives only as the fallback for a setting still on
 for f in SKILL.md references/workflow.md references/procedures/review-merge.md \
          references/procedures/coordinator-register.md; do
-  has "$f" 'unbind_pr' && ok "$f says to unbind a merged PR" || bad "$f does not name unbind_pr"
+  if tr '\n' ' ' <"$skill/$f" | tr -s ' ' | grep -o '.\{0,250\}unbind_pr' | grep -qv 'still on\|stays on\|setting is still'; then
+    bad "$f names unbind_pr outside the setting-still-on fallback"
+  else ok "$f: unbind_pr only as a fallback"; fi
 done
+grep -q 'merge-reminder.sh' "$plugin/hooks/hooks.json" && ok "hooks.json wires the merge reminder" \
+  || bad "hooks.json does not wire merge-reminder.sh" 
 for f in SKILL.md references/workflow.md references/procedures/handover.md; do
   has "$f" 'never started by the session it replaces' && ok "$f: a replacement is not started by the session it replaces" \
     || bad "$f lacks the replacement-starter rule"
@@ -111,6 +141,7 @@ has references/templates/unit-brief.md 'final answer is the report' && ok "unit-
 has references/templates/unit-brief.md 'handover written' && ok "unit-brief reports \"handover written\"" \
   || bad "unit-brief does not report \"handover written\""
 has references/pitfalls.md 'Nested chains on rotation' && has references/pitfalls.md 'archived with its PR' \
+  && has references/pitfalls.md 'auto_archive_on_pr_close' && has references/pitfalls.md 'any `gh` touch\|touches with `gh`' \
   && ok "pitfalls record nested chains and PR auto-archive" || bad "pitfalls miss nested chains or PR auto-archive"
 
 echo "passed $pass, failed $failn"
