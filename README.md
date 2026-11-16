@@ -173,13 +173,21 @@ bash tests/hooks-test.sh           # edit guard and SessionStart, jq and python3
 bash tests/ledger-lint-test.sh     # every lint rule; a fresh ledger passes
 bash tests/pre-push-guard-test.sh  # merged, closed and open PRs with a fake gh; install-guards
 bash tests/bootstrap-test.sh [template-dir]   # full bootstrap against local bare repos and a fake gh
-bash tests/structure-test.sh       # commands, procedures and the skill agree; listing text fits the cap
+bash tests/structure-test.sh       # commands, procedures and the skill agree; listing text fits the cap; key rules present
 bash tests/exec-bits-test.sh       # every plugin *.sh is executable in git
 bash tests/check-context-test.sh   # ok / SOFT / HARD levels, thresholds from env and args, window cap
 ```
 
 ## Changes
 
+- **0.5.0**: all sessions are top-level peers. Whoever starts a session detaches it to the
+  top level right away; a replacement is never started by the session it replaces. Agents
+  report by message to "Coordinator: <project>" (PR ready, blocked, handover written), and a
+  new coordinator tells every live agent its name. A coordinator names itself "Coordinator:
+  <project>" at registration, and an old session is renamed "(old)" or archived before its
+  replacement takes the name. The coordinator unbinds a PR from its
+  session after merging it, so the PR's close does not auto-archive it. Structure test for
+  these rules; pitfalls for nested chains and the merging coordinator's auto-archive.
 - **0.4.0**: two context thresholds instead of one. Soft (default 250k): finish the current
   issue, take no new one, then rotate. Hard (default 400k, or 75% of the model's window):
   stop at the next safe point and rotate. The handover is written before the session's last

@@ -17,6 +17,9 @@ Last reviewed: {{DATE}}
 | <name> | <owner/repo or dir/**> | <what> | <model>, <effort> | <standing or per-issue> | <exact command or CI job; manual check if any> | <owner or coordinator> | <e.g. 15 PRs or 5 days> |
 
 Agent session names: "Agent: <unit>" (per-issue: "Agent: <unit> #<issue>").
+Every session sits at the top level of the sidebar, each agent in its own worktree: whoever
+starts a session detaches it right away. Agents report by message to "Coordinator:
+{{PROJECT_NAME}}" (PR ready and gate green, blocked or decision needed, handover written).
 
 ## 3. Roles
 
@@ -32,6 +35,8 @@ Agent session names: "Agent: <unit>" (per-issue: "Agent: <unit> #<issue>").
 ## 4. Flow
 
 - Integration branch: `<develop>`. Release branch: `<main>`. Merge method: <merge commit or squash>.
+  After merging, the coordinator unbinds the PR from its session, so the PR's close does not
+  archive it.
 - A release is: <release PR into main | tag | published package | data release>, per unit if they differ.
 - Cadence: <milestone | continuous>.
 - Hotfix: <branch from the release branch, PR into it, then back-merge>.

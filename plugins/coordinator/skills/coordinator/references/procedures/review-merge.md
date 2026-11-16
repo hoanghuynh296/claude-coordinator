@@ -24,7 +24,10 @@ Review and merge the named pull request. Read the unit's row and the
    what you checked. Not done → the merge is allowed only if the profile defers that check to
    release time; then add a row to "Verification debt" in `ROADMAP.md`.
 6. **Merge** with the profile's method, deleting the branch:
-   `gh pr merge <n> --repo <repo> --merge --delete-branch` (or `--squash`).
+   `gh pr merge <n> --repo <repo> --merge --delete-branch` (or `--squash`). Then unbind the PR
+   from your session if it is bound (`mcp__ccd_pr__unbind_pr` with the PR's URL): the app
+   archives a session bound to a PR when that PR closes, which would leave the project without
+   a coordinator.
 7. **Ledger.** Update the unit's row in `COORDINATION.md` (in progress, "integration ahead
    by"); remove the issue from `ROADMAP.md`. Do not add a line about the merged PR. Lint,
    commit and push.

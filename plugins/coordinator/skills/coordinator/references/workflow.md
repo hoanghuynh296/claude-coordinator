@@ -39,14 +39,21 @@ session the stretch needs in that one turn. If sessions cannot be started (the o
 Remote Control, or the tool is unavailable), run the same brief as a background subagent with
 its own worktree and convert later.
 
+Every session sits at the top level of the sidebar; none nests under another. Start each agent
+in its own worktree and detach it right away (`mcp__ccd_session_mgmt__detach_session`). A
+nested session builds a chain on every rotation and is archived with its parent. A detached
+agent sends no turn-end note to the coordinator, so it reports by message (section 4).
+
 Never leave a unit idle while its `ROADMAP.md` list has an item that is not blocked.
 
 ## 4. The agent's loop (agents do this, not the coordinator)
 
 Fresh branch from the integration branch → commit after each step, push after the first commit
-and after every commit → PR that closes the issue → keep the unit's gate green → report once:
-"PR ready, gate green" (with the evidence: run id or command output) or "blocked / decision
-needed". Before every push the agent checks that the branch's PR is not already merged.
+and after every commit → PR that closes the issue → keep the unit's gate green → report once,
+by message to the coordinator session by name ("Coordinator: <project>"): "PR ready, gate
+green" (with the evidence: run id or command output), "blocked / decision needed", or
+"handover written". Before every push the agent checks that the branch's PR is not already
+merged.
 
 ## 5. Review and merge (procedure `review-merge.md`)
 
@@ -57,7 +64,9 @@ needed". Before every push the agent checks that the branch's PR is not already 
    If a manual check is skipped, the merge note says `UNVERIFIED: <what>` and the item goes on
    the verification debt list in `ROADMAP.md`.
 5. A stacked PR is retargeted to the integration branch before its base merges.
-6. Merge with the profile's method. Update the ledger (remove the item; adjust "ahead by").
+6. Merge with the profile's method, then unbind the PR from the coordinator's session
+   (`mcp__ccd_pr__unbind_pr`): the app archives a session bound to a PR when that PR closes.
+   Update the ledger (remove the item; adjust "ahead by").
 7. Check the unit's integration limit. At the limit: stop handing out feature issues for that
    unit and go to step 6 of this workflow.
 
@@ -92,13 +101,18 @@ After a release, clear the unit's verification debt items that the release cover
 - **Hard threshold** (default 400k, or 75% of the model's window if lower): it stops at the
   next safe point (commit, push), writes a full handover (done, left in order, decisions,
   commands to re-run, traps) and reports "blocked: rotate". No new step.
-- Then a fresh session with the same name starts from that note. Archive the old session;
+- Then a fresh session with the same name starts from that note. It is never started by the
+  session it replaces: the coordinator starts it and detaches it to the top level. The old
+  session is renamed "<name> (old)" or archived before the new one takes the name. Archive the old session;
   never message it again.
 - `per-issue` sessions write no handover file: at soft they just finish the issue; at hard
   they write done, left, commands to re-run and traps into the PR (or the issue if there is no
   PR yet), and the next session for that issue starts from it.
-- Coordinator: procedure `handover.md`, then a fresh session reads `coordination/README.md`
-  and registers.
+- Coordinator: procedure `handover.md`, then a fresh session, started by the old coordinator
+  and detached or started by the owner from the sidebar, reads `coordination/README.md` and
+  registers: it takes the name "Coordinator: <project>" only after the old coordinator is
+  renamed "Coordinator: <project> (old)" or archived, then sends every live agent one message
+  with its name.
 - Usage limit: every agent stops at once. The ledger says who was doing what. After the
   reset, continue each standing agent with one message; start per-issue agents again from
   their issue.

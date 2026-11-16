@@ -73,5 +73,45 @@ for f in SKILL.md references/workflow.md references/procedures/handover.md refer
     || bad "$f does not give the per-issue handover rule (no handover file; at hard, into the PR)"
 done
 
+# Sessions are top-level peers: starters detach what they start, agents report by message to
+# the coordinator by name, and the coordinator unbinds a PR after merging it.
+has() { tr '\n' ' ' <"$skill/$1" | tr -s ' ' | grep -q -- "$2"; }
+for f in SKILL.md references/workflow.md references/procedures/milestone-start.md \
+         references/procedures/handover.md references/procedures/coordinator-register.md \
+         references/templates/unit-brief.md; do
+  has "$f" 'detach_session' && ok "$f says to detach sessions to the top level" \
+    || bad "$f does not name detach_session"
+done
+for f in SKILL.md references/workflow.md references/roles.md references/templates/PROFILE.md \
+         references/templates/unit-brief.md references/templates/platform-brief.md \
+         references/templates/qa-brief.md ../../agents/oneoff-builder.md; do
+  has "$f" 'Coordinator: <project>\|Coordinator: {{PROJECT_NAME}}' && ok "$f names the coordinator session reports go to" \
+    || bad "$f does not name \"Coordinator: <project>\" as where reports go"
+done
+for f in SKILL.md references/workflow.md references/procedures/review-merge.md \
+         references/procedures/coordinator-register.md; do
+  has "$f" 'unbind_pr' && ok "$f says to unbind a merged PR" || bad "$f does not name unbind_pr"
+done
+for f in SKILL.md references/workflow.md references/procedures/handover.md; do
+  has "$f" 'never started by the session it replaces' && ok "$f: a replacement is not started by the session it replaces" \
+    || bad "$f lacks the replacement-starter rule"
+  has "$f" '(old)' && ok "$f: the old session gives up its name before the replacement takes it" \
+    || bad "$f does not rename the old session \"<name> (old)\""
+done
+has references/procedures/coordinator-register.md 'set_session_title' \
+  && has references/procedures/coordinator-register.md 'only live session with that name' \
+  && ok "coordinator-register names the session and checks the name is unique" \
+  || bad "coordinator-register does not set and check the name \"Coordinator: <project>\""
+for f in kickoff adopt; do
+  grep -q 'coordinator-register' "$skill/references/procedures/$f.md" && ok "$f reaches the naming step through coordinator-register" \
+    || bad "$f does not follow coordinator-register"
+done
+has references/templates/unit-brief.md 'final answer is the report' && ok "unit-brief gives the subagent fallback's report" \
+  || bad "unit-brief lacks the subagent exception"
+has references/templates/unit-brief.md 'handover written' && ok "unit-brief reports \"handover written\"" \
+  || bad "unit-brief does not report \"handover written\""
+has references/pitfalls.md 'Nested chains on rotation' && has references/pitfalls.md 'archived with its PR' \
+  && ok "pitfalls record nested chains and PR auto-archive" || bad "pitfalls miss nested chains or PR auto-archive"
+
 echo "passed $pass, failed $failn"
 [[ $failn -eq 0 ]]

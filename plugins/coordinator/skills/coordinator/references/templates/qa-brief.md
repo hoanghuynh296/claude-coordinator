@@ -20,7 +20,8 @@ Exit criteria of <milestone> (from `coordination/ROADMAP.md`):
    the feature lands, and say which.
 2. Fixtures are fictional. Never real customer data. <Pack rules, e.g. three domains.>
 3. After merges the coordinator asks you to run the suite on the integration branch. Report
-   per criterion: pass, or fail with the failing step and the owning unit.
+   per criterion, by message to "Coordinator: <project>": pass, or fail with the failing step
+   and the owning unit. The verdict (rule 5) goes the same way.
 4. Walk each persona's main flow on staging and note friction, broken copy, wrong language,
    missing empty and error states.
 5. The milestone closes only when the suite is green on staging. You give the verdict.

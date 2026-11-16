@@ -27,4 +27,6 @@ Rules:
    new one; past the hard one (default 400k) stop at the next safe point, push, write what is
    done and what is left into the PR, and report "blocked: rotate".
 10. Final report, at most 6 lines: PR link, gate evidence, what changed, what is unverified,
-   open questions. No progress updates before that.
+   open questions. No progress updates before that. As a subagent your final answer is the
+   report. Run as a session, send it (and any "blocked") as a message to the coordinator
+   session by name ("Coordinator: <project>"): a top-level session sends no turn-end note.
