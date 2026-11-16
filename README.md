@@ -180,6 +180,12 @@ bash tests/check-context-test.sh   # ok / SOFT / HARD levels, thresholds from en
 
 ## Changes
 
+- **0.4.0**: two context thresholds instead of one. Soft (default 250k): finish the current
+  issue, take no new one, then rotate. Hard (default 400k, or 75% of the model's window):
+  stop at the next safe point and rotate. The handover is written before the session's last
+  PR merges. `check-context.sh` reports `ok` / `SOFT` / `HARD` (was `ok` / `ROTATE`) and
+  takes `--soft`, `--hard`, `--window`. Pitfalls for subagents and the edit guard, and for
+  stacked PRs without CI.
 - **0.3.0**: plain language first. Procedures live in the skill; commands are shortcuts. The
   skill routes what the owner says to a procedure and lists the points where a human is
   needed. SessionStart recognises a ledger folder and a unit checkout without registration.
