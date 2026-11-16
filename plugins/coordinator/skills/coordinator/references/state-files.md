@@ -10,6 +10,7 @@ The ledger is a private git repo. Its layout is the same for every project:
     PROFILE.md             how this project runs (see profile.md); the owner's standing rules
     ROADMAP.md             goal, milestones if used, ordered backlog per unit, verification debt
     DECISIONS.md           append-only decision log (C-xxx)
+    next-cleared.md        appears on first use: merged PRs cleared without a Next message (next-clear.sh)
     handover/              one file per role, overwritten at each rotation (git keeps history)
     memory/                portable copy of the coordinator's memory files
     MOVE.md                optional: steps to continue on another machine

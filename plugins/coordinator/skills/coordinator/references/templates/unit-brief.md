@@ -37,15 +37,20 @@ Read first: `AGENTS.md`<, `OWNERSHIP.md`, the contract files this unit produces 
 5. Implement contracts as merged; a contract change is its own issue.
 6. Say `UNVERIFIED: <what>` for anything you could not check. Never present a guess as a fact.
 7. What you learn that the next session needs goes into this unit's docs in the same PR.
-8. Never merge your own PR. If review findings come back, fix them on the same branch.
+8. Never merge your own PR. If review findings come back, fix them on the same branch, report
+   "PR ready" again and wait again.
 9. Anything that costs money is the owner's decision: flag it, do not choose it.
 10. Report only (a) PR ready and gate green, (b) blocked or decision needed, (c) handover
-    written. Every report is a message to the coordinator session by name ("Coordinator:
+    written. End every report with `Context: <k tokens>` (your current context size). Every report is a message to the coordinator session by name ("Coordinator:
     <project>"); no turn-end note reaches it, so a report you do not send is lost. If a new
     coordinator tells you its name, report to that one from then on. <Subagent fallback: your
     final answer is the report; send no message.> At most <6> lines: issue,
     PR link, what changed, evidence, risks. No ack-only messages, no progress updates.
-11. When you finish an issue and have the next one, continue without asking.
+11. One issue at a time, one full lifecycle. After "PR ready" you wait: fix review findings
+    when told, and start nothing new until the coordinator's message `PR #<n> merged. Next:
+    <issue | handover | stand by | done>`. Then do exactly that (`done`: a `per-issue` session
+    is archived; stop). Do not name or start a next issue yourself. You run only when a
+    message arrives, so the coordinator always sends that message after a merge.
 12. Context. Past <250k> (soft): do not stop mid-task. Finish the current issue (PR, gate
     green), take no new one, write `coordination/handover/<unit>.md` in the ledger repo before
     that PR merges, and report "rotate after #<n>". Past <400k> (hard): stop at the next safe
@@ -57,5 +62,5 @@ Read first: `AGENTS.md`<, `OWNERSHIP.md`, the contract files this unit produces 
 
 ## Prompt (per round)
 
-Do #<n> (<link>), then #<m>, in that order. Each issue has the goal, acceptance criteria,
-required checks and what is out of scope.
+Do #<n> (<link>). It has the goal, acceptance criteria, required checks and what is out of
+scope. Report "PR ready" when the gate is green, then wait for `PR #<n> merged. Next: ...`.

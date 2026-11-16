@@ -30,9 +30,10 @@ the issues on either side of it start.
 
 ## 3. Hand out work
 
-One batched message per agent: the issue number, plus the next one or two in order so the
-agent does not stop and ask between PRs. Units in `per-issue` mode get a fresh session per
-issue instead (brief: `templates/unit-brief.md` plus the issue link).
+Hand out ONE issue per agent, never a queue of two or three. The agent takes that issue
+through its full lifecycle (section 4) and waits; the next issue goes out in the coordinator's
+message after the merge (`PR #<n> merged. Next: <issue>`). Units in `per-issue` mode get a
+fresh session per issue instead (brief: `templates/unit-brief.md` plus the issue link).
 
 Sessions can only be started in a turn the owner started from the desktop app. Start every
 session the stretch needs in that one turn. If sessions cannot be started (the owner is on
@@ -52,8 +53,16 @@ Fresh branch from the integration branch → commit after each step, push after 
 and after every commit → PR that closes the issue → keep the unit's gate green → report once,
 by message to the coordinator session by name ("Coordinator: <project>"): "PR ready, gate
 green" (with the evidence: run id or command output), "blocked / decision needed", or
-"handover written". Before every push the agent checks that the branch's PR is not already
-merged.
+"handover written", ending with `Context: <k tokens>`. Before every push the agent checks that
+the branch's PR is not already merged.
+
+Then the agent waits. It fixes review findings when told (same branch, reports again, waits
+again) and starts nothing new until the coordinator's message `PR #<n> merged. Next: <issue |
+handover | stand by | done>`. Sessions run only when a message arrives: an agent that reports
+"PR ready, next #50" and ends its turn, and a coordinator that merges and says nothing, leave
+both waiting forever. So the coordinator always sends that message in the same turn as the
+merge (`review-merge.md`, step 9), and the plugin's Stop hook does not let it end the turn
+until it has.
 
 ## 5. Review and merge (procedure `review-merge.md`)
 
@@ -68,7 +77,9 @@ merged.
    agent's session (`mcp__ccd_session_mgmt__archive_session`); a `standing` session is archived
    only on rotation. Fallback only while the app setting `auto_archive_on_pr_close` is still
    on: check `mcp__ccd_pr__get_status` and unbind (`mcp__ccd_pr__unbind_pr`) any PR bound to you.
-   Update the ledger (remove the item; adjust "ahead by").
+   Update the ledger (remove the item; adjust "ahead by"). In the same turn, read the author's
+   context (`mcp__ccd_session_mgmt__get_usage`) and send it `PR #<n> merged. Next: <issue |
+   handover | stand by | done>` (`review-merge.md`, step 9).
 7. Check the unit's integration limit. At the limit: stop handing out feature issues for that
    unit and go to step 6 of this workflow.
 

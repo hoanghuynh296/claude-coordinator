@@ -20,6 +20,15 @@
             "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/merge-reminder.sh\""
           }
         ]
+      },
+      {
+        "matcher": "SendMessage|mcp__ccd_session_mgmt__send_message",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/next-sent.sh\""
+          }
+        ]
       }
     ],
     "SessionStart": [
@@ -28,6 +37,16 @@
           {
             "type": "command",
             "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/session-start.sh\""
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/next-guard.sh\""
           }
         ]
       }

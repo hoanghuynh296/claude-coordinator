@@ -77,7 +77,9 @@ PR already merged, ledgers drifting out of shape.
 
 ## 8. Lean messaging; knowledge goes where it is used
 
-- No ack-only or status-ping messages, in either direction. Silence means "working".
+- No ack-only or status-ping messages, in either direction. An agent is either working on the
+  issue it was given or waiting on the coordinator; the merge notice `PR #<n> merged. Next:
+  ...` is not a ping but the message that starts its next step.
 - One batched message per agent per round. Short reports (the profile sets the length).
 - Sessions are replaced past the profile's context thresholds, not kept alive: after their
   current issue at the soft one, at the next safe point at the hard one.

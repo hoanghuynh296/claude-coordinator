@@ -58,3 +58,40 @@ reg_value() {
 reg_values() {
   sed -n "s/^$2=//p" "$1"
 }
+
+# Per-session hook state of a registered coordinator: $COORD_HOME/state/<session_id>/
+#   pending-next   one line per merged PR still waiting for "PR #N merged. Next: ..":
+#                  "<N> <repo or -> <UTC time>"
+#   stop-blocks    how many times the Stop hook has blocked in the current turn
+state_dir() {
+  local sid="$1"
+  [[ "$sid" =~ ^[A-Za-z0-9_-]+$ ]] || return 1
+  local d="$COORD_HOME/state/$sid"
+  mkdir -p "$d" && printf '%s' "$d"
+}
+
+# pending_add <sid> <pr> <repo>: record (or refresh) PR <pr> as waiting for its Next message
+pending_add() {
+  local d f; d="$(state_dir "$1")" || return 1; f="$d/pending-next"
+  pending_remove "$1" "$2"
+  printf '%s %s %s\n' "$2" "${3:--}" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" >>"$f"
+  rm -f "$d/stop-blocks"
+}
+
+# pending_remove <sid> <pr>: returns 0 when the PR was pending
+pending_remove() {
+  local d f; d="$(state_dir "$1")" || return 1; f="$d/pending-next"
+  [[ -f "$f" ]] || return 1
+  grep -q "^$2 " "$f" || return 1
+  grep -v "^$2 " "$f" >"$f.tmp" || true
+  mv "$f.tmp" "$f"
+  [[ -s "$f" ]] || rm -f "$f" "$d/stop-blocks"
+  return 0
+}
+
+# pending_list <sid>: the pending PR lines (nothing when none)
+pending_list() {
+  local d; d="$(state_dir "$1")" || return 0
+  [[ -f "$d/pending-next" ]] && cat "$d/pending-next"
+  return 0
+}

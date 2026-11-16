@@ -35,6 +35,10 @@ verification gate, who may release it, and its integration limit.
 `per-issue` only works if the unit's `AGENTS.md` and docs carry everything a cold start needs.
 If a per-issue agent keeps asking the same questions, fix the docs, not the mode.
 
+In either mode an agent works one issue at a time through its full lifecycle: PR, gate green,
+"PR ready" (ending `Context: <k tokens>`), review fixes, then it waits for the coordinator's
+`PR #<n> merged. Next: <issue | handover | stand by | done>`. Never hand out a queue.
+
 In either mode every session sits at the top level of the sidebar: whoever starts it detaches
 it right away, and it reports by message to "Coordinator: <project>". This is not a profile
 choice; nested sessions are archived with their parent and lose their reports at rotation.

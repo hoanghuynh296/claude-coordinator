@@ -144,5 +144,52 @@ has references/pitfalls.md 'Nested chains on rotation' && has references/pitfall
   && has references/pitfalls.md 'auto_archive_on_pr_close' && has references/pitfalls.md 'any `gh` touch\|touches with `gh`' \
   && ok "pitfalls record nested chains and PR auto-archive" || bad "pitfalls miss nested chains or PR auto-archive"
 
+
+# One issue, one full lifecycle (0.7.0): agents take one issue, report "PR ready" with their
+# context and wait for "PR #N merged. Next: ..."; the coordinator sends that in the merge turn,
+# and hooks enforce it.
+for f in references/templates/unit-brief.md references/templates/platform-brief.md \
+         references/templates/qa-brief.md ../../agents/oneoff-builder.md references/workflow.md \
+         SKILL.md references/roles.md references/profile.md references/templates/PROFILE.md \
+         references/procedures/review-merge.md references/pitfalls.md; do
+  has "$f" 'PR #<n> merged. Next:' && ok "$f gives the merge notice \"PR #<n> merged. Next: ...\"" \
+    || bad "$f does not give the merge notice format"
+done
+for f in references/templates/unit-brief.md ../../agents/oneoff-builder.md references/workflow.md \
+         SKILL.md references/profile.md references/templates/PROFILE.md; do
+  has "$f" 'Context: <k tokens>' && ok "$f: reports end with Context: <k tokens>" \
+    || bad "$f does not end reports with \"Context: <k tokens>\""
+done
+for f in references/templates/unit-brief.md references/workflow.md SKILL.md references/roles.md \
+         references/profile.md references/templates/PROFILE.md ../../agents/oneoff-builder.md; do
+  has "$f" 'one issue at a time\|One issue at a time\|ONE issue\|one full lifecycle\|One task, one full lifecycle' \
+    && ok "$f: one issue at a time" || bad "$f does not say one issue at a time"
+done
+has SKILL.md 'either working on the issue it was given or waiting on the coordinator' \
+  && ok "SKILL.md: an agent is working or waiting on the coordinator" || bad "SKILL.md lacks working-or-waiting"
+has references/procedures/review-merge.md 'same turn as the merge' \
+  && has references/procedures/review-merge.md 'get_usage' \
+  && has references/procedures/review-merge.md 'next-clear.sh' \
+  && ok "review-merge step 9: context, Next message in the merge turn, escape hatch" \
+  || bad "review-merge step 9 lacks the same-turn Next message, get_usage or next-clear.sh"
+has references/procedures/review-merge.md 'reports "PR ready" again and waits again' \
+  && ok "review-merge: after findings the agent fixes, reports and waits" || bad "review-merge: findings loop not stated"
+has references/pitfalls.md 'Both sides waited after a merge' && ok "pitfalls record the post-merge stall" \
+  || bad "pitfalls miss the post-merge stall"
+for phrase in 'continue without asking' 'Tell the agent nothing about the merge' 'Silence means' \
+              'next two or three' 'next one or two in order'; do
+  if grep -rqi -- "$phrase" "$plugin"; then bad "the kit still says \"$phrase\""; else ok "the kit no longer says \"$phrase\""; fi
+done
+for h in next-sent.sh next-guard.sh; do
+  grep -q "$h" "$plugin/hooks/hooks.json" && ok "hooks.json wires $h" || bad "hooks.json does not wire $h"
+done
+python3 -I - "$plugin/hooks/hooks.json" <<'PY2' && ok "hooks.json: Stop runs next-guard, SendMessage tools run next-sent" || bad "hooks.json event wiring"
+import json, sys
+h = json.load(open(sys.argv[1]))["hooks"]
+assert any("next-guard.sh" in x["command"] for e in h["Stop"] for x in e["hooks"])
+m = [e["matcher"] for e in h["PostToolUse"] if any("next-sent.sh" in x["command"] for x in e["hooks"])]
+assert m and "SendMessage" in m[0] and "mcp__ccd_session_mgmt__send_message" in m[0]
+PY2
+
 echo "passed $pass, failed $failn"
 [[ $failn -eq 0 ]]
