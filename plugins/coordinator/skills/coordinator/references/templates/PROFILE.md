@@ -58,7 +58,12 @@ Everything else goes through an issue for the owning unit.
 
 ## 8. Budgets
 
-- Replace a session at <250k> context. Reports: at most <6> lines. Reviewer: at most 15 lines.
+- Context, soft: <250k>. Past it a session takes no new issue, finishes the current one (PR,
+  gate green), writes its handover before that PR merges, and is replaced.
+- Context, hard: <400k, or 75% of the model's context window if lower>. Past it a session
+  stops at the next safe point (commit, push), writes a full handover, reports "blocked: rotate".
+- <Per model, if they differ: e.g. Opus 1M: soft 400k, hard 700k.>
+- Reports: at most <6> lines. Reviewer: at most 15 lines.
 - `COORDINATION.md`: at most <80> lines.
 - No ack-only or status-ping messages. One batched message per agent per round.
 

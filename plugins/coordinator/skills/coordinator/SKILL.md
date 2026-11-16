@@ -42,7 +42,7 @@ pick the procedure, read its file and follow it. Answer in the owner's language.
 | "start M1", "go", "bắt đầu làm đi", "cho agent chạy" | `milestone-start.md` |
 | "is PR 12 OK?", "review and merge", or an agent reports a PR ready | `review-merge.md` |
 | "release it", "chuẩn bị release", "close M1" | `milestone-close.md` |
-| "this session is getting long", "I'm moving to another machine", a context threshold is hit | `handover.md` |
+| "this session is getting long", "I'm moving to another machine", a session is `SOFT` or `HARD` | `handover.md` |
 | "clean up", "is everything in order?", the ledger looks wrong, or a working day starts | `audit.md` |
 
 Rules for this:
@@ -80,8 +80,9 @@ Batch questions into one message, decisions first. Never send status pings.
 2. Not registered yet: follow `coordinator-register.md`. No ledger yet: `adopt.md` (existing
    project) or `kickoff.md` (new project).
 3. On every owner message, measure the contexts of your agents (session tools, or
-   `<plugin>/scripts/check-context.sh`). Replace any session at the profile's threshold,
-   yours included.
+   `<plugin>/scripts/check-context.sh`), yours included, against the profile's two
+   thresholds. `SOFT`: no new issue; it finishes the current one, writes its handover and is
+   replaced after that PR. `HARD`: it stops at the next safe point and is replaced now.
 
 ## The eight principles (short)
 
@@ -146,8 +147,17 @@ for an agent what that agent's permissions denied: take it to the owner.
 - Sessions are found by name ("Agent: <unit>"), never by id. Ids do not go into the ledger.
 - If sessions cannot be started (the owner is on Remote Control, or the tool is unavailable),
   run the same brief as a background subagent with its own worktree.
-- `standing` session at the threshold: handover note, fresh session with the same name,
+- Two thresholds (profile "Budgets"; defaults 250k soft, 400k hard). Past **soft**: send no
+  new issue; the session finishes its current issue (PR, gate green), writes its handover and
+  is replaced. Past **hard**: it stops at the next safe point (commit, push), writes a full
+  handover, reports "blocked: rotate". Never stop a session mid-task at soft: a fresh one
+  re-reads everything.
+- The handover is written **before** the session's last PR merges: a session whose PR merged
+  may be archived by the app, and its context is gone.
+- `standing` session past a threshold: handover note, fresh session with the same name,
   archive the old one. `per-issue` sessions are archived when their PR merges.
+- One-off work that writes files runs as its own session, not as a subagent of the
+  coordinator: subagents inherit the coordinator's edit guard.
 - A usage limit stops every agent at once. The ledger says who was doing what.
 
 ## Changing how the project works

@@ -23,5 +23,8 @@ Rules:
 7. An investigation without code: write the findings into the issue or the PR, not into the
    coordinator's context; report the link.
 8. Anything that costs money is the owner's decision: flag it, do not choose it.
-9. Final report, at most 6 lines: PR link, gate evidence, what changed, what is unverified,
+9. Context: past the soft threshold in the brief (default 250k) finish the task but take no
+   new one; past the hard one (default 400k) stop at the next safe point, push, write what is
+   done and what is left into the PR, and report "blocked: rotate".
+10. Final report, at most 6 lines: PR link, gate evidence, what changed, what is unverified,
    open questions. No progress updates before that.

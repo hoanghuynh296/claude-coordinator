@@ -79,14 +79,21 @@ After a release, clear the unit's verification debt items that the release cover
 - Ledger: update, lint, commit and push after every merge, decision, release, session change
   and owner answer.
 - Decisions: one row in `DECISIONS.md`; the bound units add their one-line entry.
-- Contexts: measure on every owner message; replace any session at the threshold.
+- Contexts: measure on every owner message. `SOFT`: no new issue for that session; replace it
+  after its current PR. `HARD`: replace it now (section 8).
 - procedure `audit.md` at least once per working day and before every handover.
 
 ## 8. Rotate or stop
 
-- `standing` session at the threshold: it pushes its work, moves what it learned into the
-  unit's docs, writes `handover/<unit>.md` (in flight only), then a fresh session with the
-  same name starts from that note. Archive the old session; never message it again.
+- **Soft threshold** (default 250k): the session does not stop mid-task. It finishes its
+  current issue (PR, gate green), takes no new one, moves what it learned into the unit's
+  docs and writes `handover/<unit>.md` (in flight only) **before that PR merges**: a session
+  whose last PR merged may be archived by the app, and its context is lost.
+- **Hard threshold** (default 400k, or 75% of the model's window if lower): it stops at the
+  next safe point (commit, push), writes a full handover (done, left in order, decisions,
+  commands to re-run, traps) and reports "blocked: rotate". No new step.
+- Then a fresh session with the same name starts from that note. Archive the old session;
+  never message it again.
 - Coordinator: procedure `handover.md`, then a fresh session reads `coordination/README.md`
   and registers.
 - Usage limit: every agent stops at once. The ledger says who was doing what. After the

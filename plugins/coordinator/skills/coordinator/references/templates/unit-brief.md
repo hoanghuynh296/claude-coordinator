@@ -37,8 +37,12 @@ Read first: `AGENTS.md`<, `OWNERSHIP.md`, the contract files this unit produces 
 10. Report only (a) PR ready and gate green, (b) blocked or decision needed. At most <6> lines:
     issue, PR link, what changed, evidence, risks. No ack-only messages, no progress updates.
 11. When you finish an issue and have the next one, continue without asking.
-<12. `standing` only: at ~<250k> context, push your work, move what you learned into the docs,
-    write `coordination/handover/<unit>.md` in the ledger repo and tell the coordinator.>
+12. Context. Past <250k> (soft): do not stop mid-task. Finish the current issue (PR, gate
+    green), take no new one, write `coordination/handover/<unit>.md` in the ledger repo before
+    that PR merges, and report "rotate after #<n>". Past <400k> (hard): stop at the next safe
+    point (commit, push), write a full handover (done, left in order, decisions, commands to
+    re-run, traps), report "blocked: rotate". No new step. <`per-issue` units: the handover is
+    needed only at hard; at soft just finish the issue.>
 <Pack rules that apply to this unit, one line each.>
 
 ## Prompt (per round)
