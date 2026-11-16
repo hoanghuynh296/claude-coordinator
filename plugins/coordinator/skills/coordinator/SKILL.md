@@ -162,6 +162,9 @@ for an agent what that agent's permissions denied: take it to the owner.
 - A replacement is never started by the session it replaces. An agent's replacement is started
   by the coordinator; a coordinator's by the old coordinator (then detached) or by the owner
   from the sidebar.
+- Reports go by name, so a name belongs to one live session. Before a replacement takes it,
+  rename the old session "<name> (old)" or archive it. A coordinator names itself
+  "Coordinator: <project>" when it registers (`coordinator-register.md`).
 - A session the starter could not detach detaches itself (`detach_session` with `self`); if
   that is refused too, ask the owner to drag it to the top level.
 - After merging a PR, unbind it from your session (`mcp__ccd_pr__unbind_pr`): the app archives a

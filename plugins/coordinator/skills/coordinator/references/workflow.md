@@ -101,15 +101,18 @@ After a release, clear the unit's verification debt items that the release cover
 - **Hard threshold** (default 400k, or 75% of the model's window if lower): it stops at the
   next safe point (commit, push), writes a full handover (done, left in order, decisions,
   commands to re-run, traps) and reports "blocked: rotate". No new step.
-- Then a fresh session with the same name starts from that note, started by the coordinator
-  (never by the session it replaces) and detached to the top level. Archive the old session;
+- Then a fresh session with the same name starts from that note. It is never started by the
+  session it replaces: the coordinator starts it and detaches it to the top level. The old
+  session is renamed "<name> (old)" or archived before the new one takes the name. Archive the old session;
   never message it again.
 - `per-issue` sessions write no handover file: at soft they just finish the issue; at hard
   they write done, left, commands to re-run and traps into the PR (or the issue if there is no
   PR yet), and the next session for that issue starts from it.
 - Coordinator: procedure `handover.md`, then a fresh session, started by the old coordinator
-  and detached or started by the owner from the sidebar, reads `coordination/README.md`,
-  registers and sends every live agent one message with its name.
+  and detached or started by the owner from the sidebar, reads `coordination/README.md` and
+  registers: it takes the name "Coordinator: <project>" only after the old coordinator is
+  renamed "Coordinator: <project> (old)" or archived, then sends every live agent one message
+  with its name.
 - Usage limit: every agent stops at once. The ledger says who was doing what. After the
   reset, continue each standing agent with one message; start per-issue agents again from
   their issue.

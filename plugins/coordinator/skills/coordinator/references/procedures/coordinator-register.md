@@ -23,9 +23,14 @@ Register this session as coordinator. Input: the ledger folder and, optionally, 
    that started it, detach yourself (`mcp__ccd_session_mgmt__detach_session` with `self`), or
    ask the owner to drag it out. Unbind any PR bound to this session that is already merged
    (`mcp__ccd_pr__unbind_pr`).
-5. Taking over from another coordinator: send every live agent one message, "Coordinator is
+5. Name this session "Coordinator: <project>" (`mcp__ccd_session_mgmt__set_session_title`
+   with `self`), then check with `mcp__ccd_session_mgmt__list_sessions` that it is the only
+   live session with that name. Another one (an old coordinator) must be renamed
+   "Coordinator: <project> (old)" or archived first; agents report by name, and a report to
+   the wrong session is lost. This step also runs at the end of `kickoff` and `adopt`.
+6. Taking over from another coordinator: send every live agent one message, "Coordinator is
    now the session 'Coordinator: <project>'; report to it by message." Nothing else in it.
-6. Give the owner a status in at most 8 lines (as the `status` procedure would).
+7. Give the owner a status in at most 8 lines (as the `status` procedure would).
 
 To stop being coordinator:
 `bash "<plugin>/scripts/register.sh" --unregister "<session>"`.

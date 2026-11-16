@@ -31,7 +31,9 @@ handover carries only what is in flight; see `references/state-files.md`.
    never started by the session it replaces: an agent's replacement is started by the
    coordinator; a coordinator's by the old coordinator, or by the owner from the sidebar. The
    starter detaches it to the top level right away (`mcp__ccd_session_mgmt__detach_session`);
-   if that is refused, the new session detaches itself (`self`) or the owner drags it out. A
-   fresh coordinator then follows the `coordinator-register` procedure. Before archiving the
-   old coordinator, unbind every PR from it and check that no session still nests under it.
-   Archive the old session after the new one has started; never message it again.
+   if that is refused, the new session detaches itself (`self`) or the owner drags it out.
+   Reports go by name, so two sessions must never share it: before the new session takes the
+   name, rename the old one "<name> (old)" (`mcp__ccd_session_mgmt__set_session_title`) or
+   archive it. Before archiving the old coordinator, unbind every PR from it and check that no
+   session still nests under it. A fresh coordinator then follows the `coordinator-register`
+   procedure. Archive the old session after the new one has started; never message it again.
