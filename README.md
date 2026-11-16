@@ -183,7 +183,9 @@ bash tests/check-context-test.sh   # ok / SOFT / HARD levels, thresholds from en
 - **0.5.0**: all sessions are top-level peers. Whoever starts a session detaches it to the
   top level right away; a replacement is never started by the session it replaces. Agents
   report by message to "Coordinator: <project>" (PR ready, blocked, handover written), and a
-  new coordinator tells every live agent its name. The coordinator unbinds a PR from its
+  new coordinator tells every live agent its name. A coordinator names itself "Coordinator:
+  <project>" at registration, and an old session is renamed "(old)" or archived before its
+  replacement takes the name. The coordinator unbinds a PR from its
   session after merging it, so the PR's close does not auto-archive it. Structure test for
   these rules; pitfalls for nested chains and the merging coordinator's auto-archive.
 - **0.4.0**: two context thresholds instead of one. Soft (default 250k): finish the current
