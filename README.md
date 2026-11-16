@@ -145,7 +145,7 @@ id and must register again.
 | `ledger-lint.sh [dir]` | see above; budgets in the environment or in `<dir>/.ledger-lint` |
 | `install-guards.sh`, `pre-push-guard.sh` | see above |
 | `register.sh <session> <ledger> [unit...] [--allow glob]... [--allow-none] [--no-guard]` | register or `--unregister` a coordinator session |
-| `check-context.sh [session...]` | context size per session from its transcript; flags the rotation threshold (`ROTATE_AT`, default 250000) |
+| `check-context.sh [--soft N] [--hard N] [--window N] [session...]` | context size per session from its transcript, with a level: `ok`, `SOFT` (finish the current issue, then rotate; default 250k) or `HARD` (rotate now; default 400k, capped at 75% of the context window). Also `SOFT_AT`, `HARD_AT`, `CONTEXT_WINDOW` |
 | `bootstrap.sh <owner/repo> <dir> ...` | the single-repo SaaS starting point: repo from a template (default `hoanghuynh296/agent-project-template`, which is private: pass `--template <your repo>`), placeholders, `develop`, labels, ledger, branch protection. `--ledger-only` creates just the ledger; `--dry-run` prints every action |
 
 ## Layout
@@ -163,7 +163,7 @@ plugins/coordinator/
   agents/{reviewer,oneoff-builder}.md
   hooks/hooks.json, hooks/{lib,coordinator-guard,session-start}.sh
   scripts/{init-ledger,ledger-lint,install-guards,pre-push-guard,register,check-context,bootstrap}.sh
-tests/{hooks,ledger-lint,pre-push-guard,structure,bootstrap,exec-bits}-test.sh
+tests/{hooks,ledger-lint,pre-push-guard,structure,bootstrap,exec-bits,check-context}-test.sh
 ```
 
 ## Tests
@@ -175,6 +175,7 @@ bash tests/pre-push-guard-test.sh  # merged, closed and open PRs with a fake gh;
 bash tests/bootstrap-test.sh [template-dir]   # full bootstrap against local bare repos and a fake gh
 bash tests/structure-test.sh       # commands, procedures and the skill agree; listing text fits the cap
 bash tests/exec-bits-test.sh       # every plugin *.sh is executable in git
+bash tests/check-context-test.sh   # ok / SOFT / HARD levels, thresholds from env and args, window cap
 ```
 
 ## Changes
