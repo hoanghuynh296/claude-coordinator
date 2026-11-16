@@ -15,7 +15,8 @@ handover carries only what is in flight; see `references/state-files.md`.
    its work, (b) move what it learned about the code into the unit's docs (in its open PR or a
    small docs PR), (c) write `coordination/handover/<unit>.md` in the ledger repo from
    `references/templates/handover.md` (at `HARD` fill every section: done, left in order,
-   decisions, commands to re-run, traps), commit and push, (d) reply with the file path. Do not
+   decisions, commands to re-run, traps), commit and push, (d) report "handover written" with
+   the file path, by message to "Coordinator: <project>". Do not
    write it for the agent. `per-issue` sessions write no handover file: at `SOFT` they just finish the issue; at `HARD`
    they write done, left, commands to re-run and traps into the PR (or the issue if there is
    no PR yet), which the next session starts from.
@@ -26,6 +27,11 @@ handover carries only what is in flight; see `references/state-files.md`.
    `coordination/memory/` from your memory folder (paths relative to the workspace; no home
    paths). Lint, commit and push the ledger.
 4. Propose the replacement to the owner in at most 4 lines: a fresh session with the same
-   name, first prompt "Read `coordination/README.md` in <ledger> and continue as <role>". A
-   fresh coordinator then follows the `coordinator-register` procedure. Archive the old session
-   after the new one has started; never message it again.
+   name, first prompt "Read `coordination/README.md` in <ledger> and continue as <role>". It is
+   never started by the session it replaces: an agent's replacement is started by the
+   coordinator; a coordinator's by the old coordinator, or by the owner from the sidebar. The
+   starter detaches it to the top level right away (`mcp__ccd_session_mgmt__detach_session`);
+   if that is refused, the new session detaches itself (`self`) or the owner drags it out. A
+   fresh coordinator then follows the `coordinator-register` procedure. Before archiving the
+   old coordinator, unbind every PR from it and check that no session still nests under it.
+   Archive the old session after the new one has started; never message it again.

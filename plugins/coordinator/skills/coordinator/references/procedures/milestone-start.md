@@ -20,7 +20,10 @@ Start the named milestone or stretch of work. Reread `references/pitfalls.md`.
    - `standing` units without a session, and `per-issue` units: start a fresh session, named
      per the profile, with the model and effort from the profile, background from
      `references/templates/unit-brief.md` (plus `platform-brief.md` / `qa-brief.md`), prompt =
-     the issue links.
+     the issue links. Start each in its own worktree and detach it to the top level right away
+     (`mcp__ccd_session_mgmt__detach_session`); if that is refused, the brief tells the agent
+     to detach itself, and otherwise ask the owner to drag it out. The brief names
+     "Coordinator: <project>" as the session it reports to by message.
    - Cannot start sessions (owner on Remote Control, or the tool is unavailable): launch the
      same briefs as background subagents with their own worktree; convert to sessions when the
      owner is back at the desktop.
