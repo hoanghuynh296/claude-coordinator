@@ -39,53 +39,66 @@ Read before starting a stretch of work. Each entry: what went wrong, then the fi
     setting) and install the pre-push guard (`install-guards.sh`).
 11. **Stacked PRs merged into their base lose work.** → Retarget a stacked PR to the
     integration branch before merging its base.
-12. **Shared-file conflicts.** Several tickets each touched CI or the build file; every merge
+12. **Stacked PRs got no CI.** The workflow ran only for PRs into the integration branch, so a
+    PR stacked on another branch merged with no checks at all. → Merge stacks bottom-up; retarget
+    each PR to the integration branch (CI then runs) before merging it.
+13. **Shared-file conflicts.** Several tickets each touched CI or the build file; every merge
     conflicted. → A Platform unit owns shared and root files (switch the role on when this
     starts to happen).
-13. **A release without a tag.** A release workflow tagged only PRs from `release/*`; a PR
+14. **A release without a tag.** A release workflow tagged only PRs from `release/*`; a PR
     from the integration branch straight to main merged untagged. → The profile states exactly
     what a release is; `milestone-close` follows the profile, not habit.
 
 ## Verification
 
-14. **"CI green" covered less than it sounded.** CI ran one language's unit tests; the web
+15. **"CI green" covered less than it sounded.** CI ran one language's unit tests; the web
     checks and the engine tests ran only locally. → The profile's gate names the exact
     commands; the review checks the evidence for each, and says `UNVERIFIED` for the rest.
-15. **The Reviewer catches what tests miss.** It found two high-severity auth bugs that CI and
+16. **The Reviewer catches what tests miss.** It found two high-severity auth bugs that CI and
     the author's 53 tests missed. → The profile lists the risk areas where it is mandatory.
-16. **Unverified claims piling up.** "JSON shape unverified", "not checked on real hardware"
+17. **Unverified claims piling up.** "JSON shape unverified", "not checked on real hardware"
     sat in notes for days. → A verification debt list in `ROADMAP.md`, cleared at release.
-17. **An output difference that was not a bug.** Two days went into a mismatch that came from
+18. **An output difference that was not a bug.** Two days went into a mismatch that came from
     the engine seeding a random generator. → Before debugging a difference, compare the
     reference against itself.
 
 ## Sessions and tokens
 
-18. **Messages that wake sessions.** Every cross-session message makes the receiver re-read
+19. **Messages that wake sessions.** Every cross-session message makes the receiver re-read
     its whole context. Idle notices and acks multiplied turns. → No acks, no pings, no idle
     subscriptions; one batched message per agent per round.
-19. **Sessions cannot be started from Remote Control**, and only in a turn the owner started.
+20. **Sessions cannot be started from Remote Control**, and only in a turn the owner started.
     → Start every session a stretch needs in one owner turn; otherwise fall back to background
     subagents with the same brief.
-20. **Usage limits stop every agent at once.** → The ledger always says who is doing what;
+21. **Usage limits stop every agent at once.** → The ledger always says who is doing what;
     after the reset, continue standing agents with one message each.
-21. **Unpushed worktrees get cleaned up.** A worktree with no pushed commits was removed
+22. **Unpushed worktrees get cleaned up.** A worktree with no pushed commits was removed
     during a pause and its work was lost. → Every brief: commit after each step, push after
     the first commit and after every commit.
-22. **A standing agent with nothing to do.** One unit's agent was idle most of the time, yet
+23. **A standing agent with nothing to do.** One unit's agent was idle most of the time, yet
     kept a long context that was re-read at every message. → `per-issue` mode for units with
     intermittent work.
-23. **Messaging an archived session** makes it resume with its full old context. → Archive
+24. **Messaging an archived session** makes it resume with its full old context. → Archive
     after rotation; never message it again.
-24. **Permission laundering.** An agent was denied an action and the coordinator did it
+25. **Permission laundering.** An agent was denied an action and the coordinator did it
     instead. → What one session's permissions deny goes to the owner, not to another session.
+26. **One threshold stopped agents mid-task.** At 250k a session had to hand over at once, even
+    halfway through an issue; the fresh session then re-read everything, which cost more than
+    it saved. → Two thresholds: soft (finish the current issue, take no new one, then
+    rotate) and hard (stop at the next safe point and rotate). `check-context.sh` reports both.
+27. **Handover after merge came too late.** An agent's last PR merged, the app auto-archived the
+    session, and what it knew was lost before it wrote a handover. → The handover is written
+    before the session's last PR merges.
+28. **Subagents inherit the coordinator's edit guard.** A coordinator gave writing work to a
+    subagent; the guard denied its edits too. → One-off work that writes files runs as its own session,
+    not as a subagent of the coordinator.
 
 ## Tooling
 
-25. **`ubuntu-latest` moved** and broke a pinned tool. → Pin runner images and tool versions.
-26. **Branch protection on private repos** needs a paid GitHub plan. → On GitHub's 403 the
+29. **`ubuntu-latest` moved** and broke a pinned tool. → Pin runner images and tool versions.
+30. **Branch protection on private repos** needs a paid GitHub plan. → On GitHub's 403 the
     bootstrap script warns and continues; record the owner's choice in `DECISIONS.md`.
-27. **Scripts lose their exec bit** when a tool rewrites them. → Commands call scripts with
+31. **Scripts lose their exec bit** when a tool rewrites them. → Commands call scripts with
     `bash <path>`; `tests/exec-bits-test.sh` checks the mode in git.
-28. **Template placeholders left behind** in CI files matched nothing. → The bootstrap script
+32. **Template placeholders left behind** in CI files matched nothing. → The bootstrap script
     fails while any placeholder remains.
