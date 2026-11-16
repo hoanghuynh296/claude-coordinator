@@ -92,8 +92,22 @@ for f in SKILL.md references/workflow.md references/procedures/review-merge.md \
          references/procedures/coordinator-register.md; do
   has "$f" 'unbind_pr' && ok "$f says to unbind a merged PR" || bad "$f does not name unbind_pr"
 done
-has SKILL.md 'never started by the session it replaces' && ok "SKILL.md: a replacement is not started by the session it replaces" \
-  || bad "SKILL.md lacks the replacement-starter rule"
+for f in SKILL.md references/workflow.md references/procedures/handover.md; do
+  has "$f" 'never started by the session it replaces' && ok "$f: a replacement is not started by the session it replaces" \
+    || bad "$f lacks the replacement-starter rule"
+  has "$f" '(old)' && ok "$f: the old session gives up its name before the replacement takes it" \
+    || bad "$f does not rename the old session \"<name> (old)\""
+done
+has references/procedures/coordinator-register.md 'set_session_title' \
+  && has references/procedures/coordinator-register.md 'only live session with that name' \
+  && ok "coordinator-register names the session and checks the name is unique" \
+  || bad "coordinator-register does not set and check the name \"Coordinator: <project>\""
+for f in kickoff adopt; do
+  grep -q 'coordinator-register' "$skill/references/procedures/$f.md" && ok "$f reaches the naming step through coordinator-register" \
+    || bad "$f does not follow coordinator-register"
+done
+has references/templates/unit-brief.md 'final answer is the report' && ok "unit-brief gives the subagent fallback's report" \
+  || bad "unit-brief lacks the subagent exception"
 has references/templates/unit-brief.md 'handover written' && ok "unit-brief reports \"handover written\"" \
   || bad "unit-brief does not report \"handover written\""
 has references/pitfalls.md 'Nested chains on rotation' && has references/pitfalls.md 'archived with its PR' \
