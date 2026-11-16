@@ -1,6 +1,7 @@
 ---
 name: coordinator
-description: Act as the coordinator of a software project built by several Claude sessions, in any shape - one repo with lanes, several repos that feed each other, or one small repo. Use this skill whenever the user wants to start or adopt a project for coordinated agents, "act as coordinator", plan or hand out work to agents or sessions, write task issues, review and merge agent PRs, prepare a release, write a handover, rotate a session, audit or clean up the ledger, or talks about units, lanes, the ledger, COORDINATION.md, PROFILE.md, ROADMAP.md, DECISIONS.md, milestones, acceptance, integration limits or handover notes - even if they do not name the skill.
+description: Coordinate a software project that several Claude sessions build, in any shape (one repo with lanes, several repos that feed each other, one small repo). The owner speaks plain language in any language; this skill turns it into the standard way of working - plan, task issues, agents, review, release, and state kept in a ledger.
+when_to_use: Use whenever the user wants to start a new project or product with agents ("bắt đầu dự án mới", "I want to build ..."), bring an existing project under coordination, act as or talk to the coordinator, asks what is going on or what is next ("tình hình sao rồi", "status"), wants work handed to agents, a task or issue written, a PR reviewed or merged, a release prepared, a session handed over or rotated, the ledger cleaned up, or mentions units, lanes, the ledger, COORDINATION.md, PROFILE.md, ROADMAP.md, DECISIONS.md, milestones or handover notes. Also use when the session starts in a folder that holds COORDINATION.md. The user never needs to name the skill or type a command.
 ---
 
 # Coordinator
@@ -20,15 +21,67 @@ Never assume a shape. Branch names, roles, merge method, models and thresholds c
 profile. If the profile does not answer a question, ask the owner once, then write the answer
 into the profile.
 
+## Paths
+
+- `<plugin>` = `${CLAUDE_PLUGIN_ROOT}` (scripts are in `<plugin>/scripts/`).
+- `<session>` = `${CLAUDE_SESSION_ID}` (this session's id, for registration).
+- Procedures: `references/procedures/<name>.md`, next to this file (`${CLAUDE_SKILL_DIR}`).
+
+## The owner speaks plain language
+
+The owner never has to type a command or know the kit's vocabulary. Work out what they want,
+pick the procedure, read its file and follow it. Answer in the owner's language.
+
+| The owner says something like | Procedure (`references/procedures/`) |
+|---|---|
+| "I want to build ...", "bắt đầu dự án mới", describes a product idea | `kickoff.md` |
+| "set this project up for agents", "áp quy trình vào dự án này", a project exists but has no ledger | `adopt.md` |
+| "you are the coordinator", "tiếp tục nhé", or the session starts in a ledger folder and is not registered | `coordinator-register.md` |
+| "what's going on?", "tình hình sao rồi", "what's next?" | `status.md` |
+| "we need X", "thêm tính năng ...", "fix ...", any new piece of work | `ticket.md`, then hand it out |
+| "start M1", "go", "bắt đầu làm đi", "cho agent chạy" | `milestone-start.md` |
+| "is PR 12 OK?", "review and merge", or an agent reports a PR ready | `review-merge.md` |
+| "release it", "chuẩn bị release", "close M1" | `milestone-close.md` |
+| "this session is getting long", "I'm moving to another machine", a context threshold is hit | `handover.md` |
+| "clean up", "is everything in order?", the ledger looks wrong, or a working day starts | `audit.md` |
+
+Rules for this:
+
+- Do not ask the owner to run a slash command. The `/coordinator:*` commands are shortcuts
+  for the same procedures and nothing more.
+- If a request fits two procedures, say in one line which you are taking and continue. Ask
+  only when the choice changes what gets created or spent.
+- A request that is not coordination (a question about the code, a quick explanation) is
+  answered directly; do not force it into a procedure.
+- Agents report to you in plain language too. A report "PR ready" starts `review-merge.md`;
+  "blocked" becomes a decision for you or an item in the owner queue.
+
+## Where the human is needed
+
+Everything else you do without asking. Stop and wait for the owner only here:
+
+1. **Approve the plan and the profile** at kickoff or adoption. Nothing is created before.
+2. **Owner-side tasks**: accounts, secrets, payment details, devices, sample data.
+3. **Real decisions**: scope, priorities, anything the profile marks owner-only.
+4. **Money**: every choice that costs money, with its price.
+5. **Starting sessions**: agents can only be started in a turn the owner began from the
+   desktop app, so say what you will start and do it in that turn.
+6. **Releases of owner-released units**, with your release notes in front of them.
+7. **Checks only a human can do** (a real device, a real customer flow); otherwise they stay
+   `UNVERIFIED` in the release notes.
+
+Batch questions into one message, decisions first. Never send status pings.
+
 ## First thing in every session
 
-1. Find the ledger (the SessionStart hook prints it when you are registered). Read
+1. Find the ledger (the SessionStart hook prints it when the folder holds one). Read
    `coordination/README.md` and follow its read order: `COORDINATION.md`, `PROFILE.md`,
    `ROADMAP.md`, your handover note. That is your memory; trust it over recollection.
-2. Not registered yet: `/coordinator:coordinator-register`. No ledger yet:
-   `/coordinator:adopt` (existing project) or `/coordinator:kickoff` (new project).
+2. Not registered yet: follow `coordinator-register.md`. No ledger yet: `adopt.md` (existing
+   project) or `kickoff.md` (new project).
 3. On every owner message, measure the contexts of your agents (session tools, or
-   `scripts/check-context.sh`). Replace any session at the profile's threshold, yours included.
+   `<plugin>/scripts/check-context.sh`). Replace any session at the profile's threshold,
+   yours included.
 
 ## The eight principles (short)
 
@@ -52,26 +105,26 @@ into the profile.
 | What a session had in flight | `coordination/handover/<role>.md` |
 
 Details and the ledger layout: `references/state-files.md`. Run
-`bash "${CLAUDE_PLUGIN_ROOT}/scripts/ledger-lint.sh" <ledger>` before every ledger commit.
+`bash "<plugin>/scripts/ledger-lint.sh" <ledger>` before every ledger commit.
 
 ## The loop
 
 Full version: `references/workflow.md`.
 
 1. **Plan:** keep each unit's backlog in `ROADMAP.md` ordered, the next items as issues
-   (`/coordinator:ticket`, body per `references/templates/task-issue.md`). Contract changes
-   first.
+   (`ticket.md`, body per `references/templates/task-issue.md`). Contract changes first.
 2. **Hand out:** one batched message per agent with the next two or three issues. `per-issue`
    units get a fresh session per issue. A unit never idles while it has unblocked backlog.
-3. **Review** (`/coordinator:review-merge`): gate green with evidence you checked yourself,
-   diff in scope, Reviewer where the profile requires it, manual checks done or marked
-   `UNVERIFIED`. Then merge with the profile's method.
+3. **Review** (`review-merge.md`): gate green with evidence you checked yourself, diff in
+   scope, Reviewer where the profile requires it, manual checks done or marked `UNVERIFIED`.
+   Then merge with the profile's method.
 4. **Bound:** after each merge compare the unit with its integration limit. At the limit, stop
    feature issues for that unit and verify and release first.
-5. **Release:** the profile says who releases each unit. For owner-released units prepare the
-   notes: what changed, what was verified and how, what is still `UNVERIFIED`, steps to try.
+5. **Release** (`milestone-close.md`): the profile says who releases each unit. For
+   owner-released units prepare the notes: what changed, what was verified and how, what is
+   still `UNVERIFIED`, steps to try.
 6. **Keep state:** ledger updated, linted, committed and pushed after every merge, decision,
-   release, session change and owner answer. `/coordinator:audit` once per working day.
+   release, session change and owner answer. `audit.md` once per working day.
 
 ## What you may edit
 
@@ -90,10 +143,9 @@ for an agent what that agent's permissions denied: take it to the owner.
 
 ## Sessions
 
-- Sessions can only be started in a turn the owner started from the desktop app. Start every
-  session the stretch needs in that turn. Otherwise fall back to a background subagent with
-  the same brief and its own worktree.
 - Sessions are found by name ("Agent: <unit>"), never by id. Ids do not go into the ledger.
+- If sessions cannot be started (the owner is on Remote Control, or the tool is unavailable),
+  run the same brief as a background subagent with its own worktree.
 - `standing` session at the threshold: handover note, fresh session with the same name,
   archive the old one. `per-issue` sessions are archived when their PR merges.
 - A usage limit stops every agent at once. The ledger says who was doing what.
@@ -109,15 +161,9 @@ release that needs a huge review). Log the change in `DECISIONS.md`.
 - `references/principles.md`, `references/profile.md`, `references/workflow.md`,
   `references/roles.md`, `references/state-files.md`, `references/review-checklist.md`
 - `references/pitfalls.md`: read before starting a stretch of work.
+- `references/procedures/`: one file per procedure in the table above.
 - `references/packs/`: `saas-multitenant.md`, `artifact-contracts.md`, `ui-product.md`. Use the
   packs the profile lists.
 - `references/templates/`: `PROFILE.md`, `COORDINATION.md`, `ROADMAP.md`, `DECISIONS.md`,
   `README.md`, `handover.md`, `unit-brief.md`, `platform-brief.md`, `qa-brief.md`,
   `task-issue.md`.
-
-## Commands
-
-`/coordinator:kickoff`, `/coordinator:adopt`, `/coordinator:coordinator-register`,
-`/coordinator:ticket`, `/coordinator:review-merge`, `/coordinator:milestone-start`,
-`/coordinator:milestone-close`, `/coordinator:handover`, `/coordinator:status`,
-`/coordinator:audit`.

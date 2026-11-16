@@ -32,27 +32,56 @@ knowledge base, a library) are in the skill's `references/profile.md`.
 /plugin install coordinator@coordinator-marketplace
 ```
 
-The repo is private: your `gh` and git credentials must have access. Restart the session (or
-run `/reload-plugins`) after installing. Requirements: `gh` (authenticated), `git`, `python3`;
-`jq` is used when present.
+Or from a shell: `claude plugin marketplace add hoanghuynh296/claude-coordinator`, then
+`claude plugin install coordinator@coordinator-marketplace`. Restart the session (or run
+`/reload-plugins`) after installing. Requirements: `gh` (authenticated for your own repos),
+`git`, `python3`; `jq` is used when present.
 
-## New project: the owner's steps
+## For the owner: you only talk
 
-1. Open a session in the desktop app in an empty working folder; name it "Coordinator: <project>".
-2. Run `/coordinator:kickoff` and answer its questions in one reply.
-3. Read the draft plan and the draft profile. Approve or ask for changes. Nothing is created
-   before you approve.
-4. The coordinator creates the ledger, the repos the profile lists, labels and guards, and
-   registers itself.
-5. Do the owner-side tasks it lists (accounts, secrets, billing).
-6. Say "start" from the desktop app: sessions can only be started from your own message.
-7. From then on: answer decisions when asked, and release the units your profile gives you.
+You never have to type a command or learn the kit's words. Say what you want in your own
+language; the coordinator session picks the procedure and follows the standard.
 
-## Existing project
+### Starting
 
-Run `/coordinator:adopt`. The coordinator reads how the project works today, proposes a
-profile that matches it plus the changes it recommends, waits for your approval, then creates
-the ledger or migrates an existing one into the standard layout.
+| Situation | What you do | What you say (examples) |
+|---|---|---|
+| A new project | Open a session in the desktop app in an empty folder | "I want to build ...", "Mình muốn làm một app ..." |
+| A project that already exists | Open a session in its folder | "Set this project up so agents can work on it", "Áp quy trình coordinator vào dự án này" |
+| A project already under the kit | Open a session in its ledger folder | Anything: "tình hình sao rồi?", "what's next?" The session recognises the ledger by itself |
+
+For a new project the coordinator asks five questions in one message (the product, its
+shape, stack and limits, the first stretch of work, your working rules), then shows you a
+draft plan and a draft profile. Nothing is created until you approve them.
+
+### While the project runs
+
+| You say | The coordinator does |
+|---|---|
+| "We need X", "thêm tính năng ...", "fix ..." | writes a task issue with acceptance criteria and queues it for the right unit |
+| "Go", "bắt đầu làm đi" | starts or briefs the agents for the next stretch of work |
+| "What's going on?" | status in at most ten lines, your decisions first |
+| "Is it good? Merge it" | reviews with evidence, runs the independent Reviewer where the profile requires it, merges |
+| "Release it", "chuẩn bị release" | verifies, writes release notes, releases, or hands the release to you |
+| "I'm switching machines", "this chat is long" | writes the handover so a fresh session can continue |
+| "Is everything in order?" | audits the ledger against GitHub and fixes drift |
+
+### Where you are needed
+
+Everything else runs without you. The coordinator stops and waits only for:
+
+1. **Approving the plan and the profile** at the start.
+2. **Owner-side tasks**: accounts, secrets, payment details, devices, sample data.
+3. **Real decisions**: scope, priorities, anything your profile marks as yours.
+4. **Money**: every choice that costs money, with its price.
+5. **Starting agent sessions**: they can only be started in a turn you began from the
+   desktop app, so the coordinator asks you to say "go" there.
+6. **Releases of the units your profile gives you**, with the release notes in front of you.
+7. **Checks only a human can do** (a real device, a real customer flow). Skipped ones are
+   listed as `UNVERIFIED` in the release notes.
+
+Questions arrive batched in one message. You get no status pings; silence means work is
+going on, and "what's going on?" always gets an answer.
 
 ## The ledger
 
@@ -73,7 +102,10 @@ Each kind of fact has one home. History is git and merged PRs, never the ledger.
 multi-repo project the ledger repo is the workspace root and unit repos sit in `products/`
 (git-ignored); in a single-repo project it is a sibling folder `<repo>-coordination`.
 
-## Commands
+## Commands (optional shortcuts)
+
+Each command runs the same procedure the skill picks from plain language
+(`skills/coordinator/references/procedures/`).
 
 | Command | What it does |
 |---|---|
@@ -114,7 +146,7 @@ id and must register again.
 | `install-guards.sh`, `pre-push-guard.sh` | see above |
 | `register.sh <session> <ledger> [unit...] [--allow glob]... [--allow-none] [--no-guard]` | register or `--unregister` a coordinator session |
 | `check-context.sh [session...]` | context size per session from its transcript; flags the rotation threshold (`ROTATE_AT`, default 250000) |
-| `bootstrap.sh <owner/repo> <dir> ...` | the single-repo SaaS starting point: repo from `hoanghuynh296/agent-project-template`, placeholders, `develop`, labels, ledger, branch protection. `--ledger-only` creates just the ledger; `--dry-run` prints every action |
+| `bootstrap.sh <owner/repo> <dir> ...` | the single-repo SaaS starting point: repo from a template (default `hoanghuynh296/agent-project-template`, which is private: pass `--template <your repo>`), placeholders, `develop`, labels, ledger, branch protection. `--ledger-only` creates just the ledger; `--dry-run` prints every action |
 
 ## Layout
 
@@ -124,13 +156,14 @@ plugins/coordinator/
   .claude-plugin/plugin.json
   skills/coordinator/SKILL.md
   skills/coordinator/references/{principles,profile,workflow,roles,state-files,review-checklist,pitfalls}.md
+  skills/coordinator/references/procedures/*.md            (one per command; the skill routes to them)
   skills/coordinator/references/packs/{saas-multitenant,artifact-contracts,ui-product}.md
   skills/coordinator/references/templates/*.md
   commands/*.md
   agents/{reviewer,oneoff-builder}.md
   hooks/hooks.json, hooks/{lib,coordinator-guard,session-start}.sh
   scripts/{init-ledger,ledger-lint,install-guards,pre-push-guard,register,check-context,bootstrap}.sh
-tests/{hooks,ledger-lint,pre-push-guard,bootstrap,exec-bits}-test.sh
+tests/{hooks,ledger-lint,pre-push-guard,structure,bootstrap,exec-bits}-test.sh
 ```
 
 ## Tests
@@ -140,11 +173,15 @@ bash tests/hooks-test.sh           # edit guard and SessionStart, jq and python3
 bash tests/ledger-lint-test.sh     # every lint rule; a fresh ledger passes
 bash tests/pre-push-guard-test.sh  # merged, closed and open PRs with a fake gh; install-guards
 bash tests/bootstrap-test.sh [template-dir]   # full bootstrap against local bare repos and a fake gh
+bash tests/structure-test.sh       # commands, procedures and the skill agree; listing text fits the cap
 bash tests/exec-bits-test.sh       # every plugin *.sh is executable in git
 ```
 
 ## Changes
 
+- **0.3.0**: plain language first. Procedures live in the skill; commands are shortcuts. The
+  skill routes what the owner says to a procedure and lists the points where a human is
+  needed. SessionStart recognises a ledger folder and a unit checkout without registration.
 - **0.2.0**: core principles plus a per-project profile replace the fixed "lanes + Platform +
   QA" shape, which is now one starting point with its rules in the `saas-multitenant` pack.
   Standard ledger layout with one home per fact; `adopt` and `audit` commands; ledger lint;

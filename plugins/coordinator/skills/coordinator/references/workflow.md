@@ -5,24 +5,24 @@ The lifecycle below is the same for every project. Where a step says "per the pr
 
 ## 1. Start
 
-**New project** (`/coordinator:kickoff`): interview the owner in one message, draft the plan
+**New project** (procedure `kickoff.md`): interview the owner in one message, draft the plan
 and the profile, stop for approval, then create the ledger and whatever the profile needs
 (repos, branches, labels, guards). Nothing is created before the owner approves.
 
-**Existing project** (`/coordinator:adopt`): read what is there (repos, branches, CI, open
+**Existing project** (procedure `adopt.md`): read what is there (repos, branches, CI, open
 issues and PRs, any existing notes), propose a profile that matches how the project already
 works, stop for approval, then create or migrate the ledger. Adoption changes how work is
 tracked, not the product.
 
-Either way, finish by registering the session (`/coordinator:coordinator-register`) and
-running `/coordinator:audit` once.
+Either way, finish by registering the session (procedure `coordinator-register.md`) and
+running procedure `audit.md` once.
 
 ## 2. Plan the next stretch
 
-- `milestone` cadence: `/coordinator:milestone-start <Mn>` turns the milestone's content and
+- `milestone` cadence: procedure `milestone-start.md` turns the milestone's content and
   exit criteria into issues, contract first.
 - `continuous` cadence: keep each unit's list in `ROADMAP.md` ordered, with at least the next
-  two items as issues (`/coordinator:ticket`).
+  two items as issues (procedure `ticket.md`).
 
 Every issue has: goal, unit, acceptance criteria, the checks that prove it, what is out of
 scope, and what it depends on. An issue that changes a contract between units is done before
@@ -48,7 +48,7 @@ and after every commit → PR that closes the issue → keep the unit's gate gre
 "PR ready, gate green" (with the evidence: run id or command output) or "blocked / decision
 needed". Before every push the agent checks that the branch's PR is not already merged.
 
-## 5. Review and merge (`/coordinator:review-merge`)
+## 5. Review and merge (procedure `review-merge.md`)
 
 1. Gate green, per the profile. Evidence checked by the coordinator, not taken from the report.
 2. Diff inside the unit's ownership and the issue's scope.
@@ -69,7 +69,7 @@ Who releases each unit is in the profile.
   release per the profile (release PR, tag, published artifact). Record it in the ledger.
 - **Owner-released units:** prepare the release: what changed in plain words, what was
   verified and how, what is still `UNVERIFIED`, steps for the owner to try. The owner decides.
-- `milestone` cadence adds `/coordinator:milestone-close`: QA verdict on the exit criteria,
+- `milestone` cadence adds procedure `milestone-close.md`: QA verdict on the exit criteria,
   demo steps for the owner, then the release.
 
 After a release, clear the unit's verification debt items that the release covered.
@@ -80,14 +80,14 @@ After a release, clear the unit's verification debt items that the release cover
   and owner answer.
 - Decisions: one row in `DECISIONS.md`; the bound units add their one-line entry.
 - Contexts: measure on every owner message; replace any session at the threshold.
-- `/coordinator:audit` at least once per working day and before every handover.
+- procedure `audit.md` at least once per working day and before every handover.
 
 ## 8. Rotate or stop
 
 - `standing` session at the threshold: it pushes its work, moves what it learned into the
   unit's docs, writes `handover/<unit>.md` (in flight only), then a fresh session with the
   same name starts from that note. Archive the old session; never message it again.
-- Coordinator: `/coordinator:handover`, then a fresh session reads `coordination/README.md`
+- Coordinator: procedure `handover.md`, then a fresh session reads `coordination/README.md`
   and registers.
 - Usage limit: every agent stops at once. The ledger says who was doing what. After the
   reset, continue each standing agent with one message; start per-issue agents again from

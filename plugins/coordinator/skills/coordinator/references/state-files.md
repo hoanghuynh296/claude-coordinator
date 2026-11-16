@@ -81,5 +81,5 @@ copied from somewhere else. Units in `per-issue` mode have no handover file.
 
 `scripts/ledger-lint.sh <ledger-dir>` checks what a machine can check: required files, size
 and line-length budgets, session ids and home paths, decision ids that are cited but not
-defined, a missing or old `Updated:` date. Run it before every ledger commit; `/coordinator:audit`
+defined, a missing or old `Updated:` date. Run it before every ledger commit; procedure `audit.md`
 runs it together with the checks that need judgement.

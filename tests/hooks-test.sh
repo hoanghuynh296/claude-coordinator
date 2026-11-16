@@ -89,6 +89,22 @@ echo "--- SessionStart (registered):"
 printf '{"session_id":"coord-1","hook_event_name":"SessionStart","source":"startup"}' | bash "$hooks/session-start.sh"
 echo "--- SessionStart (unregistered, expect nothing):"
 printf '{"session_id":"lane-7","hook_event_name":"SessionStart","source":"startup"}' | bash "$hooks/session-start.sh"
+ss() { printf '{"session_id":"%s","cwd":"%s","hook_event_name":"SessionStart","source":"startup"}' "$1" "$2" | bash "$hooks/session-start.sh"; }
+expect_out() { # name needle-or-EMPTY output
+  if [[ "$2" == EMPTY && -z "$3" ]] || [[ "$2" != EMPTY && "$3" == *"$2"* ]]; then pass=$((pass+1)); echo "PASS $1"
+  else failn=$((failn+1)); printf 'FAIL %s (want: %s)\n%s\n' "$1" "$2" "$3"; fi
+}
+echo "--- SessionStart hints for unregistered sessions"
+mkdir -p "$WS/coordination" "$tmp/wrap/one/coordination" "$tmp/wrap/two/coordination" "$tmp/plain/sub"
+touch "$tmp/wrap/one/COORDINATION.md"
+expect_out "ledger folder: hint with the session id" "session id new-1" "$(ss new-1 "$WS")"
+expect_out "ledger folder: names the ledger"         "$WS"              "$(ss new-1 "$WS")"
+expect_out "wrapper folder with one ledger"          "$tmp/wrap/one"    "$(ss new-2 "$tmp/wrap")"
+touch "$tmp/wrap/two/COORDINATION.md"
+expect_out "wrapper folder with two ledgers"         "several coordination ledgers" "$(ss new-2 "$tmp/wrap")"
+expect_out "unit checkout inside a workspace"        "unit of a coordinated project" "$(ss agent-1 "$WS/products/app")"
+expect_out "ordinary folder: silent"                 EMPTY              "$(ss new-3 "$tmp/plain")"
+expect_out "registered session: coordinator text"    "You are the COORDINATOR" "$(ss coord-2 "$tmp/plain")"
 echo "---"
 rm -rf "$tmp"
 echo "passed $pass, failed $failn"

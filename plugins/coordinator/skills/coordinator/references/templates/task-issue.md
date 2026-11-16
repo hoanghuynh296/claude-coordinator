@@ -1,6 +1,6 @@
 # Task issue body
 
-The body of every task issue (`/coordinator:ticket`). An agent starts from this text alone, so
+The body of every task issue (procedure `ticket.md`). An agent starts from this text alone, so
 write it for a reader who has not seen the conversation. Label: `task` plus `unit:<unit>` in a
 single-repo project; add the milestone if the cadence uses one.
 

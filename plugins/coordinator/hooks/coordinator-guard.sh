@@ -73,7 +73,7 @@ allowed_rel() {
 
 allow_text="nothing"
 [[ ${#allows[@]} -gt 0 ]] && { allow_text="$(printf '%s, ' "${allows[@]}")"; allow_text="${allow_text%, }"; }
-delegate="Delegate: write an issue for the owning unit (/coordinator:ticket), or use a one-off subagent (coordinator:oneoff-builder) that pushes its own branch and opens a PR."
+delegate="Delegate: write an issue for the owning unit (the coordinator skill's ticket procedure), or use a one-off subagent (coordinator:oneoff-builder) that pushes its own branch and opens a PR."
 
 # 1. Inside a unit: only the allowed planning files.
 if [[ ${#units[@]} -gt 0 ]]; then

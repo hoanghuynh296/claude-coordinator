@@ -11,7 +11,8 @@ Everything a coordinator session needs to continue, on this machine or another o
 5. `DECISIONS.md`: when you need to know why.
 6. `memory/*.md`: the owner's preferences; copy into this machine's Claude memory folder.
 
-Then register the session: `/coordinator:coordinator-register`.
+Then register this session as the coordinator (the `coordinator` skill, procedure
+`coordinator-register.md`). The owner only needs to say what they want in plain language.
 
 ## Units and repos
 
