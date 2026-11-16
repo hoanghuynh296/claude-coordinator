@@ -6,10 +6,12 @@
 # One line per session: "<session>  <size>k  <level>  <title>", level is
 #   ok    under the soft threshold
 #   SOFT  at or above soft (default 250k): finish the current issue, take no new one, then rotate
-#   HARD  at or above hard (default 400k, capped at 75% of --window): stop at the next safe
-#         point, write the handover, report "blocked: rotate"
-# Thresholds also come from SOFT_AT, HARD_AT and CONTEXT_WINDOW (ROTATE_AT is the old name of
-# SOFT_AT); arguments win over the environment.
+#   HARD  at or above hard (default 400k): stop at the next safe point, write the handover,
+#         report "blocked: rotate"
+# --window caps soft at 50% and hard at 75% of the model's context window (a 200k window gives
+# soft 100k, hard 150k). Thresholds also come from SOFT_AT, HARD_AT and CONTEXT_WINDOW
+# (ROTATE_AT is the old name of SOFT_AT); arguments win over the environment.
+# One set of thresholds applies to every session listed: run once per model group.
 set -euo pipefail
 
 usage() { sed -n '3,4p' "$0" | sed 's/^# //' >&2; exit 2; }
@@ -56,7 +58,7 @@ def tokens(text):
         t = t[:-1]
     try:
         n = int(float(t) * mult)
-    except ValueError:
+    except (ValueError, OverflowError):
         sys.exit(f"check-context.sh: not a token count: {text!r}")
     if n <= 0:
         sys.exit(f"check-context.sh: threshold must be positive: {text!r}")
@@ -64,7 +66,8 @@ def tokens(text):
 
 soft, hard = tokens(sys.argv[1]), tokens(sys.argv[2])
 if sys.argv[3]:
-    hard = min(hard, tokens(sys.argv[3]) * 3 // 4)
+    window = tokens(sys.argv[3])
+    soft, hard = min(soft, window // 2), min(hard, window * 3 // 4)
 if hard < soft:
     sys.exit(f"check-context.sh: hard threshold {hard} is below soft {soft}")
 for path in sys.argv[4:]:

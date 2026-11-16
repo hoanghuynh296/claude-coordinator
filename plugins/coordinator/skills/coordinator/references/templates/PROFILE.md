@@ -62,7 +62,8 @@ Everything else goes through an issue for the owning unit.
   gate green), writes its handover before that PR merges, and is replaced.
 - Context, hard: <400k, or 75% of the model's context window if lower>. Past it a session
   stops at the next safe point (commit, push), writes a full handover, reports "blocked: rotate".
-- <Per model, if they differ: e.g. Opus 1M: soft 400k, hard 700k.>
+- <Per model, if they differ: e.g. Opus 1M: soft 400k, hard 700k. A small window caps soft at
+  50% and hard at 75% of it: a 200k window gives soft 100k, hard 150k.>
 - Reports: at most <6> lines. Reviewer: at most 15 lines.
 - `COORDINATION.md`: at most <80> lines.
 - No ack-only or status-ping messages. One batched message per agent per round.

@@ -84,7 +84,8 @@ write code; then say so in the profile and register without the guard.
 
 Context thresholds for rotation, report length, model per role, ledger size budget. Defaults:
 soft 250k, hard 400k (or 75% of the model's context window, whichever is lower), reports in 6
-lines, `COORDINATION.md` at most 80 lines. Thresholds may differ per model.
+lines, `COORDINATION.md` at most 80 lines. Thresholds may differ per model. For a small
+window, soft is capped at 50% and hard at 75% of it (a 200k window: soft 100k, hard 150k).
 
 - **Soft:** do not stop mid-task. The session finishes its current issue (PR, gate green),
   takes no new one, writes its handover, and is replaced after that PR. The coordinator sends
@@ -94,7 +95,8 @@ lines, `COORDINATION.md` at most 80 lines. Thresholds may differ per model.
 - Why two: one threshold that stops a session mid-task makes the fresh session re-read
   everything, which costs more than it saves. The hard one is the safety margin.
 
-`check-context.sh --soft <n> --hard <n> [--window <n>]` reports `ok`, `SOFT` or `HARD`.
+`check-context.sh --soft <n> --hard <n> [--window <n>]` reports `ok`, `SOFT` or `HARD`. One
+run applies one set of thresholds: run it once per model group when they differ.
 
 ### 8. Owner rules
 

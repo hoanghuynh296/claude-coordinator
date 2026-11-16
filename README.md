@@ -145,7 +145,7 @@ id and must register again.
 | `ledger-lint.sh [dir]` | see above; budgets in the environment or in `<dir>/.ledger-lint` |
 | `install-guards.sh`, `pre-push-guard.sh` | see above |
 | `register.sh <session> <ledger> [unit...] [--allow glob]... [--allow-none] [--no-guard]` | register or `--unregister` a coordinator session |
-| `check-context.sh [--soft N] [--hard N] [--window N] [session...]` | context size per session from its transcript, with a level: `ok`, `SOFT` (finish the current issue, then rotate; default 250k) or `HARD` (rotate now; default 400k, capped at 75% of the context window). Also `SOFT_AT`, `HARD_AT`, `CONTEXT_WINDOW` |
+| `check-context.sh [--soft N] [--hard N] [--window N] [session...]` | context size per session from its transcript, with a level: `ok`, `SOFT` (finish the current issue, then rotate; default 250k) or `HARD` (rotate now; default 400k). `--window` caps soft at 50% and hard at 75% of the context window. Also `SOFT_AT`, `HARD_AT`, `CONTEXT_WINDOW`; one run per model group |
 | `bootstrap.sh <owner/repo> <dir> ...` | the single-repo SaaS starting point: repo from a template (default `hoanghuynh296/agent-project-template`, which is private: pass `--template <your repo>`), placeholders, `develop`, labels, ledger, branch protection. `--ledger-only` creates just the ledger; `--dry-run` prints every action |
 
 ## Layout
@@ -184,7 +184,8 @@ bash tests/check-context-test.sh   # ok / SOFT / HARD levels, thresholds from en
   issue, take no new one, then rotate. Hard (default 400k, or 75% of the model's window):
   stop at the next safe point and rotate. The handover is written before the session's last
   PR merges. `check-context.sh` reports `ok` / `SOFT` / `HARD` (was `ok` / `ROTATE`) and
-  takes `--soft`, `--hard`, `--window`. Pitfalls for subagents and the edit guard, and for
+  takes `--soft`, `--hard`, `--window` (a small window caps soft at 50%, hard at 75%).
+  `per-issue` sessions write no handover file; at hard they write it into the PR. Pitfalls for subagents and the edit guard, and for
   stacked PRs without CI.
 - **0.3.0**: plain language first. Procedures live in the skill; commands are shortcuts. The
   skill routes what the owner says to a procedure and lists the points where a human is

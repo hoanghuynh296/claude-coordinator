@@ -52,11 +52,16 @@ expect "ROTATE_AT still sets soft"   ok   " 120k  SOFT" env ROTATE_AT=100000 bas
 expect "HARD_AT from env"            ok   " 320k  HARD" env HARD_AT=300k bash "$script" s-mid
 expect "args win over env"           ok   " 320k  ok"   env SOFT_AT=100k bash "$script" --soft 330k --hard 500k s-mid
 expect "window caps hard at 75%"     ok   " 320k  HARD" bash "$script" --window 400k s-mid
+expect "200k window, default soft"   ok   " 120k  SOFT" bash "$script" --window 200k s-small
+expect "200k window caps hard too"   ok   " 250k  HARD" bash "$script" --window 200k s-soft
+transcript s-tiny 90000
+expect "200k window under soft"      ok   "  90k  ok"   env CONTEXT_WINDOW=200k bash "$script" s-tiny
 expect "window above hard changes nothing" ok " 320k  SOFT" bash "$script" --window 1m s-mid
 expect "CONTEXT_WINDOW from env"     ok   " 320k  HARD" env CONTEXT_WINDOW=400000 bash "$script" s-mid
 
 expect "hard below soft is refused"  fail "below soft" bash "$script" --soft 300k --hard 200k s-mid
 expect "bad number is refused"       fail "not a token count" bash "$script" --soft lots s-mid
+expect "inf is refused"              fail "not a token count" bash "$script" --soft inf s-mid
 expect "unknown option is refused"   fail "unknown option" bash "$script" --rotate 1 s-mid
 
 echo "$pass passed, $failn failed"
