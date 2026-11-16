@@ -73,5 +73,31 @@ for f in SKILL.md references/workflow.md references/procedures/handover.md refer
     || bad "$f does not give the per-issue handover rule (no handover file; at hard, into the PR)"
 done
 
+# Sessions are top-level peers: starters detach what they start, agents report by message to
+# the coordinator by name, and the coordinator unbinds a PR after merging it.
+has() { tr '\n' ' ' <"$skill/$1" | tr -s ' ' | grep -q -- "$2"; }
+for f in SKILL.md references/workflow.md references/procedures/milestone-start.md \
+         references/procedures/handover.md references/procedures/coordinator-register.md \
+         references/templates/unit-brief.md; do
+  has "$f" 'detach_session' && ok "$f says to detach sessions to the top level" \
+    || bad "$f does not name detach_session"
+done
+for f in SKILL.md references/workflow.md references/roles.md references/templates/PROFILE.md \
+         references/templates/unit-brief.md references/templates/platform-brief.md \
+         references/templates/qa-brief.md ../../agents/oneoff-builder.md; do
+  has "$f" 'Coordinator: <project>\|Coordinator: {{PROJECT_NAME}}' && ok "$f names the coordinator session reports go to" \
+    || bad "$f does not name \"Coordinator: <project>\" as where reports go"
+done
+for f in SKILL.md references/workflow.md references/procedures/review-merge.md \
+         references/procedures/coordinator-register.md; do
+  has "$f" 'unbind_pr' && ok "$f says to unbind a merged PR" || bad "$f does not name unbind_pr"
+done
+has SKILL.md 'never started by the session it replaces' && ok "SKILL.md: a replacement is not started by the session it replaces" \
+  || bad "SKILL.md lacks the replacement-starter rule"
+has references/templates/unit-brief.md 'handover written' && ok "unit-brief reports \"handover written\"" \
+  || bad "unit-brief does not report \"handover written\""
+has references/pitfalls.md 'Nested chains on rotation' && has references/pitfalls.md 'archived with its PR' \
+  && ok "pitfalls record nested chains and PR auto-archive" || bad "pitfalls miss nested chains or PR auto-archive"
+
 echo "passed $pass, failed $failn"
 [[ $failn -eq 0 ]]
