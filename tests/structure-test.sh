@@ -186,6 +186,8 @@ has references/procedures/handover.md 'next-clear.sh" <session> --handover' \
   && ok "handover carries pending Next PRs to the replacement" || bad "handover does not carry pending Next PRs over"
 has references/procedures/review-merge.md 'whoever receives it' \
   && ok "review-merge: any message with the notice clears it, whoever receives it" || bad "review-merge does not say the notice clears whatever the recipient"
+has references/procedures/review-merge.md 'autoMergeRequest' \
+  && ok "review-merge checks queued auto-merges before sending Next" || bad "review-merge does not check queued --auto merges"
 for h in next-sent.sh next-guard.sh; do
   grep -q "$h" "$plugin/hooks/hooks.json" && ok "hooks.json wires $h" || bad "hooks.json does not wire $h"
 done

@@ -117,12 +117,15 @@ done
 echo "$*" >>"$FAKE_GH_DIR/calls"
 f="$FAKE_GH_DIR/${repo/\//_}#$n"
 [[ -f "$f" ]] || { echo "GraphQL: Could not resolve to a PullRequest" >&2; exit 1; }
+[[ "$(cat "$f")" == SLOW ]] && exec sleep 30
 printf '{"state":"%s","url":"https://github.com/%s/pull/%s"}\n' "$(cat "$f")" "$repo" "$n"
 GH
 chmod +x "$tmp/fake-gh"; export COORDINATOR_GH="$tmp/fake-gh"
 merged() { for k in "$@"; do echo MERGED >"$FAKE_GH_DIR/${k/\//_}"; done; }
 merged 'o/r#12' 'o/r#13' 'o/r2#13' 'o/r3#14' 'o/r#7' 'o/r#21' 'o/r#22'
-echo OPEN >"$FAKE_GH_DIR/o_r#16"
+merged 'o/r#30' 'a/b#6' 'o/r#31' 'o/r#32' 'a/b#33' 'o/r#34'
+echo OPEN >"$FAKE_GH_DIR/o_r#16"; echo OPEN >"$FAKE_GH_DIR/o_r#15"
+for n in 40 41 42 43 44 45; do echo SLOW >"$FAKE_GH_DIR/o_r#$n"; done
 mr() { printf '{"session_id":"%s","cwd":"%s","hook_event_name":"PostToolUse","tool_name":"Bash","tool_input":{"command":"%s"},"tool_response":{"stdout":"","stderr":"","interrupted":false}}' "$1" "$tmp" "$2" | bash "$hooks/merge-reminder.sh"; }
 pend() { awk '{printf "%s ", $1}' "$COORDINATOR_HOME/state/$1/pending-next" 2>/dev/null; }
 expect_eq() { # name want got
@@ -153,13 +156,21 @@ for mode in jq python3; do
   expect_eq  "quoted subject: PR is 7, not a word of it" "o/r#12 o/r#13 o/r2#13 o/r3#14 o/r#7 " "$(pend coord-1)"
   out="$(mr coord-1 'echo gh pr merge 21; echo \"gh pr merge 22\"')"
   expect_eq  "echo gh pr merge: not a merge"           "o/r#12 o/r#13 o/r2#13 o/r3#14 o/r#7 " "$(pend coord-1)"
-  expect_out "echo gh pr merge: silent"                EMPTY "$out"
+  expect_out "echo gh pr merge: fail-open reminder"    "could not be read" "$out"
   expect_out "failed merge then '; echo ok': silent"   EMPTY "$(mr coord-1 'gh pr merge 16; echo ok')"
   mr coord-1 'gh pr merge 16 || true' >/dev/null
   expect_eq  "failed merge (still OPEN) not recorded"  "o/r#12 o/r#13 o/r2#13 o/r3#14 o/r#7 " "$(pend coord-1)"
-  expect_out "--auto: not recorded, says so"           "only queues" "$(mr coord-1 'gh pr merge 15 --auto --squash')"
+  expect_out "--auto still queued: not recorded, says so" "queued the merge" "$(mr coord-1 'gh pr merge 15 --auto --squash')"
+  expect_out "--auto on a ready PR: merged, recorded"  "merged o/r#30" "$(mr coord-1 'gh pr merge 30 --auto --squash')"
+  mr coord-1 'if true; then gh pr merge 6 -R a/b; fi' >/dev/null
+  mr coord-1 'env GH_PROMPT_DISABLED=1 gh pr merge 31 && nohup gh pr merge 32 >/dev/null' >/dev/null
+  mr coord-1 'while false; do :; done; { gh pr merge 33 -R a/b; }; ! gh pr merge 34' >/dev/null
+  expect_eq  "merges inside if/env/nohup/{}/! recorded" "o/r#30 a/b#6 o/r#31 o/r#32 a/b#33 o/r#34 " "$(pend coord-1 | sed 's/^.*o\/r#7 //')"
+  expect_out "for loop with \$p: fail-open reminder"   "could not be read" "$(mr coord-1 'for p in 1 2; do gh pr merge $p; done')"
+  expect_out "xargs gh pr merge: fail-open reminder"   "could not be read" "$(mr coord-1 'echo 5 | xargs -n1 gh pr merge')"
+  for k in o/r#30 a/b#6 o/r#31 o/r#32 a/b#33 o/r#34; do bash "$root/plugins/coordinator/scripts/next-clear.sh" coord-1 "$k" "test" >/dev/null 2>&1; done
   expect_out "gh cannot answer: reminder, not recorded" "could not confirm" "$(mr coord-1 'gh pr merge 99')"
-  expect_out "branch-name merge: asks for the number"  "no PR number" "$(mr coord-1 'gh pr merge feature-x')"
+  expect_out "branch-name merge: asks for the number"  "could not be read" "$(mr coord-1 'gh pr merge feature-x')"
   expect_eq  "still five pending"                      "o/r#12 o/r#13 o/r2#13 o/r3#14 o/r#7 " "$(pend coord-1)"
 
   out="$(stop coord-1 false)"
@@ -193,6 +204,17 @@ for mode in jq python3; do
   expect_eq  "registered, nothing pending: silent"     "" "$(stop coord-2 false)"
 done
 unset COORDINATOR_NO_JQ
+
+echo "--- one total deadline for every gh lookup"
+t0=$SECONDS
+out="$(COORDINATOR_GH_DEADLINE=2 mr coord-3 'gh pr merge 40; gh pr merge 41; gh pr merge 42; gh pr merge 43; gh pr merge 44; gh pr merge 45')"
+el=$((SECONDS - t0))
+(( el <= 5 )) && { pass=$((pass+1)); echo "PASS six hung gh calls end within the 2 s deadline (${el}s)"; } \
+  || { failn=$((failn+1)); echo "FAIL six hung gh calls took ${el}s with a 2 s deadline"; }
+expect_out "hung gh: reminder, nothing recorded"       "could not confirm" "$out"
+expect_eq  "hung gh: no pending"                        "" "$(pend coord-3)"
+python3 -I -c 'import json,sys; h=json.load(open(sys.argv[1]))["hooks"]; t=[x.get("timeout",0) for e in h["PostToolUse"] for x in e["hooks"] if "merge-reminder" in x["command"]]; sys.exit(0 if t and t[0] >= 30 else 1)' "$hooks/hooks.json" \
+  && { pass=$((pass+1)); echo "PASS hooks.json gives merge-reminder a timeout above the deadline"; } || { failn=$((failn+1)); echo "FAIL merge-reminder timeout in hooks.json"; }
 
 echo "--- escape hatch and handover: next-clear.sh"
 nc="$root/plugins/coordinator/scripts/next-clear.sh"

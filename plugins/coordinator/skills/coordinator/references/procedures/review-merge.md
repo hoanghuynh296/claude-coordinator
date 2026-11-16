@@ -26,7 +26,9 @@ Review and merge the named pull request. Read the unit's row and the
    what you checked. Not done → the merge is allowed only if the profile defers that check to
    release time; then add a row to "Verification debt" in `ROADMAP.md`.
 6. **Merge** with the profile's method, deleting the branch:
-   `gh pr merge <n> --repo <repo> --merge --delete-branch` (or `--squash`).
+   `gh pr merge <n> --repo <repo> --merge --delete-branch` (or `--squash`). Pass a literal PR
+   number. With `--auto` the merge may only be queued: the hook records the PR only once it
+   is MERGED, so see step 9.
    - The author is a `per-issue` agent: send it `PR #<n> merged. Next: done` (step 9), then
      archive its session
      (`mcp__ccd_session_mgmt__archive_session`, found by name "Agent: <unit> #<issue>"). Its
@@ -43,6 +45,9 @@ Review and merge the named pull request. Read the unit's row and the
    is verification and release, not a feature.
 9. **Tell the author what is next, in the same turn as the merge.** The agent waits after
    "PR ready" and runs only when a message arrives, so silence here stalls it for good.
+   First check any merge you queued with `--auto`:
+   `gh pr view <n> --repo <repo> --json state,autoMergeRequest`. Still queued → send nothing
+   yet (the agent keeps waiting) and look again on your next turn; MERGED → go on.
    Read its context (`mcp__ccd_session_mgmt__get_usage` on its session; its last report's
    `Context:` line is the fallback), then send it one message:
    `PR #<n> merged. Next: <issue | handover | stand by | done>`.

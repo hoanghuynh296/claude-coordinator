@@ -17,7 +17,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/merge-reminder.sh\""
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/merge-reminder.sh\"",
+            "timeout": 45
           }
         ]
       },
@@ -26,7 +27,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/next-sent.sh\""
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/next-sent.sh\"",
+            "timeout": 10
           }
         ]
       }
@@ -46,7 +48,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/next-guard.sh\""
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/next-guard.sh\"",
+            "timeout": 10
           }
         ]
       }
