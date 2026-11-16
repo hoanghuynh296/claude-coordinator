@@ -105,6 +105,15 @@ expect_out "wrapper folder with two ledgers"         "several coordination ledge
 expect_out "unit checkout inside a workspace"        "unit of a coordinated project" "$(ss agent-1 "$WS/products/app")"
 expect_out "ordinary folder: silent"                 EMPTY              "$(ss new-3 "$tmp/plain")"
 expect_out "registered session: coordinator text"    "You are the COORDINATOR" "$(ss coord-2 "$tmp/plain")"
+echo "--- PostToolUse merge reminder"
+mr() { printf '{"session_id":"%s","hook_event_name":"PostToolUse","tool_name":"Bash","tool_input":{"command":"%s"}}' "$1" "$2" | bash "$hooks/merge-reminder.sh"; }
+expect_out "merge by coordinator: archive reminder"  "archive_session" "$(mr coord-1 'gh pr merge 12 --repo o/r --merge --delete-branch')"
+expect_out "merge after cd &&: reminder"             "archive_session" "$(mr coord-1 'cd x && gh pr merge 12')"
+expect_out "gh pr view: silent"                      EMPTY "$(mr coord-1 'gh pr view 12')"
+expect_out "merge by unregistered session: silent"   EMPTY "$(mr lane-7 'gh pr merge 12')"
+expect_out "merge reminder via python3" "archive_session" "$(COORDINATOR_NO_JQ=1 mr coord-1 'gh pr merge 12')"
+python3 -I -c 'import json,sys; json.load(open(sys.argv[1]))' "$hooks/hooks.json" && { pass=$((pass+1)); echo "PASS hooks.json parses"; } \
+  || { failn=$((failn+1)); echo "FAIL hooks.json does not parse"; }
 echo "---"
 rm -rf "$tmp"
 echo "passed $pass, failed $failn"

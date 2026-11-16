@@ -35,8 +35,10 @@ starts a session detaches it right away. Agents report by message to "Coordinato
 ## 4. Flow
 
 - Integration branch: `<develop>`. Release branch: `<main>`. Merge method: <merge commit or squash>.
-  After merging, the coordinator unbinds the PR from its session, so the PR's close does not
-  archive it.
+  After merging a `per-issue` agent's PR, the coordinator archives that agent's session; a
+  `standing` session is archived only on rotation.
+- App setting `auto_archive_on_pr_close`: off (checked <date>). With it on, the app archives
+  every session bound to a PR when that PR closes, the coordinator included.
 - A release is: <release PR into main | tag | published package | data release>, per unit if they differ.
 - Cadence: <milestone | continuous>.
 - Hotfix: <branch from the release branch, PR into it, then back-merge>.

@@ -49,5 +49,8 @@ approves in a later message.**
 
 ## Step 5 - register and report
 Follow the `coordinator-register` procedure (ledger dir, unit dirs), then the `audit` procedure.
+Registration reads the app settings (`mcp__ccd_settings__get_settings`): if
+`auto_archive_on_pr_close` is on, ask the owner to turn it off before any agent starts, and
+record the result in `PROFILE.md` ("Flow").
 Commit and push the ledger. Send the owner one message: what exists now, the owner-side task
 list, and the first issues you propose to hand out.

@@ -64,8 +64,10 @@ merged.
    If a manual check is skipped, the merge note says `UNVERIFIED: <what>` and the item goes on
    the verification debt list in `ROADMAP.md`.
 5. A stacked PR is retargeted to the integration branch before its base merges.
-6. Merge with the profile's method, then unbind the PR from the coordinator's session
-   (`mcp__ccd_pr__unbind_pr`): the app archives a session bound to a PR when that PR closes.
+6. Merge with the profile's method. After merging a `per-issue` agent's PR, archive that
+   agent's session (`mcp__ccd_session_mgmt__archive_session`); a `standing` session is archived
+   only on rotation. Fallback only while the app setting `auto_archive_on_pr_close` is still
+   on: check `mcp__ccd_pr__get_status` and unbind (`mcp__ccd_pr__unbind_pr`) any PR bound to you.
    Update the ledger (remove the item; adjust "ahead by").
 7. Check the unit's integration limit. At the limit: stop handing out feature issues for that
    unit and go to step 6 of this workflow.

@@ -1,7 +1,8 @@
 # Handover: <role>, <YYYY-MM-DD>
 
 Write this before replacing a `standing` session or the coordinator, or before a long pause,
-and before the session's last PR merges (a session whose PR merged may be archived by the app).
+and before the session's last PR merges (the coordinator archives a `per-issue` session right
+after its PR merges).
 Past the soft threshold, after finishing the current issue; past the hard one, at the next safe
 point, with every section filled.
 Save it as `coordination/handover/<role>.md` in the ledger repo (overwrite the old one; git

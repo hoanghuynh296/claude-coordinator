@@ -8,7 +8,7 @@ project's `PROFILE.md` (see `profile.md` for when each one pays).
 | Role | Kind | Does | Never does |
 |---|---|---|---|
 | Owner | human | approves the plan and the profile; answers real decisions; approves anything that costs money; releases the units the profile marks owner-released; does non-code tasks (accounts, secrets, billing) | receives status pings or ack-only messages |
-| Coordinator | one Claude session | keeps the ledger, roadmap and decisions; writes issues; starts and briefs agents; reviews; merges into the integration branch and unbinds the merged PR from its session; detaches every session it starts to the top level; releases the units the profile gives it; reports to the owner | writes product code (unless the profile says so); does agents' git plumbing; does for an agent what that agent's permissions denied |
+| Coordinator | one Claude session | keeps the ledger, roadmap and decisions; writes issues; starts and briefs agents; reviews; merges into the integration branch and then archives the `per-issue` agent's session; detaches every session it starts to the top level; releases the units the profile gives it; reports to the owner | writes product code (unless the profile says so); does agents' git plumbing; does for an agent what that agent's permissions denied |
 | Unit agent | Claude session, `standing` or `per-issue` | owns one unit; one branch and one PR per issue; keeps its gate green; moves what it learns into the unit's docs; reports once per PR, by message to "Coordinator: <project>" | edits another unit's files; merges its own PR; decides anything that costs money |
 
 ## Optional

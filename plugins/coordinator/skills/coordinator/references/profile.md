@@ -30,7 +30,7 @@ verification gate, who may release it, and its integration limit.
 | Mode | What it means | Use when |
 |---|---|---|
 | `standing` | one long-lived session "Agent: <unit>", rotated past the soft context threshold (after its current issue) with a handover note | the unit has a steady queue and work in flight carries context (a long build, a multi-PR feature) |
-| `per-issue` | a fresh session for each issue, archived when its PR merges; no handover notes | work is intermittent or each task is self-contained; the unit's docs are good enough to start cold |
+| `per-issue` | a fresh session for each issue, archived by the coordinator after its PR merges; no handover notes | work is intermittent or each task is self-contained; the unit's docs are good enough to start cold |
 
 `per-issue` only works if the unit's `AGENTS.md` and docs carry everything a cold start needs.
 If a per-issue agent keeps asking the same questions, fix the docs, not the mode.

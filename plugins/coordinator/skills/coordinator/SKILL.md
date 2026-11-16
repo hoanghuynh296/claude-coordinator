@@ -85,8 +85,10 @@ Batch questions into one message, decisions first. Never send status pings.
    replaced after that PR. `HARD`: it stops at the next safe point and is replaced now.
 4. Keep the sessions flat: every session of the project sits at the top level of the sidebar
    ("Sessions" below). A session nested under you that you started: detach it. One you cannot
-   detach: ask the owner to drag it to the top level. A PR still bound to you after its merge:
-   unbind it. A new coordinator sends every live agent one message with its name, "Coordinator:
+   detach: ask the owner to drag it to the top level. The app setting
+   `auto_archive_on_pr_close` must be off (`mcp__ccd_settings__get_settings`); if it is on, ask
+   the owner to turn it off (`coordinator-register.md`). After merging a `per-issue` agent's PR,
+   archive that agent's session. A new coordinator sends every live agent one message with its name, "Coordinator:
    <project>", so their reports reach it.
 
 ## The eight principles (short)
@@ -167,8 +169,13 @@ for an agent what that agent's permissions denied: take it to the owner.
   "Coordinator: <project>" when it registers (`coordinator-register.md`).
 - A session the starter could not detach detaches itself (`detach_session` with `self`); if
   that is refused too, ask the owner to drag it to the top level.
-- After merging a PR, unbind it from your session (`mcp__ccd_pr__unbind_pr`): the app archives a
-  session bound to a PR when that PR closes, and a coordinator that merged would be archived.
+- The app binds every PR a session touches with `gh` (create, view, review, merge), and with
+  its setting `auto_archive_on_pr_close` on it archives the session when that PR closes. The
+  setting stays off for every project run with this kit (`coordinator-register.md` checks it).
+  Sessions are then archived by the coordinator: after merging a `per-issue` agent's PR, it
+  archives that agent's session (`mcp__ccd_session_mgmt__archive_session`); a `standing`
+  session is archived only when it is replaced. Fallback while the setting is still on: after
+  each merge, `mcp__ccd_pr__get_status` and `mcp__ccd_pr__unbind_pr` for any PR bound to you.
 - Sessions are found by name ("Agent: <unit>"), never by id. Ids do not go into the ledger.
 - If sessions cannot be started (the owner is on Remote Control, or the tool is unavailable),
   run the same brief as a background subagent with its own worktree.
@@ -177,11 +184,11 @@ for an agent what that agent's permissions denied: take it to the owner.
   is replaced. Past **hard**: it stops at the next safe point (commit, push), writes a full
   handover, reports "blocked: rotate". Never stop a session mid-task at soft: a fresh one
   re-reads everything.
-- The handover is written **before** the session's last PR merges: a session whose PR merged
-  may be archived by the app, and its context is gone.
+- The handover is written **before** the session's last PR merges: the coordinator archives a
+  `per-issue` session right after its PR merges, and its context is gone.
 - `standing` session past a threshold: handover note, fresh session with the same name,
-  archive the old one. `per-issue` sessions are archived when their PR merges and write no
-  handover file: at soft they just finish the issue; at hard they write done, left, commands
+  archive the old one. `per-issue` sessions are archived by the coordinator after their PR
+  merges and write no handover file: at soft they just finish the issue; at hard they write done, left, commands
   to re-run and traps into the PR (or the issue if there is no PR yet).
 - One-off work that writes files runs as its own session, not as a subagent of the
   coordinator: subagents inherit the coordinator's edit guard.

@@ -41,5 +41,7 @@ idles → `per-issue`; no integration limit → set one; decisions cited but def
 
 ## Step 5 - register and report
 Follow the `coordinator-register` procedure (ledger dir, unit dirs), then the `audit` procedure, commit and
-push the ledger. Report to the owner in at most 10 lines: what moved where, what was deleted,
+push the ledger. Registration reads the app settings (`mcp__ccd_settings__get_settings`): if
+`auto_archive_on_pr_close` is on, ask the owner to turn it off before any agent starts, and
+record the result in `PROFILE.md` ("Flow"). Report to the owner in at most 10 lines: what moved where, what was deleted,
 what is now enforced by a machine, what you need from the owner.

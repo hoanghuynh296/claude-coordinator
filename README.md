@@ -129,6 +129,7 @@ files, review checklist, pitfalls, packs, templates) and two agents: `coordinato
 | Guard | What it stops |
 |---|---|
 | Edit guard (PreToolUse hook) | a registered coordinator editing anything inside a unit except the planning files the profile allows. Understands several units, also when they sit inside the ledger folder. `register.sh --allow <glob>` sets the allowed files; `--no-guard` switches it off for projects whose profile lets the coordinator write code |
+| Merge reminder (PostToolUse hook on Bash) | a registered coordinator forgetting, after `gh pr merge`, to archive the `per-issue` agent's session (it adds a reminder to the context; it blocks nothing) |
 | `scripts/ledger-lint.sh <ledger>` | a ledger out of shape: missing files, over the size budget, session ids or home paths, decision ids cited but not defined, leftover placeholders. Warns on a stale date, on history in the live ledger, on an undated delegation |
 | `scripts/pre-push-guard.sh` (git pre-push hook) | pushing to a branch whose pull request is already merged or closed; optional local protection of release branches |
 | `scripts/install-guards.sh [--settings] <repo>...` | installs the pre-push guard in each clone; `--settings` turns on delete-branch-on-merge on GitHub |
@@ -161,7 +162,7 @@ plugins/coordinator/
   skills/coordinator/references/templates/*.md
   commands/*.md
   agents/{reviewer,oneoff-builder}.md
-  hooks/hooks.json, hooks/{lib,coordinator-guard,session-start}.sh
+  hooks/hooks.json, hooks/{lib,coordinator-guard,session-start,merge-reminder}.sh
   scripts/{init-ledger,ledger-lint,install-guards,pre-push-guard,register,check-context,bootstrap}.sh
 tests/{hooks,ledger-lint,pre-push-guard,structure,bootstrap,exec-bits,check-context}-test.sh
 ```
@@ -180,6 +181,16 @@ bash tests/check-context-test.sh   # ok / SOFT / HARD levels, thresholds from en
 
 ## Changes
 
+- **0.6.0**: a coordinator can no longer be lost to the app's "Auto-archive sessions when
+  their pull request closes". The app binds every PR a session touches with `gh` (create,
+  view, review, merge), so the 0.5.0 rule "unbind the PR after merging" was easy to miss, and
+  two coordinators were archived anyway. Now `coordinator-register` (and so `kickoff` and
+  `adopt`) reads the app settings and asks the owner to turn `auto_archive_on_pr_close` off,
+  recording it in the profile; `audit` checks it again. Sessions are archived by the
+  coordinator: after merging a `per-issue` agent's PR it archives that session
+  (`archive_session`); a `standing` session is archived only on rotation. `unbind_pr` is kept
+  only as the fallback while the setting is still on. A PostToolUse hook reminds a registered
+  coordinator to archive the agent after every `gh pr merge`.
 - **0.5.0**: all sessions are top-level peers. Whoever starts a session detaches it to the
   top level right away; a replacement is never started by the session it replaces. Agents
   report by message to "Coordinator: <project>" (PR ready, blocked, handover written), and a
