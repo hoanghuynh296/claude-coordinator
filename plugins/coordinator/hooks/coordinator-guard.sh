@@ -52,13 +52,17 @@ units=()
 while IFS= read -r u; do [[ -n "$u" ]] && units+=("$u"); done < <(reg_values "$reg" unit; reg_values "$reg" project)
 allows=()
 while IFS= read -r a; do [[ -n "$a" ]] && allows+=("$a"); done < <(reg_values "$reg" allow)
-[[ ${#allows[@]} -eq 0 ]] && allows=("docs/PLAN.md" "docs/adr/*" "docs/contracts/README.md" "AGENTS.md")
+if [[ "$(reg_value "$reg" allow_none)" == "1" ]]; then
+  allows=()
+elif [[ ${#allows[@]} -eq 0 ]]; then
+  allows=("docs/PLAN.md" "docs/adr/*" "docs/contracts/README.md" "AGENTS.md")
+fi
 
 # allowed_rel <path relative to a unit root>: matches an allow glob at the unit root or deeper
 # (so "AGENTS.md" also allows web/AGENTS.md, as the first version of this guard did).
 allowed_rel() {
   local rel="$1" g
-  for g in "${allows[@]}"; do
+  for g in ${allows[@]+"${allows[@]}"}; do
     # shellcheck disable=SC2254  # the allow entries are globs on purpose
     case "$rel" in
       $g|*/$g) return 0 ;;
@@ -67,7 +71,8 @@ allowed_rel() {
   return 1
 }
 
-allow_text="$(printf '%s, ' "${allows[@]}")"; allow_text="${allow_text%, }"
+allow_text="nothing"
+[[ ${#allows[@]} -gt 0 ]] && { allow_text="$(printf '%s, ' "${allows[@]}")"; allow_text="${allow_text%, }"; }
 delegate="Delegate: write an issue for the owning unit (/coordinator:ticket), or use a one-off subagent (coordinator:oneoff-builder) that pushes its own branch and opens a PR."
 
 # 1. Inside a unit: only the allowed planning files.

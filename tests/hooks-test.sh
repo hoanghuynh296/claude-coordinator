@@ -68,6 +68,12 @@ echo "--- registered without the guard"
 "$root/plugins/coordinator/scripts/register.sh" coord-3 "$W" "$W/products/app" --no-guard >/dev/null
 check "no-guard unit code"        allow "$(ev coord-3 Write file_path "$WS/products/app/src/main.py")"
 
+echo "--- registered with --allow-none"
+"$root/plugins/coordinator/scripts/register.sh" coord-5 "$W" "$W/products/app" --allow-none >/dev/null
+check "allow-none AGENTS.md"      deny  "$(ev coord-5 Edit file_path "$WS/products/app/AGENTS.md")"
+check "allow-none docs/PLAN.md"   deny  "$(ev coord-5 Edit file_path "$WS/products/app/docs/PLAN.md")"
+check "allow-none ledger file"    allow "$(ev coord-5 Write file_path "$WS/coordination/ROADMAP.md")"
+
 echo "--- register.sh rejects bad input"
 if "$root/plugins/coordinator/scripts/register.sh" coord-4 "$W" --allow '/abs/path' >/dev/null 2>&1; then
   failn=$((failn+1)); echo "FAIL absolute --allow accepted"

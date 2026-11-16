@@ -112,7 +112,7 @@ id and must register again.
 | `init-ledger.sh <dir> [--name] [--owner] [--workspace]` | write the standard ledger layout from the templates; never overwrites |
 | `ledger-lint.sh [dir]` | see above; budgets in the environment or in `<dir>/.ledger-lint` |
 | `install-guards.sh`, `pre-push-guard.sh` | see above |
-| `register.sh <session> <ledger> [unit...] [--allow glob]... [--no-guard]` | register or `--unregister` a coordinator session |
+| `register.sh <session> <ledger> [unit...] [--allow glob]... [--allow-none] [--no-guard]` | register or `--unregister` a coordinator session |
 | `check-context.sh [session...]` | context size per session from its transcript; flags the rotation threshold (`ROTATE_AT`, default 250000) |
 | `bootstrap.sh <owner/repo> <dir> ...` | the single-repo SaaS starting point: repo from `hoanghuynh296/agent-project-template`, placeholders, `develop`, labels, ledger, branch protection. `--ledger-only` creates just the ledger; `--dry-run` prints every action |
 

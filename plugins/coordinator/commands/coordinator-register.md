@@ -17,6 +17,7 @@ Register this session as coordinator. Arguments: `$ARGUMENTS`.
    - `--allow` once per path the profile lets the coordinator edit inside units. Without any
      `--allow` the defaults apply: `docs/PLAN.md`, `docs/adr/*`, `docs/contracts/README.md`,
      `AGENTS.md`.
+   - `--allow-none` when the profile lets the coordinator edit nothing inside units.
    - `--no-guard` only when the profile says the coordinator may write code.
 3. Follow the read order in `coordination/README.md`, load the `coordinator` skill, and give
    the owner a status in at most 8 lines (as `/coordinator:status` would).
