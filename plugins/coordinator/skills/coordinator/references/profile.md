@@ -29,7 +29,7 @@ verification gate, who may release it, and its integration limit.
 
 | Mode | What it means | Use when |
 |---|---|---|
-| `standing` | one long-lived session "Agent: <unit>", rotated at the context threshold with a handover note | the unit has a steady queue and work in flight carries context (a long build, a multi-PR feature) |
+| `standing` | one long-lived session "Agent: <unit>", rotated past the soft context threshold (after its current issue) with a handover note | the unit has a steady queue and work in flight carries context (a long build, a multi-PR feature) |
 | `per-issue` | a fresh session for each issue, archived when its PR merges; no handover notes | work is intermittent or each task is self-contained; the unit's docs are good enough to start cold |
 
 `per-issue` only works if the unit's `AGENTS.md` and docs carry everything a cold start needs.
@@ -82,8 +82,21 @@ write code; then say so in the profile and register without the guard.
 
 ### 7. Budgets
 
-Context threshold for rotation, report length, model per role, ledger size budget. Defaults:
-rotate at 250k, reports in 6 lines, `COORDINATION.md` at most 80 lines.
+Context thresholds for rotation, report length, model per role, ledger size budget. Defaults:
+soft 250k, hard 400k (or 75% of the model's context window, whichever is lower), reports in 6
+lines, `COORDINATION.md` at most 80 lines. Thresholds may differ per model. For a small
+window, soft is capped at 50% and hard at 75% of it (a 200k window: soft 100k, hard 150k).
+
+- **Soft:** do not stop mid-task. The session finishes its current issue (PR, gate green),
+  takes no new one, writes its handover, and is replaced after that PR. The coordinator sends
+  it no new issues.
+- **Hard:** the session stops at the next safe point (commit, push), writes a full handover
+  (done, left in order, decisions, commands to re-run, traps) and reports "blocked: rotate".
+- Why two: one threshold that stops a session mid-task makes the fresh session re-read
+  everything, which costs more than it saves. The hard one is the safety margin.
+
+`check-context.sh --soft <n> --hard <n> [--window <n>]` reports `ok`, `SOFT` or `HARD`. One
+run applies one set of thresholds: run it once per model group when they differ.
 
 ### 8. Owner rules
 

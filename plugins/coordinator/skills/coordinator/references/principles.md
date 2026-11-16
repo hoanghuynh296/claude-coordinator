@@ -79,7 +79,8 @@ PR already merged, ledgers drifting out of shape.
 
 - No ack-only or status-ping messages, in either direction. Silence means "working".
 - One batched message per agent per round. Short reports (the profile sets the length).
-- Sessions are replaced at the profile's context threshold, not kept alive.
+- Sessions are replaced past the profile's context thresholds, not kept alive: after their
+  current issue at the soft one, at the next safe point at the hard one.
 - What an agent learns about a unit goes into that unit's own docs, in the same PR. A handover
   note carries only what is in flight, never knowledge about the code.
 

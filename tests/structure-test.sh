@@ -60,5 +60,18 @@ assert os.path.isdir(os.path.join(root, entry["source"])), "plugin source path m
 assert p["version"].count(".") == 2, "version is not x.y.z"
 PY
 
+# The context thresholds have one set of defaults (soft 250k, hard 400k) wherever they are
+# stated (each file that states them names both), and the per-issue handover rule reads the same in every place that gives it.
+for f in scripts/check-context.sh skills/coordinator/SKILL.md skills/coordinator/references/profile.md \
+         skills/coordinator/references/workflow.md skills/coordinator/references/templates/PROFILE.md \
+         skills/coordinator/references/templates/unit-brief.md agents/oneoff-builder.md; do
+  if grep -q '250k' "$plugin/$f" && grep -q '400k' "$plugin/$f"; then ok "$f states the 250k/400k defaults"
+  else bad "$f does not state both defaults 250k and 400k"; fi
+done
+for f in SKILL.md references/workflow.md references/procedures/handover.md references/templates/unit-brief.md; do
+  tr '\n' ' ' <"$skill/$f" | tr -s ' ' | grep -q 'no handover file' && ok "$f gives the per-issue handover rule" \
+    || bad "$f does not give the per-issue handover rule (no handover file; at hard, into the PR)"
+done
+
 echo "passed $pass, failed $failn"
 [[ $failn -eq 0 ]]

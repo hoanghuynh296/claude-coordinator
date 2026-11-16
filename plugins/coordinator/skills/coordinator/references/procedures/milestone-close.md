@@ -24,5 +24,5 @@ is for each unit, who performs it, and which checks come first.
 6. If the release and integration branches diverged, get a back-merge PR.
 7. **Ledger.** Update the unit's row (released = the new version, ahead by 0), remove the
    cleared debt rows, close the milestone in `ROADMAP.md` and on GitHub. Lint, commit, push.
-8. Measure contexts; replace sessions near the threshold before the next stretch. If the unit
+8. Measure contexts; replace `SOFT` and `HARD` sessions before the next stretch. If the unit
    was in a feature freeze because of its integration limit, the freeze ends here.
