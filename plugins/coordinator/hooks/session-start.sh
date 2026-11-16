@@ -67,6 +67,6 @@ fi
 # 3. A unit checkout inside a ledger workspace: <ledger>/products/<unit>.
 parent="$(dirname "$cwd")"
 if [[ "$(basename "$parent")" == "products" ]] && is_ledger "$(dirname "$parent")"; then
-  echo "This repo is a unit of a coordinated project (ledger: $(dirname "$parent")). If you are its agent: follow this repo's AGENTS.md; work arrives as issues with acceptance criteria; one issue, one branch from the integration branch, one PR; never merge your own PR; report to the coordinator only when the PR is ready or you are blocked."
+  echo "This repo is a unit of a coordinated project (ledger: $(dirname "$parent")). If you are its agent: follow this repo's AGENTS.md; work arrives as issues with acceptance criteria; one issue, one branch from the integration branch, one PR; never merge your own PR; report to the coordinator only when the PR is ready or you are blocked. One issue at a time: after \"PR ready\" wait for the coordinator's \"PR #<n> merged. Next: ...\" before starting anything new."
 fi
 exit 0

@@ -25,3 +25,6 @@ Exit criteria of <milestone> (from `coordination/ROADMAP.md`):
 4. Walk each persona's main flow on staging and note friction, broken copy, wrong language,
    missing empty and error states.
 5. The milestone closes only when the suite is green on staging. You give the verdict.
+6. One task at a time, as in `unit-brief.md`: after a report (a PR ready, a suite run, the
+   verdict) wait for the coordinator's next message (`PR #<n> merged. Next: ...` after a merge
+   of yours). Start nothing new on your own.

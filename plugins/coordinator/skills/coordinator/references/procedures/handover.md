@@ -25,7 +25,10 @@ handover carries only what is in flight; see `references/state-files.md`.
    Run the `audit` procedure. Then write `coordination/handover/coordinator.md`: in flight, next
    steps in order, waiting on. If a rule changed, it goes into `PROFILE.md`, not here. Refresh
    `coordination/memory/` from your memory folder (paths relative to the workspace; no home
-   paths). Lint, commit and push the ledger.
+   paths). Merged PRs still waiting for their Next message move with you: run
+   `bash "<plugin>/scripts/next-clear.sh" <session> --handover` (it prints them as
+   `owner/repo#N` and drops this session's hook state) and list them under "Pending Next" in
+   the note. Lint, commit and push the ledger.
 4. Propose the replacement to the owner in at most 4 lines: a fresh session with the same
    name, first prompt "Read `coordination/README.md` in <ledger> and continue as <role>". It is
    never started by the session it replaces: an agent's replacement is started by the
@@ -36,4 +39,6 @@ handover carries only what is in flight; see `references/state-files.md`.
    name, rename the old one "<name> (old)" (`mcp__ccd_session_mgmt__set_session_title`) or
    archive it. Before archiving the old coordinator, check that no session still nests under
    it (archiving a parent archives its side sessions). A fresh coordinator then follows the `coordinator-register`
-   procedure. Archive the old session after the new one has started; never message it again.
+   procedure, records the note's "Pending Next" PRs
+   (`bash "<plugin>/scripts/next-clear.sh" <session> --add <owner/repo#N>...`) and sends their
+   messages. Archive the old session after the new one has started; never message it again.

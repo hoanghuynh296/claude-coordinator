@@ -30,3 +30,8 @@ Rules:
    open questions. No progress updates before that. As a subagent your final answer is the
    report. Run as a session, send it (and any "blocked") as a message to the coordinator
    session by name ("Coordinator: <project>"): a top-level session sends no turn-end note.
+   End it with `Context: <k tokens>`.
+11. One task, one full lifecycle. After the report you wait: fix review findings when told
+   (same branch, report again), and start nothing new until the coordinator's message
+   `PR #<n> merged. Next: <issue | handover | stand by | done>`. `done` (the usual answer for a
+   one-off): stop; the coordinator archives the session.

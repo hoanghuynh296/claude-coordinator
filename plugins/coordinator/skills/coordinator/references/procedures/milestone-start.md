@@ -15,12 +15,13 @@ Start the named milestone or stretch of work. Reread `references/pitfalls.md`.
 3. Order each unit's list in `ROADMAP.md`. Update `COORDINATION.md` (in progress per unit).
    Lint, commit and push the ledger.
 4. **Staff it now, in this turn** (sessions can only be started from the owner's own message):
-   - `standing` units with a live session: one batched message with the next two or three
-     issues, in order.
+   - `standing` units with a live session: one message with its next ONE issue, if it is
+     standing by. An agent with a PR in review gets its next issue in the merge notice
+     (`PR #<n> merged. Next: #<m>`, `review-merge.md` step 9), not before.
    - `standing` units without a session, and `per-issue` units: start a fresh session, named
      per the profile, with the model and effort from the profile, background from
      `references/templates/unit-brief.md` (plus `platform-brief.md` / `qa-brief.md`), prompt =
-     the issue links. Start each in its own worktree and detach it to the top level right away
+     the link of its one issue. Start each in its own worktree and detach it to the top level right away
      (`mcp__ccd_session_mgmt__detach_session`); if that is refused, the brief tells the agent
      to detach itself, and otherwise ask the owner to drag it out. The brief names
      "Coordinator: <project>" as the session it reports to by message.

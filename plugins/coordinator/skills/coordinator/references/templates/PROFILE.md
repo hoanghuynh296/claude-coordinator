@@ -19,7 +19,10 @@ Last reviewed: {{DATE}}
 Agent session names: "Agent: <unit>" (per-issue: "Agent: <unit> #<issue>").
 Every session sits at the top level of the sidebar, each agent in its own worktree: whoever
 starts a session detaches it right away. Agents report by message to "Coordinator:
-{{PROJECT_NAME}}" (PR ready and gate green, blocked or decision needed, handover written).
+{{PROJECT_NAME}}" (PR ready and gate green, blocked or decision needed, handover written),
+each report ending `Context: <k tokens>`. One issue, one full lifecycle: after "PR ready" the
+agent waits; the coordinator hands out one issue at a time and, in the same turn as each
+merge, sends the author `PR #<n> merged. Next: <issue | handover | stand by | done>`.
 
 ## 3. Roles
 
@@ -73,7 +76,9 @@ Everything else goes through an issue for the owning unit.
   50% and hard at 75% of it: a 200k window gives soft 100k, hard 150k.>
 - Reports: at most <6> lines. Reviewer: at most 15 lines.
 - `COORDINATION.md`: at most <80> lines.
-- No ack-only or status-ping messages. One batched message per agent per round.
+- No ack-only or status-ping messages. One batched message per agent per round. The merge
+  notice `PR #<n> merged. Next: ...` is not a ping: it is the only thing that starts an
+  agent's next step.
 
 ## 9. Owner rules
 

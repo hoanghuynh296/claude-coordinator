@@ -121,11 +121,15 @@ Full version: `references/workflow.md`.
 
 1. **Plan:** keep each unit's backlog in `ROADMAP.md` ordered, the next items as issues
    (`ticket.md`, body per `references/templates/task-issue.md`). Contract changes first.
-2. **Hand out:** one batched message per agent with the next two or three issues. `per-issue`
-   units get a fresh session per issue. A unit never idles while it has unblocked backlog.
+2. **Hand out:** ONE issue per agent. It takes that issue through its full lifecycle (PR, gate
+   green, "PR ready", review fixes) and waits; the next one goes out in your message after the
+   merge. `per-issue` units get a fresh session per issue. A unit never idles while it has
+   unblocked backlog.
 3. **Review** (`review-merge.md`): gate green with evidence you checked yourself, diff in
    scope, Reviewer where the profile requires it, manual checks done or marked `UNVERIFIED`.
-   Then merge with the profile's method.
+   Then merge with the profile's method, and in the same turn send the author
+   `PR #<n> merged. Next: <issue | handover | stand by | done>` (step 9 there). The Stop hook
+   blocks your turn's end until that message is sent.
 4. **Bound:** after each merge compare the unit with its integration limit. At the limit, stop
    feature issues for that unit and verify and release first.
 5. **Release** (`milestone-close.md`): the profile says who releases each unit. For
@@ -143,8 +147,13 @@ for an agent what that agent's permissions denied: take it to the owner.
 
 ## Messages and tokens
 
-- No ack-only or status-ping messages, either way. Silence means "working".
-- One batched message per agent per round: findings, answers and the next issues, sent once.
+- No ack-only or status-ping messages, either way. An agent is either working on the issue it
+  was given or waiting on the coordinator: after "PR ready" it waits for your findings or for
+  `PR #<n> merged. Next: <issue | handover | stand by | done>`. It never starts a next issue
+  on its own, so a merge without that message leaves it idle for good.
+- One batched message per agent per round: findings or answers, or the merge notice with the
+  next step, sent once.
+- Every agent report ends with `Context: <k tokens>`.
 - Reports within the profile's length. Your own status to the owner: short, decisions first.
 - Agents report by message to the coordinator session by name ("Coordinator: <project>"), for
   every outcome: PR ready and gate green, blocked or decision needed, handover written. Sessions

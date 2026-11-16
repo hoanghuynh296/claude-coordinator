@@ -107,13 +107,19 @@ Read before starting a stretch of work. Each entry: what went wrong, then the fi
     parent archived its side sessions. → All sessions are top-level peers: the starter detaches
     each one right away; a replacement is never started by the session it replaces; agents
     report by message to "Coordinator: <project>".
+31. **Both sides waited after a merge.** An agent reported "PR ready, next #50" and ended its
+    turn; the coordinator merged and, as the kit then said, told it nothing. Agent sessions run
+    only when a message arrives, and nothing noticed the stop, so both waited. → One issue, one
+    full lifecycle: the agent works one issue, reports "PR ready" and waits; in the same turn
+    as the merge the coordinator sends `PR #<n> merged. Next: <issue | handover | stand by |
+    done>`. The plugin's Stop hook blocks the coordinator's turn from ending until it has.
 
 ## Tooling
 
-31. **`ubuntu-latest` moved** and broke a pinned tool. → Pin runner images and tool versions.
-32. **Branch protection on private repos** needs a paid GitHub plan. → On GitHub's 403 the
+32. **`ubuntu-latest` moved** and broke a pinned tool. → Pin runner images and tool versions.
+33. **Branch protection on private repos** needs a paid GitHub plan. → On GitHub's 403 the
     bootstrap script warns and continues; record the owner's choice in `DECISIONS.md`.
-33. **Scripts lose their exec bit** when a tool rewrites them. → Commands call scripts with
+34. **Scripts lose their exec bit** when a tool rewrites them. → Commands call scripts with
     `bash <path>`; `tests/exec-bits-test.sh` checks the mode in git.
-34. **Template placeholders left behind** in CI files matched nothing. → The bootstrap script
+35. **Template placeholders left behind** in CI files matched nothing. → The bootstrap script
     fails while any placeholder remains.
