@@ -16,7 +16,9 @@ handover carries only what is in flight; see `references/state-files.md`.
    small docs PR), (c) write `coordination/handover/<unit>.md` in the ledger repo from
    `references/templates/handover.md` (at `HARD` fill every section: done, left in order,
    decisions, commands to re-run, traps), commit and push, (d) reply with the file path. Do not
-   write it for the agent. `per-issue` sessions need no handover: the issue and the PR are it.
+   write it for the agent. `per-issue` sessions write no handover file: at `SOFT` they just finish the issue; at `HARD`
+   they write done, left, commands to re-run and traps into the PR (or the issue if there is
+   no PR yet), which the next session starts from.
 3. **Yourself:** first make the files true: `COORDINATION.md` (live state, no expired
    delegation), `ROADMAP.md` (order, debt), `DECISIONS.md` (anything decided this session).
    Run the `audit` procedure. Then write `coordination/handover/coordinator.md`: in flight, next

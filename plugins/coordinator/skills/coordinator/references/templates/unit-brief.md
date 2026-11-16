@@ -41,8 +41,9 @@ Read first: `AGENTS.md`<, `OWNERSHIP.md`, the contract files this unit produces 
     green), take no new one, write `coordination/handover/<unit>.md` in the ledger repo before
     that PR merges, and report "rotate after #<n>". Past <400k> (hard): stop at the next safe
     point (commit, push), write a full handover (done, left in order, decisions, commands to
-    re-run, traps), report "blocked: rotate". No new step. <`per-issue` units: the handover is
-    needed only at hard; at soft just finish the issue.>
+    re-run, traps), report "blocked: rotate". No new step. <`per-issue` units: no handover file.
+    At soft just finish the issue; at hard write the same sections into the PR (or the issue
+    if there is no PR yet) instead.>
 <Pack rules that apply to this unit, one line each.>
 
 ## Prompt (per round)

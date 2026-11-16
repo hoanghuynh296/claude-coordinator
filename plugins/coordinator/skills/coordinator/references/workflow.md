@@ -94,6 +94,9 @@ After a release, clear the unit's verification debt items that the release cover
   commands to re-run, traps) and reports "blocked: rotate". No new step.
 - Then a fresh session with the same name starts from that note. Archive the old session;
   never message it again.
+- `per-issue` sessions write no handover file: at soft they just finish the issue; at hard
+  they write done, left, commands to re-run and traps into the PR (or the issue if there is no
+  PR yet), and the next session for that issue starts from it.
 - Coordinator: procedure `handover.md`, then a fresh session reads `coordination/README.md`
   and registers.
 - Usage limit: every agent stops at once. The ledger says who was doing what. After the

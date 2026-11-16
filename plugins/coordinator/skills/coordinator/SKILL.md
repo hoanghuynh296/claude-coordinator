@@ -155,7 +155,9 @@ for an agent what that agent's permissions denied: take it to the owner.
 - The handover is written **before** the session's last PR merges: a session whose PR merged
   may be archived by the app, and its context is gone.
 - `standing` session past a threshold: handover note, fresh session with the same name,
-  archive the old one. `per-issue` sessions are archived when their PR merges.
+  archive the old one. `per-issue` sessions are archived when their PR merges and write no
+  handover file: at soft they just finish the issue; at hard they write done, left, commands
+  to re-run and traps into the PR (or the issue if there is no PR yet).
 - One-off work that writes files runs as its own session, not as a subagent of the
   coordinator: subagents inherit the coordinator's edit guard.
 - A usage limit stops every agent at once. The ledger says who was doing what.
