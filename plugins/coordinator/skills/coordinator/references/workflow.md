@@ -1,80 +1,94 @@
-# Workflow: full lifecycle
+# Workflow
 
-## 1. Kickoff (`/coordinator:kickoff`)
-1. Interview the owner, five questions in one message: (1) product and the problem, users and
-   personas; (2) the design partner (alias only) and what they need first; (3) stack preferences
-   and constraints (hosting, languages, AI provider, UI language); (4) scope of MVP1 and what is
-   explicitly later; (5) owner availability, budget limits, repo name/owner.
-2. Write the draft `docs/PLAN.md` in the scratchpad from the template sections (summary,
-   principles, users, scope by phase, UX, AI, architecture, milestones with QA exit criteria,
-   agent workflow, owner-side tasks, MVP done, risks). Generalise every design-partner need into a
-   per-tenant-configurable feature.
-3. **Stop.** Ask the owner to approve or change the plan. Nothing is created before approval.
+The lifecycle below is the same for every project. Where a step says "per the profile", read
+`coordination/PROFILE.md`; do not assume a branch name, a role or a merge method.
 
-## 2. Bootstrap (after approval)
-1. Write the placeholder values file (keys from the template's `TEMPLATE.md`: PROJECT_NAME,
-   PROJECT_DESCRIPTION, OWNER_GITHUB, UI_LANGUAGE, STACK_*, API_DIR, WEB_DIR, INTEGRATIONS_DIR,
-   AI_DIR, CMD_*, CONTRACT_FORMAT, FIRST_CUSTOMER_ALIAS). The `*_DIR` values also feed the CI
-   paths-filter in `.github/workflows/ci.yml`; a lane not needed still gets a dir value and is
-   trimmed by Platform's first ticket. Commands not known yet: `make <target>` stub text such as
-   `TBD (platform)`.
-2. Run `scripts/bootstrap.sh <owner/repo> <dir> --values <file> --plan <PLAN.md> [--check <job>]`.
-   It creates the repo from `hoanghuynh296/agent-project-template`, fills placeholders everywhere,
-   deletes `TEMPLATE.md`, creates and pushes `develop`, sets default branch + delete-branch-on-merge,
-   labels `lane:*` `milestone:*` `decision`, GitHub milestones, the private `<repo>-coordination`
-   ledger repo with `COORDINATION.md` + `handover/`, and branch protection (required check
-   `changes` + extras) on develop and main.
-3. Register the session as coordinator (`scripts/register.sh`). From now on the guard hook is on.
-4. Write the owner-side task list into the ledger (accounts, domains, secrets, billing, design
-   partner contacts) and send it to the owner in one message.
+## 1. Start
 
-## 3. Milestone start (`/coordinator:milestone-start`)
-1. Create one Issue per ticket from the ticket form: milestone, lane, goal, allowed paths,
-   contract, acceptance criteria, required tests (3 fixture domains), out of scope. Labels
-   `lane:<lane>` + `milestone:<Mn>`.
-2. **Contract first.** The contract ticket (api lane, `docs/contracts/`) merges before parallel
-   backend/frontend tickets start. Until then, only tickets that do not depend on it run.
-3. QA ticket: acceptance tests from the exit criteria.
-4. Fill the milestone table in the ledger; commit + push.
-5. **Start every session the milestone needs in this one owner turn**: lane sessions, Platform,
-   QA. Sessions can only be started from the owner's own message in the desktop app; if you wait
-   for a later turn you need another owner message. Name them "Agent: <lane>", set the model,
-   own worktree, the lane brief as background and the ticket as prompt.
-6. Fallback when sessions cannot be started (owner on Remote Control / mobile, or the tool is
-   unavailable): run the same brief as background subagents with worktree isolation; they push
-   and open PRs themselves. Mark them `subagent` in the Sessions table and convert them to lane
-   sessions when the owner is back at the desktop (handover note -> fresh session, same name).
+**New project** (`/coordinator:kickoff`): interview the owner in one message, draft the plan
+and the profile, stop for approval, then create the ledger and whatever the profile needs
+(repos, branches, labels, guards). Nothing is created before the owner approves.
 
-## 4. Lane loop (lanes do this, not the coordinator)
-Branch `t<m>.<n>-<slug>` from fresh `develop` -> commit after each step, push after the first
-commit and every commit after -> PR `Closes #N` with the template -> Auto-fix on -> fix CI
-until green -> report "PR ready + CI green" or "blocked/decision" in at most 6 lines.
+**Existing project** (`/coordinator:adopt`): read what is there (repos, branches, CI, open
+issues and PRs, any existing notes), propose a profile that matches how the project already
+works, stop for approval, then create or migrate the ledger. Adoption changes how work is
+tracked, not the product.
+
+Either way, finish by registering the session (`/coordinator:coordinator-register`) and
+running `/coordinator:audit` once.
+
+## 2. Plan the next stretch
+
+- `milestone` cadence: `/coordinator:milestone-start <Mn>` turns the milestone's content and
+  exit criteria into issues, contract first.
+- `continuous` cadence: keep each unit's list in `ROADMAP.md` ordered, with at least the next
+  two items as issues (`/coordinator:ticket`).
+
+Every issue has: goal, unit, acceptance criteria, the checks that prove it, what is out of
+scope, and what it depends on. An issue that changes a contract between units is done before
+the issues on either side of it start.
+
+## 3. Hand out work
+
+One batched message per agent: the issue number, plus the next one or two in order so the
+agent does not stop and ask between PRs. Units in `per-issue` mode get a fresh session per
+issue instead (brief: `templates/unit-brief.md` plus the issue link).
+
+Sessions can only be started in a turn the owner started from the desktop app. Start every
+session the stretch needs in that one turn. If sessions cannot be started (the owner is on
+Remote Control, or the tool is unavailable), run the same brief as a background subagent with
+its own worktree and convert later.
+
+Never leave a unit idle while its `ROADMAP.md` list has an item that is not blocked.
+
+## 4. The agent's loop (agents do this, not the coordinator)
+
+Fresh branch from the integration branch → commit after each step, push after the first commit
+and after every commit → PR that closes the issue → keep the unit's gate green → report once:
+"PR ready, gate green" (with the evidence: run id or command output) or "blocked / decision
+needed". Before every push the agent checks that the branch's PR is not already merged.
 
 ## 5. Review and merge (`/coordinator:review-merge`)
-1. Check CI is green and the diff stays inside the ticket's allowed paths.
-2. Reviewer subagent: **mandatory** for auth, tenancy/isolation, money/billing, AI write tools
-   (agents that change data), secrets or permissions; also for large PRs (> ~400 changed lines
-   or > 15 files). Otherwise a coordinator skim against `review-checklist.md` is enough.
-3. Blocking findings -> one batched message to the lane; it fixes on the same branch.
-4. Stacked PR? Retarget it to `develop` before merging its base, or its commits are lost.
-5. Merge (squash) into `develop`. Update the ledger row, commit + push the ledger. Tell QA to
-   run the suite when the merge touches an exit criterion (batched with other news).
 
-## 6. Milestone close (`/coordinator:milestone-close`)
-1. QA verdict: suite green on staging for every exit criterion.
-2. Demo instructions for the owner: staging URL, test accounts (from the project's seed files),
-   3-6 steps per persona, what to look for.
-3. After the owner's OK: release branch `release/<version>` from `develop`, bump `VERSION`,
-   update `CHANGELOG.md`, PR `release/<version>` -> `main`. Release PRs must come from
-   `release/*` branches: the release workflow tags `v$(cat VERSION)` only for those.
-4. The owner merges the release PR; the workflow creates the tag and GitHub release.
-5. Merge `main` back into `develop` if they diverged (via PR). Close the GitHub milestone, write
-   follow-ups into the ledger, rotate sessions that are near the limit.
+1. Gate green, per the profile. Evidence checked by the coordinator, not taken from the report.
+2. Diff inside the unit's ownership and the issue's scope.
+3. Reviewer subagent when the profile's risk areas or size limits say so.
+4. Manual checks the gate cannot do (per the profile: a browser pass, a run on real hardware).
+   If a manual check is skipped, the merge note says `UNVERIFIED: <what>` and the item goes on
+   the verification debt list in `ROADMAP.md`.
+5. A stacked PR is retargeted to the integration branch before its base merges.
+6. Merge with the profile's method. Update the ledger (remove the item; adjust "ahead by").
+7. Check the unit's integration limit. At the limit: stop handing out feature issues for that
+   unit and go to step 6 of this workflow.
 
-## 7. Continuous rules
-- Measure contexts on each owner message (`scripts/check-context.sh`); rotate at ~250k.
-- Ledger commit + push after every merge, decision, session change.
-- One batched message per agent per round; no ack-only or status pings.
-- Usage limit hit: all agents stop at once. After the reset, resume each agent with SendMessage
-  (its transcript and worktree survive); do not start new ones. The ledger tells you who was
-  doing what.
+## 6. Verify and release
+
+Who releases each unit is in the profile.
+
+- **Coordinator-released units:** gate green on the integration branch, evidence checked,
+  release per the profile (release PR, tag, published artifact). Record it in the ledger.
+- **Owner-released units:** prepare the release: what changed in plain words, what was
+  verified and how, what is still `UNVERIFIED`, steps for the owner to try. The owner decides.
+- `milestone` cadence adds `/coordinator:milestone-close`: QA verdict on the exit criteria,
+  demo steps for the owner, then the release.
+
+After a release, clear the unit's verification debt items that the release covered.
+
+## 7. Keep state (continuous)
+
+- Ledger: update, lint, commit and push after every merge, decision, release, session change
+  and owner answer.
+- Decisions: one row in `DECISIONS.md`; the bound units add their one-line entry.
+- Contexts: measure on every owner message; replace any session at the threshold.
+- `/coordinator:audit` at least once per working day and before every handover.
+
+## 8. Rotate or stop
+
+- `standing` session at the threshold: it pushes its work, moves what it learned into the
+  unit's docs, writes `handover/<unit>.md` (in flight only), then a fresh session with the
+  same name starts from that note. Archive the old session; never message it again.
+- Coordinator: `/coordinator:handover`, then a fresh session reads `coordination/README.md`
+  and registers.
+- Usage limit: every agent stops at once. The ledger says who was doing what. After the
+  reset, continue each standing agent with one message; start per-issue agents again from
+  their issue.

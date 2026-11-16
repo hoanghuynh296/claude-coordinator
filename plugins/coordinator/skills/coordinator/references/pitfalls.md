@@ -1,40 +1,91 @@
-# Pitfalls (learned the hard way)
+# Pitfalls (each one happened)
 
-1. **Shared-file conflicts.** Several tickets each touched CI, Makefile or AGENTS.md; every
-   merge conflicted. -> Platform is the sole owner of shared/root files; other tickets request
-   changes through it.
-2. **`ubuntu-latest` moved** and broke a pinned Playwright. -> Pin runner images
-   (`ubuntu-24.04`) and tool versions.
-3. **paths-filter needs `pull-requests: read`** in the workflow permissions, or it fails on PRs.
-4. **CI green has no wake-up.** The coordinator never learned a PR went green. -> Lanes own
-   their PR to green with Auto-fix and report "ready + green" once.
-5. **Coordinator doing git plumbing** (pushing, opening PRs, cleaning worktrees for subagents)
-   bloated its context. -> Agents push, open PRs and clean their worktrees themselves.
-6. **Stacked PRs merged into their base lose work.** When the base PR merged (and its branch
-   was deleted), the child PR's commits went nowhere. -> Retarget stacked PRs to `develop`
-   before merging the base.
-7. **Memory-only rules get violated.** "The coordinator never edits code" was broken under
-   pressure. -> Hook enforcement (the guard in this plugin).
-8. **Reviewer catches what tests miss.** It found 2 high-severity auth bugs that CI and the
-   author's 53 tests missed. -> Reviewer is mandatory for auth, tenancy, money, AI write PRs.
-9. **Sessions cannot be started from Remote Control** and only from the owner's own message in
-   the desktop app. -> Start all milestone sessions in one owner turn; when the owner is remote,
-   fall back to background subagents with the same brief and worktree isolation (they push and
-   open PRs), and convert them to lane sessions when the owner is back at the desktop.
-10. **Usage limits stop every agent at once.** -> Keep the ledger current at all times; after the
-    reset resume each agent with SendMessage instead of starting new ones (new ones start cold
-    and duplicate work).
-11. **Unpushed worktrees get cleaned up.** An isolated worktree with no commits was auto-cleaned
-    during a usage-limit pause and all its work was lost. -> Every brief: commit after each step,
-    push the branch right after the first commit, then after every commit.
-12. **Release tags only from `release/*`.** The template's release workflow tags `v$(cat VERSION)`
-    only for PRs from `release/*` branches into main. A PR from `develop` straight to main merges
-    without a tag.
-13. **Template placeholders left behind.** `{{API_DIR}}` etc. also live in
-    `.github/workflows/ci.yml`; unfilled, CI filters match nothing. The bootstrap script fails if
-    any placeholder remains and deletes `TEMPLATE.md` only after all are filled.
-14. **Branch protection on private repos** needs a paid GitHub plan. On GitHub's 403 ("Upgrade to
-    GitHub Pro") bootstrap warns, continues without protection and prints an ACTION line: record an
-    owner decision `C-xxx` in the ledger (upgrade / make public / accept no protection).
-15. **Scripts lose their exec bit** when rewritten by a tool. Commands call them with `bash <path>`;
-    `tests/exec-bits-test.sh` fails if any plugin `*.sh` is not 100755 in git.
+Read before starting a stretch of work. Each entry: what went wrong, then the fix.
+
+## State
+
+1. **The ledger became a log.** It was meant to hold live state; after four days it was 231
+   lines of per-PR history, with tables two days stale. → Live state only, a size budget,
+   `ledger-lint.sh` before every commit. History is in git.
+2. **A stale delegation stayed in the ledger.** "The owner is asleep and delegated all
+   decisions" was still there days later; a new coordinator could read it as valid. → Every
+   delegation carries its date and is deleted when the session ends.
+3. **One rule, three copies, three values.** The rotation threshold was 250k in the ledger and
+   300k in memory; the model of one agent differed between two lines of the same file. → Each
+   rule is written once, in `PROFILE.md`; other files point to it.
+4. **Decisions with no home.** Decision ids were cited in code and docs of three repos but
+   defined only in a ledger that deletes finished items. → `DECISIONS.md` is append-only, and
+   each bound unit carries a one-line entry with the same id.
+5. **Machine-specific notes in a portable ledger.** Session ids and home paths of an old
+   machine survived a move; the memory copy drifted because its files held absolute paths.
+   → Nothing machine-specific in the ledger; sessions are found by name; the lint rejects home
+   paths and session ids.
+6. **Repo knowledge in handover notes.** Traps about a repo's code lived in the coordinator's
+   handover file, where the next agent of that repo would not see them. → Knowledge goes into
+   the unit's docs in the PR that found it; a handover carries only what is in flight.
+7. **A plan file nobody ticked.** A phase was shipped and released while the plan still showed
+   it as not started. → Updating the plan or roadmap is part of the definition of done.
+
+## Flow
+
+8. **Agents faster than verification.** About 130 PRs merged in four days with one reviewer;
+   the integration branch ran 35 commits ahead of the release without a browser check. → An
+   integration limit per unit; at the limit, verify and release before new features.
+9. **No ordered backlog.** The next task lived in the coordinator's head, so agents idled and
+   the owner had to ask why. → `ROADMAP.md` lists the next issues per unit; hand out two or
+   three at once.
+10. **Pushes onto a merged PR's branch.** Three times an agent added commits to a branch whose
+    PR had already merged; the commits went nowhere. → Delete branches on merge (repo
+    setting) and install the pre-push guard (`install-guards.sh`).
+11. **Stacked PRs merged into their base lose work.** → Retarget a stacked PR to the
+    integration branch before merging its base.
+12. **Shared-file conflicts.** Several tickets each touched CI or the build file; every merge
+    conflicted. → A Platform unit owns shared and root files (switch the role on when this
+    starts to happen).
+13. **A release without a tag.** A release workflow tagged only PRs from `release/*`; a PR
+    from the integration branch straight to main merged untagged. → The profile states exactly
+    what a release is; `milestone-close` follows the profile, not habit.
+
+## Verification
+
+14. **"CI green" covered less than it sounded.** CI ran one language's unit tests; the web
+    checks and the engine tests ran only locally. → The profile's gate names the exact
+    commands; the review checks the evidence for each, and says `UNVERIFIED` for the rest.
+15. **The Reviewer catches what tests miss.** It found two high-severity auth bugs that CI and
+    the author's 53 tests missed. → The profile lists the risk areas where it is mandatory.
+16. **Unverified claims piling up.** "JSON shape unverified", "not checked on real hardware"
+    sat in notes for days. → A verification debt list in `ROADMAP.md`, cleared at release.
+17. **An output difference that was not a bug.** Two days went into a mismatch that came from
+    the engine seeding a random generator. → Before debugging a difference, compare the
+    reference against itself.
+
+## Sessions and tokens
+
+18. **Messages that wake sessions.** Every cross-session message makes the receiver re-read
+    its whole context. Idle notices and acks multiplied turns. → No acks, no pings, no idle
+    subscriptions; one batched message per agent per round.
+19. **Sessions cannot be started from Remote Control**, and only in a turn the owner started.
+    → Start every session a stretch needs in one owner turn; otherwise fall back to background
+    subagents with the same brief.
+20. **Usage limits stop every agent at once.** → The ledger always says who is doing what;
+    after the reset, continue standing agents with one message each.
+21. **Unpushed worktrees get cleaned up.** A worktree with no pushed commits was removed
+    during a pause and its work was lost. → Every brief: commit after each step, push after
+    the first commit and after every commit.
+22. **A standing agent with nothing to do.** One unit's agent was idle most of the time, yet
+    kept a long context that was re-read at every message. → `per-issue` mode for units with
+    intermittent work.
+23. **Messaging an archived session** makes it resume with its full old context. → Archive
+    after rotation; never message it again.
+24. **Permission laundering.** An agent was denied an action and the coordinator did it
+    instead. → What one session's permissions deny goes to the owner, not to another session.
+
+## Tooling
+
+25. **`ubuntu-latest` moved** and broke a pinned tool. → Pin runner images and tool versions.
+26. **Branch protection on private repos** needs a paid GitHub plan. → On GitHub's 403 the
+    bootstrap script warns and continues; record the owner's choice in `DECISIONS.md`.
+27. **Scripts lose their exec bit** when a tool rewrites them. → Commands call scripts with
+    `bash <path>`; `tests/exec-bits-test.sh` checks the mode in git.
+28. **Template placeholders left behind** in CI files matched nothing. → The bootstrap script
+    fails while any placeholder remains.

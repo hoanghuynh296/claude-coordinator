@@ -1,29 +1,24 @@
-# Handover - <session name> - <YYYY-MM-DD HH:MM>
+# Handover: <role>, <YYYY-MM-DD>
 
-Write this before rotating a session (~250k context) or before a long pause. Save it as
-`handover/<YYYY-MM-DD>-<session-slug>.md` in the ledger repo, commit and push. The fresh session
-(same name) reads this file first, then COORDINATION.md.
+Write this before replacing a `standing` session or the coordinator, or before a long pause.
+Save it as `coordination/handover/<role>.md` in the ledger repo (overwrite the old one; git
+keeps history), commit and push. Only what is in flight belongs here. Knowledge about the code
+goes into the unit's own docs first; rules go into `PROFILE.md`; state goes into
+`COORDINATION.md`.
 
-## Role and scope
-- Session: "<name>" · role: <coordinator | lane X | platform | qa-Mn> · model: <model>
-- Worktree / branch: <path> / <branch>
-- Owned paths: <from OWNERSHIP.md>
-
-## State
-- Milestone: <Mn> · current ticket(s): #<n> <title>
-- Open PRs: #<n> <status: CI green/red, review pending, findings to fix>
-- Uncommitted or unpushed work: <none | what and where> (there should be none: commit + push first)
+## In flight
+- Issue(s): #<n> <title>
+- Open PRs: #<n> <gate green or red, review pending, findings to fix>
+- Branches pushed without a PR: <branch: what it holds, what is missing>
+- Unpushed work: none <there must be none: commit and push first>
 
 ## Next steps (in order)
 1.
 2.
 
-## Decisions and context the next session needs
-- <decision, with C-xxx id if logged>
-
-## Gotchas
-- <things that wasted time; commands that work; flaky tests>
-
 ## Waiting on
 - Owner: <question or task>
-- Other lanes: <dependency>
+- Other units: <dependency>
+
+## Moved into the unit's docs in this rotation
+- <file: what was added> <or "nothing new">

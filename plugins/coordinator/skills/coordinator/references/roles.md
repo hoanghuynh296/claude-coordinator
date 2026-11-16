@@ -1,32 +1,43 @@
 # Roles
 
-| Role | Kind | Model | Does | Never does |
-|---|---|---|---|---|
-| Owner | human | - | approves the plan, answers real decisions, does non-code tasks (accounts, domains, billing, legal), tests demos, merges release PRs, starts sessions from the desktop app | gets status pings or ack-only messages |
-| Coordinator | Claude session | Opus | plan, ADRs, ledger, tickets (GitHub Issues), starts sessions, reviews, merges into `develop`, prepares releases, measures contexts | writes product code, runs setup/infra by hand, does git plumbing for agents |
-| Lane | long-lived named session "Agent: <lane>", own worktree | per lane: core backend/AI Opus, web/integrations Sonnet | owns directories per `OWNERSHIP.md`, one branch + PR per ticket, fixes its own CI with Auto-fix | edits other lanes' or shared files, merges its own PR |
-| Platform | lane "Agent: platform" | Sonnet | sole owner of shared/root files: CI, Makefile, workspace files, compose, infra, staging, deploy, observability, branch protection | product features |
-| QA acceptance | session "Agent: qa-M<n>" per milestone | Sonnet | at milestone start writes E2E acceptance tests from exit criteria; runs them on `develop` with the real stack after merges; persona walkthroughs; final milestone verdict on staging | product code |
-| Reviewer | subagent `coordinator:reviewer` | Opus | read-only independent review of large or sensitive PRs with a security checklist; verdict + ranked findings in at most 15 lines | edits, pushes, comments on GitHub |
-| One-off | subagent `coordinator:oneoff-builder` (or general) | Sonnet | fixtures, docs, investigations, small fixes; pushes its own branch, opens a PR | long-lived ownership |
+Three roles exist in every project. The rest are optional and are switched on in the
+project's `PROFILE.md` (see `profile.md` for when each one pays).
+
+## Always
+
+| Role | Kind | Does | Never does |
+|---|---|---|---|
+| Owner | human | approves the plan and the profile; answers real decisions; approves anything that costs money; releases the units the profile marks owner-released; does non-code tasks (accounts, secrets, billing) | receives status pings or ack-only messages |
+| Coordinator | one Claude session | keeps the ledger, roadmap and decisions; writes issues; starts and briefs agents; reviews; merges into the integration branch; releases the units the profile gives it; reports to the owner | writes product code (unless the profile says so); does agents' git plumbing; does for an agent what that agent's permissions denied |
+| Unit agent | Claude session, `standing` or `per-issue` | owns one unit; one branch and one PR per issue; keeps its gate green; moves what it learns into the unit's docs; reports once per PR | edits another unit's files; merges its own PR; decides anything that costs money |
+
+## Optional
+
+| Role | Kind | Does | Never does |
+|---|---|---|---|
+| Platform | unit agent | sole owner of shared and root files: CI, build files, workspace files, infra, deploy | product features |
+| QA | session per milestone | writes acceptance tests from the exit criteria before the code exists; runs them after merges; gives the milestone verdict | product code |
+| Reviewer | read-only subagent `coordinator:reviewer` | independent review of risky or large PRs; verdict and ranked findings in at most 15 lines | edits, pushes, comments on GitHub |
+| One-off builder | subagent `coordinator:oneoff-builder` | a self-contained task outside any unit's queue (docs, fixtures, an investigation); pushes its own branch and opens a PR | long-lived ownership |
 
 ## Why these splits
 
-- **Coordinator writes no code.** Its context is the scarcest resource in the project: it holds
-  the plan, every ticket and every review. Code, logs and git plumbing fill it fast and force
-  early rotation. The guard hook enforces this because a memory-only rule was violated before.
-- **Platform owns shared files.** When several tickets each touched CI, Makefile or AGENTS.md,
-  their PRs conflicted on every merge. One owner serialises those changes.
-- **Lanes own their PR until green.** CI going green gives the coordinator no wake-up signal;
-  the lane that watches its own PR with Auto-fix does, and reports once.
-- **Reviewer is independent.** The author's tests encode the author's assumptions. The Reviewer
-  once caught two high-severity auth bugs that CI and 53 author-written tests missed, so it is
-  mandatory for auth, tenancy, money and AI write tools.
-- **QA writes tests from exit criteria first.** Acceptance written before the code cannot be
-  bent to fit the implementation.
+- **The coordinator keeps its context for coordination.** Its context holds the plan, every
+  open issue and every review. Code, logs and git plumbing fill it fast and force an early
+  rotation. Where the profile forbids coordinator edits, the guard hook enforces it.
+- **Agents own their PR until the gate is green.** A green CI run sends the coordinator no
+  wake-up; the agent that watches its own PR reports once.
+- **Review is independent of the author.** The author's tests encode the author's
+  assumptions. Independent review has caught high-severity bugs that CI and dozens of
+  author-written tests missed.
+- **Platform exists only where shared files hurt.** If PRs do not conflict on root files, the
+  role is overhead.
+- **QA writes acceptance first.** Tests written from the exit criteria before the code exists
+  cannot be bent to fit the implementation.
 
 ## Models
 
-Opus where mistakes are expensive and reasoning is deep (coordinator, Reviewer, core backend,
-AI). Sonnet for well-specified work (web, integrations, Platform, QA, one-offs). Record the
-model per session in the ledger's Sessions table.
+The profile records the model and effort per role. A common split: the stronger model where
+mistakes are expensive or reasoning is deep (coordinator, Reviewer, a core unit), the cheaper
+one for well-specified work (docs, integrations, Platform, QA, one-offs). Revisit the split
+when usage limits bite: four strong-model sessions in parallel drain a plan quickly.

@@ -3,12 +3,12 @@
   "owner": {
     "name": "hoanghuynh296"
   },
-  "description": "Multi-agent project coordination for Claude Code: owner + coordinator + lanes + Platform + QA + Reviewer.",
+  "description": "Multi-agent project coordination for Claude Code: core principles plus a per-project profile (owner, coordinator, unit agents; optional Platform, QA, Reviewer).",
   "plugins": [
     {
       "name": "coordinator",
       "source": "./plugins/coordinator",
-      "description": "Run a software project with parallel Claude sessions: /kickoff (plan + bootstrap), /milestone-start, /ticket, /review-merge, /milestone-close, /handover, /status; Reviewer agent; a hook that keeps the coordinator session out of product code."
+      "description": "Run a software project with several Claude sessions in any shape (one repo with lanes, several repos, one small repo): core principles + a per-project profile, a standard ledger, task issues, review and release commands, a ledger lint, and guards that keep the coordinator out of product code and agents off merged branches."
     }
   ]
 }

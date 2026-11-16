@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # shellcheck disable=SC2016,SC2034  # expect() evals single-quoted conditions later
 # End-to-end bootstrap run against local bare repos and a fake `gh` (no network, no GitHub).
-# Checks: placeholders filled + TEMPLATE.md removed on develop, develop pushed, ledger created,
+# Checks: placeholders filled + TEMPLATE.md removed on develop, develop pushed, ledger created in the
+# standard layout and lint-clean,
 # branch protection 403 ("Upgrade to GitHub Pro") -> warning + continue, exit 0; rerun idempotent.
 # Usage: tests/bootstrap-test.sh [template-dir]  (default: ../agent-project-template next to this repo)
 set -euo pipefail
@@ -52,8 +53,13 @@ expect "TEMPLATE.md removed on develop" '! git -C "$remote" cat-file -e develop:
 expect "no placeholders left on develop" '! git -C "$remote" grep -qE "\{\{[A-Z][A-Z0-9_]*\}\}" develop -- .'
 expect "ci.yml paths-filter filled" 'git -C "$remote" show develop:.github/workflows/ci.yml | grep -q "apps/api/\*\*"'
 expect "plan committed" 'git -C "$remote" show develop:docs/PLAN.md | grep -q Approved'
-expect "ledger pushed" 'git -C "$w/remotes/fakeowner/fakerepo-coordination.git" show HEAD:COORDINATION.md | grep -q "fakeowner/fakerepo"'
-expect "ledger handover dir" 'git -C "$w/remotes/fakeowner/fakerepo-coordination.git" cat-file -e HEAD:handover/README.md'
+led="$w/remotes/fakeowner/fakerepo-coordination.git"
+expect "ledger pushed" 'git -C "$led" cat-file -e HEAD:COORDINATION.md'
+expect "ledger standard files" 'for f in README PROFILE ROADMAP DECISIONS; do git -C "$led" cat-file -e "HEAD:coordination/$f.md" || exit 1; done'
+expect "ledger README names the repo" 'git -C "$led" show HEAD:coordination/README.md | grep -q "fakeowner/fakerepo"'
+expect "ledger has no placeholder left" '! git -C "$led" grep -qE "\{\{[A-Z][A-Z0-9_]*\}\}" HEAD -- .'
+expect "ledger handover dir" 'git -C "$led" cat-file -e HEAD:coordination/handover/.gitkeep'
+expect "fresh ledger passes the lint" 'bash "$root/plugins/coordinator/scripts/ledger-lint.sh" "$w/fakerepo-coordination" >/dev/null'
 
 rc2=0; out2="$(run)" || rc2=$?
 expect "rerun exits 0 (idempotent)" '[[ $rc2 -eq 0 ]]'

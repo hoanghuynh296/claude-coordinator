@@ -1,28 +1,29 @@
 ---
-description: Start a milestone - create Issues contract-first, update the ledger, start all lane, Platform and QA sessions in this owner turn
-argument-hint: "<milestone e.g. M1>"
+description: Start a milestone or a planned stretch of work - create the issues contract-first, order the backlog, and start or brief every agent it needs in this owner turn
+argument-hint: "<milestone, e.g. M1, or a short name for the stretch>"
 ---
 
-Start milestone `$ARGUMENTS`. Load the `coordinator` skill; reread `references/pitfalls.md`.
+Start `$ARGUMENTS`. Load the `coordinator` skill; reread `references/pitfalls.md`.
 
-1. From `docs/PLAN.md` section 7 take the milestone's content and QA exit criteria. Split it into
-   tickets, one lane each, small enough for one PR. Include: the contract ticket (if the
-   milestone adds or changes an interface), one QA ticket (acceptance tests from the exit
-   criteria), and Platform tickets for any shared/root file changes (no other ticket may touch
-   those).
-2. Create each Issue with `/coordinator:ticket` fields (`gh issue create --repo <repo> --title
-   "T<m>.<n> <title>" --label lane:<lane> --label milestone:<Mn> --milestone <Mn> --body ...`).
-   Order: contract ticket first; backend/frontend tickets that depend on it say "starts after #<contract>"
-   and are not handed out until the contract PR merges.
-3. Fill the milestone table and the Sessions table in `COORDINATION.md`; commit + push the ledger.
-4. **Start every session needed now, in this turn** (sessions can only be started from the owner's
-   own message): for each lane with a ready ticket, Platform, and QA - name "Agent: <lane>"
-   (QA: "Agent: qa-<Mn>"), the lane's model, its own worktree, background from
-   `references/templates/lane-brief.md` / `platform-brief.md` / `qa-brief.md`, prompt = the ticket
-   link. Reuse a live lane session by sending it the next ticket instead of starting a new one.
-5. If sessions cannot be started (owner on Remote Control, or the tool is unavailable): launch the
-   same briefs as background subagents with `isolation: worktree` (they commit every step, push
-   after the first commit, open PRs themselves). Mark them `subagent` in the ledger; convert to
-   lane sessions when the owner is back at the desktop.
-6. Reply to the owner in at most 8 lines: tickets created (numbers), sessions started, what waits on
-   the contract, any owner-side task needed for this milestone.
+1. Take the content and exit criteria from `coordination/ROADMAP.md` (milestone cadence) or
+   the top of each unit's backlog (continuous cadence). Split it into issues, one unit each,
+   each small enough for one PR. Include:
+   - the contract issue first, if the stretch adds or changes an interface between units;
+   - a QA issue (acceptance tests from the exit criteria) when the profile has QA on;
+   - Platform issues for shared or root files when the profile has Platform on.
+2. Create each issue with `/coordinator:ticket`. Issues that depend on the contract say
+   "depends on #<n>" and are not handed out until it merges.
+3. Order each unit's list in `ROADMAP.md`. Update `COORDINATION.md` (in progress per unit).
+   Lint, commit and push the ledger.
+4. **Staff it now, in this turn** (sessions can only be started from the owner's own message):
+   - `standing` units with a live session: one batched message with the next two or three
+     issues, in order.
+   - `standing` units without a session, and `per-issue` units: start a fresh session, named
+     per the profile, with the model and effort from the profile, background from
+     `references/templates/unit-brief.md` (plus `platform-brief.md` / `qa-brief.md`), prompt =
+     the issue links.
+   - Cannot start sessions (owner on Remote Control, or the tool is unavailable): launch the
+     same briefs as background subagents with their own worktree; convert to sessions when the
+     owner is back at the desktop.
+5. Reply to the owner in at most 8 lines: issues created (numbers), who is doing what, what
+   waits on the contract, any owner-side task this stretch needs.

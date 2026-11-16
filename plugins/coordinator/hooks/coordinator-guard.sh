@@ -1,7 +1,12 @@
 #!/usr/bin/env bash
 # PreToolUse guard for Edit|Write|MultiEdit|NotebookEdit.
-# A session registered as coordinator may only edit coordination files; everything
-# else is denied with a message telling it to delegate. Unregistered sessions: no-op.
+# A session registered as coordinator may only edit coordination files; everything else is
+# denied with a message telling it to delegate. Unregistered sessions, and sessions registered
+# with guard=off, are never affected.
+#
+# Order of the checks matters for multi-repo workspaces, where unit checkouts sit INSIDE the
+# ledger repo (products/<unit>): a path under a unit is judged by the unit rules first, and
+# only paths outside every unit may be allowed because they are in the ledger.
 # Limitation: only edit tools are guarded; Bash redirections (>, sed -i, tee) are not.
 set -u
 
@@ -11,6 +16,7 @@ set -u
 input="$(cat)"
 sid="$(json_get "$input" session_id)" || exit 0
 reg="$(registration_file "$sid")" || exit 0
+[[ "$(reg_value "$reg" guard)" == "off" ]] && exit 0
 
 path="$(json_get "$input" tool_input.file_path)"
 [[ -z "$path" ]] && path="$(json_get "$input" tool_input.notebook_path)"
@@ -41,25 +47,48 @@ esac
 under() { [[ -n "$2" && ( "$1" == "$2" || "$1" == "${2%/}/"* ) ]]; }
 
 ledger="$(reg_value "$reg" ledger)"
-project="$(reg_value "$reg" project)"
 
-# 1. Ledger repo, memory/config, scratchpad and temp dirs.
+units=()
+while IFS= read -r u; do [[ -n "$u" ]] && units+=("$u"); done < <(reg_values "$reg" unit; reg_values "$reg" project)
+allows=()
+while IFS= read -r a; do [[ -n "$a" ]] && allows+=("$a"); done < <(reg_values "$reg" allow)
+[[ ${#allows[@]} -eq 0 ]] && allows=("docs/PLAN.md" "docs/adr/*" "docs/contracts/README.md" "AGENTS.md")
+
+# allowed_rel <path relative to a unit root>: matches an allow glob at the unit root or deeper
+# (so "AGENTS.md" also allows web/AGENTS.md, as the first version of this guard did).
+allowed_rel() {
+  local rel="$1" g
+  for g in "${allows[@]}"; do
+    # shellcheck disable=SC2254  # the allow entries are globs on purpose
+    case "$rel" in
+      $g|*/$g) return 0 ;;
+    esac
+  done
+  return 1
+}
+
+allow_text="$(printf '%s, ' "${allows[@]}")"; allow_text="${allow_text%, }"
+delegate="Delegate: write an issue for the owning unit (/coordinator:ticket), or use a one-off subagent (coordinator:oneoff-builder) that pushes its own branch and opens a PR."
+
+# 1. Inside a unit: only the allowed planning files.
+if [[ ${#units[@]} -gt 0 ]]; then
+  for unit in "${units[@]}"; do
+    if under "$path" "$unit"; then
+      rel="${path#"${unit%/}"/}"
+      allowed_rel "$rel" && exit 0
+      deny "Coordinator guard: this session is registered as the coordinator and may not edit $path (inside unit $unit). $delegate Allowed inside units: $allow_text. Allowed elsewhere: the ledger repo ($ledger), ~/.claude/**, the scratchpad and temp dirs."
+    fi
+  done
+fi
+
+# 2. Ledger repo, memory/config, scratchpad and temp dirs.
 for dir in "$ledger" "$HOME/.claude" "$scratch" "${TMPDIR:-}" /tmp /private/tmp /private/var/folders; do
   under "$path" "$dir" && exit 0
 done
 
-# 2. Coordinator-owned files in the project (anywhere when no project is recorded).
-rel=""
-if [[ -n "$project" ]]; then
-  under "$path" "$project" && rel="${path#"${project%/}"/}"
-else
-  rel="$path"
-fi
-if [[ -n "$rel" ]]; then
-  case "/$rel" in
-    */docs/PLAN.md|*/docs/adr/*|*/docs/contracts/README.md|*/AGENTS.md)
-      exit 0 ;;
-  esac
+# 3. No unit recorded: the allowed planning files anywhere.
+if [[ ${#units[@]} -eq 0 ]] && allowed_rel "${path#/}"; then
+  exit 0
 fi
 
-deny "Coordinator guard: this session is registered as the coordinator, and the coordinator never edits product code, config or shared files ($path). Delegate: put the change in a ticket (/coordinator:ticket) for the owning lane per OWNERSHIP.md, the Platform lane for root/CI files, or a one-off subagent (coordinator:oneoff-builder) that pushes its own branch and opens a PR. Allowed here: the ledger repo ($ledger), docs/PLAN.md, docs/adr/**, docs/contracts/README.md, AGENTS.md (coordinator sections), ~/.claude/**, the scratchpad and temp dirs."
+deny "Coordinator guard: this session is registered as the coordinator and may not edit $path. $delegate Allowed: the ledger repo ($ledger), inside units only $allow_text, ~/.claude/**, the scratchpad and temp dirs."

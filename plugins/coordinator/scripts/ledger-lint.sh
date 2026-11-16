@@ -1,0 +1,151 @@
+#!/usr/bin/env bash
+# Check a coordination ledger against the rules a machine can check.
+# Usage: ledger-lint.sh [ledger-dir]            (default: current directory)
+#
+# Errors (exit 1):
+#   - a required file is missing (COORDINATION.md, coordination/{README,PROFILE,ROADMAP,DECISIONS}.md)
+#   - COORDINATION.md is longer than MAX_LINES (default 80) or has a line over MAX_LINE_LEN (240)
+#   - COORDINATION.md has no "Updated: YYYY-MM-DD" line
+#   - a ledger file holds a session id (local_xxxxxxxx) or a home path (/Users/x, /home/x, C:\Users\x)
+#   - a decision id (C-123) is cited in the ledger but has no row in DECISIONS.md, or a row id repeats
+#   - a template placeholder ({{NAME}}) is left in a ledger file
+# Warnings (exit 0):
+#   - "Updated:" is older than STALE_DAYS (default 7)
+#   - COORDINATION.md looks like a log (more than HISTORY_MAX lines that describe finished work)
+#   - a "delegat..." line in COORDINATION.md carries no date
+#   - PROFILE.md still has unfilled <...> fields
+#
+# Budgets can be set in the environment or in <ledger-dir>/.ledger-lint (KEY=VALUE lines):
+#   MAX_LINES, MAX_LINE_LEN, STALE_DAYS, HISTORY_MAX
+set -euo pipefail
+
+dir="${1:-.}"
+[[ -d "$dir" ]] || { echo "ledger dir not found: $dir" >&2; exit 2; }
+command -v python3 >/dev/null 2>&1 || { echo "ledger-lint.sh needs python3" >&2; exit 2; }
+
+python3 -I - "$dir" "${MAX_LINES:-}" "${MAX_LINE_LEN:-}" "${STALE_DAYS:-}" "${HISTORY_MAX:-}" <<'PY'
+import datetime, os, re, sys
+
+root = os.path.abspath(sys.argv[1])
+cfg = {"MAX_LINES": 80, "MAX_LINE_LEN": 240, "STALE_DAYS": 7, "HISTORY_MAX": 5}
+rc_file = os.path.join(root, ".ledger-lint")
+if os.path.isfile(rc_file):
+    with open(rc_file, encoding="utf-8") as fh:
+        for line in fh:
+            line = line.strip()
+            if line and not line.startswith("#") and "=" in line:
+                k, v = line.split("=", 1)
+                if k.strip() in cfg and v.strip().isdigit():
+                    cfg[k.strip()] = int(v.strip())
+for key, arg in zip(("MAX_LINES", "MAX_LINE_LEN", "STALE_DAYS", "HISTORY_MAX"), sys.argv[2:6]):
+    if arg.isdigit():
+        cfg[key] = int(arg)
+
+errors, warnings = [], []
+def err(msg): errors.append(msg)
+def warn(msg): warnings.append(msg)
+
+def read(rel):
+    try:
+        with open(os.path.join(root, rel), encoding="utf-8", errors="replace") as fh:
+            return fh.read().splitlines()
+    except FileNotFoundError:
+        return None
+
+required = ["COORDINATION.md", "coordination/README.md", "coordination/PROFILE.md",
+            "coordination/ROADMAP.md", "coordination/DECISIONS.md"]
+for rel in required:
+    if read(rel) is None:
+        err(f"{rel}: missing (create it with init-ledger.sh)")
+
+# Every ledger file: COORDINATION.md plus everything under coordination/.
+files = ["COORDINATION.md"]
+coord = os.path.join(root, "coordination")
+for base, _dirs, names in os.walk(coord):
+    for n in sorted(names):
+        if n.endswith(".md"):
+            files.append(os.path.relpath(os.path.join(base, n), root))
+
+session_id = re.compile(r"\blocal_[0-9a-f]{8}")
+home_path = re.compile(r"(/Users/[A-Za-z0-9._-]+|/home/[A-Za-z0-9._-]+|[A-Za-z]:\\Users\\[A-Za-z0-9._-]+)")
+placeholder = re.compile(r"\{\{[A-Z][A-Z0-9_]*\}\}")
+for rel in files:
+    lines = read(rel) or []
+    for i, line in enumerate(lines, 1):
+        if session_id.search(line):
+            err(f"{rel}:{i}: session id (sessions are found by name; ids are machine-specific)")
+        m = home_path.search(line)
+        if m:
+            err(f"{rel}:{i}: home path {m.group(1)} (use a path relative to the workspace)")
+        if placeholder.search(line):
+            err(f"{rel}:{i}: unfilled template placeholder")
+
+ledger = read("COORDINATION.md")
+if ledger is not None:
+    if len(ledger) > cfg["MAX_LINES"]:
+        err(f"COORDINATION.md: {len(ledger)} lines, budget {cfg['MAX_LINES']} "
+            "(delete finished items; rules go to PROFILE.md, next work to ROADMAP.md, reasons to DECISIONS.md)")
+    for i, line in enumerate(ledger, 1):
+        if len(line) > cfg["MAX_LINE_LEN"]:
+            err(f"COORDINATION.md:{i}: line of {len(line)} characters, budget {cfg['MAX_LINE_LEN']}")
+    updated = None
+    for line in ledger:
+        m = re.match(r"\s*Updated:\s*(\d{4}-\d{2}-\d{2})", line)
+        if m:
+            updated = m.group(1)
+            break
+    if updated is None:
+        err("COORDINATION.md: no 'Updated: YYYY-MM-DD' line")
+    else:
+        try:
+            age = (datetime.date.today() - datetime.date.fromisoformat(updated)).days
+            if age > cfg["STALE_DAYS"]:
+                warn(f"COORDINATION.md: 'Updated: {updated}' is {age} days old")
+        except ValueError:
+            err(f"COORDINATION.md: 'Updated: {updated}' is not a date")
+    history = re.compile(r"\b(merged|released|RELEASED|DONE|done)\b")
+    hits = [i for i, line in enumerate(ledger, 1) if history.search(line) and not line.lstrip().startswith("|---")]
+    if len(hits) > cfg["HISTORY_MAX"]:
+        warn(f"COORDINATION.md: {len(hits)} lines describe finished work (lines {', '.join(map(str, hits[:8]))}...); "
+             "the ledger holds live state only")
+    for i, line in enumerate(ledger, 1):
+        if re.search(r"delegat", line, re.I) and not line.lstrip().startswith("#") \
+           and not re.search(r"\d{4}-\d{2}-\d{2}", line) and not re.search(r"\bnone\b", line, re.I):
+            warn(f"COORDINATION.md:{i}: a delegation without a date")
+
+decisions = read("coordination/DECISIONS.md")
+if decisions is not None:
+    defined = []
+    for line in decisions:
+        m = re.match(r"\s*\|\s*(C-\d+)\s*\|", line)
+        if m:
+            defined.append(m.group(1))
+    seen = set()
+    for d in defined:
+        if d in seen:
+            err(f"coordination/DECISIONS.md: {d} has more than one row")
+        seen.add(d)
+    cited = {}
+    for rel in files:
+        if rel == "coordination/DECISIONS.md":
+            continue
+        for i, line in enumerate(read(rel) or [], 1):
+            for d in re.findall(r"\bC-\d+\b", line):
+                cited.setdefault(d, f"{rel}:{i}")
+    for d, where in sorted(cited.items()):
+        if d not in seen:
+            err(f"{where}: {d} is cited but has no row in coordination/DECISIONS.md")
+
+profile = read("coordination/PROFILE.md")
+if profile is not None:
+    unfilled = [i for i, line in enumerate(profile, 1) if re.search(r"<[a-z][^<>|]*>", line)]
+    if unfilled:
+        warn(f"coordination/PROFILE.md: {len(unfilled)} lines still have <...> fields to fill")
+
+for w in warnings:
+    print(f"warning: {w}")
+for e in errors:
+    print(f"error: {e}")
+print(f"ledger-lint: {len(errors)} error(s), {len(warnings)} warning(s)")
+sys.exit(1 if errors else 0)
+PY

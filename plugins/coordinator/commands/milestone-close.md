@@ -1,23 +1,29 @@
 ---
-description: Close a milestone - QA verdict on staging, demo instructions for the owner, release PR from release/*, tag
-argument-hint: "<milestone> [version]"
+description: Close a milestone or release a unit - verify what the profile requires, clear the verification debt, prepare the release per the profile, hand it to whoever releases
+argument-hint: "<milestone or unit> [version]"
 ---
 
-Close milestone `$ARGUMENTS`. Load the `coordinator` skill.
+Close or release `$ARGUMENTS`. Load the `coordinator` skill. The profile says what a release
+is for each unit, who performs it, and which checks come first.
 
-1. Ledger + GitHub: every ticket of the milestone merged or explicitly moved (`gh issue list
-   --milestone <Mn> --state open`). Open ones -> list them and stop.
-2. QA: ask the QA session (one message) for the final verdict on **staging** per exit criterion.
-   Not all green -> list failures with owning lanes, create fix tickets, stop.
-3. Demo instructions for the owner (one message): staging URL, test accounts from the project's
-   seed/fixture files (never real customer data), 3-6 steps per persona, what to look for, how to
-   report problems. Wait for the owner's OK.
-4. Release (after OK): ask Platform (or a one-off subagent) to create branch `release/<version>`
-   from `develop`, bump `VERSION`, update `CHANGELOG.md`, open PR `release/<version>` -> `main`.
-   The branch name must start with `release/`: the release workflow tags `v$(cat VERSION)` only
-   for PRs from `release/*`.
-5. Tell the owner to merge the release PR (owner merges releases). After merge check the tag:
-   `gh release view v<version> --repo <repo>`.
-6. If `main` and `develop` diverged, get a back-merge PR `main` -> `develop`.
-7. Close the GitHub milestone, update the ledger (milestone closed, follow-ups, decisions),
-   commit + push. Measure contexts; rotate sessions near ~250k before the next milestone.
+1. **Nothing open.** Every issue of the milestone (or every item ahead of the release point in
+   the unit's backlog) is merged or explicitly moved. Open ones → list them and stop.
+2. **Gate on the integration branch** green for the commit you will release, evidence checked
+   by you.
+3. **Verification debt.** Go through the unit's rows in "Verification debt" in `ROADMAP.md`.
+   Run each check that can be run now (manual browser pass, a run on the real stack, QA's
+   verdict per exit criterion when QA is on). Failures → fix issues, stop. What still cannot
+   be verified stays on the list and goes into the release notes as `UNVERIFIED`.
+4. **Release notes** (one message, or the release PR body): what changed in plain words; what
+   was verified and how; what is still `UNVERIFIED` and why; three to six steps to try per
+   flow; anything the owner must do on deploy.
+5. **Release** per the profile:
+   - coordinator-released unit: do it (release PR, tag, publish), then check the result.
+   - owner-released unit: prepare it and ask the owner. Do not merge it yourself unless the
+     owner delegated this release in this session; a delegation is written into
+     `COORDINATION.md` with its date and deleted afterwards.
+6. If the release and integration branches diverged, get a back-merge PR.
+7. **Ledger.** Update the unit's row (released = the new version, ahead by 0), remove the
+   cleared debt rows, close the milestone in `ROADMAP.md` and on GitHub. Lint, commit, push.
+8. Measure contexts; replace sessions near the threshold before the next stretch. If the unit
+   was in a feature freeze because of its integration limit, the freeze ends here.

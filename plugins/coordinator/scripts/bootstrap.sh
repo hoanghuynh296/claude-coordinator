@@ -14,13 +14,14 @@
 #   --milestones "M0 M1" milestone labels + GitHub milestones (default: "M0 M1")
 #   --template REPO     template repo (default: hoanghuynh296/agent-project-template)
 #   --no-protect        skip branch protection (e.g. a plan without protection on private repos)
-#   --ledger-only       only create/initialise the <repo>-coordination ledger (existing projects)
+#   --ledger-only       only create/initialise the <repo>-coordination ledger in the standard
+#                       layout (existing projects; see init-ledger.sh)
 #   --dry-run           print every gh/git action it would take; reads state, changes nothing
 #
 # Exits non-zero on the first failing step.
 set -euo pipefail
 
-usage() { sed -n '2,22p' "$0" | sed 's/^# \{0,1\}//'; exit 2; }
+usage() { sed -n '2,23p' "$0" | sed 's/^# \{0,1\}//'; exit 2; }
 
 [[ $# -ge 2 ]] || usage
 repo="$1"; local_dir="$2"; shift 2
@@ -54,7 +55,7 @@ done
 [[ -n "$plan" ]] && plan="$(cd "$(dirname "$plan")" && pwd -P)/$(basename "$plan")"
 
 plugin_root="$(cd "$(dirname "$0")/.." && pwd -P)"
-ledger_template="$plugin_root/skills/coordinator/references/templates/ledger.md"
+init_ledger="$plugin_root/scripts/init-ledger.sh"
 owner="${repo%%/*}"
 name="${repo##*/}"
 ledger_repo="${repo}-coordination"
@@ -242,31 +243,34 @@ if [[ ! -d "$ledger_dir/.git" ]]; then
   [[ $dry -eq 1 ]] && ledger_clone=0
 fi
 if [[ $ledger_clone -eq 0 || ! -f "$ledger_dir/COORDINATION.md" ]]; then
-  [[ -f "$ledger_template" ]] || fail "ledger template missing: $ledger_template"
+  [[ -f "$init_ledger" ]] || fail "init-ledger.sh missing: $init_ledger"
   if [[ $dry -eq 1 ]]; then
-    printf '    would write COORDINATION.md from %s and handover/README.md\n' "$ledger_template"
+    printf '    would write the standard ledger layout (COORDINATION.md, coordination/{README,PROFILE,ROADMAP,DECISIONS}.md, handover/, memory/)\n'
     act git -C "$ledger_dir" commit --quiet -m "docs: initial coordination ledger"
     act git -C "$ledger_dir" push --quiet -u origin HEAD
   else
     git -C "$ledger_dir" rev-parse --verify --quiet HEAD >/dev/null || git -C "$ledger_dir" symbolic-ref HEAD refs/heads/main
-    cp "$ledger_template" "$ledger_dir/COORDINATION.md"
     project_name="$name"
     if [[ -n "$values" ]]; then
       v="$(sed -n 's/^PROJECT_NAME=//p' "$values" | head -n 1)"; [[ -n "$v" ]] && project_name="$v"
     fi
-    tmp_values="$(mktemp)"
-    printf 'PROJECT_NAME=%s\nREPO=%s\nLEDGER_REPO=%s\nOWNER_GITHUB=%s\nDATE=%s\n' \
-      "$project_name" "$repo" "$ledger_repo" "$owner" "$(date +%Y-%m-%d)" > "$tmp_values"
-    fill_placeholders "$ledger_dir" "$tmp_values" COORDINATION.md
-    rm -f "$tmp_values"
-    mkdir -p "$ledger_dir/handover"
-    # shellcheck disable=SC2016  # backticks are Markdown, not expansions
-    printf '# Handover notes\n\nOne file per rotation: `YYYY-MM-DD-<session-name>.md` (template: coordinator plugin `references/templates/handover.md`).\n' > "$ledger_dir/handover/README.md"
+    bash "$init_ledger" "$ledger_dir" --name "$project_name" --owner "$owner" >/dev/null || fail "init-ledger"
+    # Fill the one row the script knows: the project repo itself.
+    python3 -I - "$ledger_dir/coordination/README.md" "$name" "$repo" <<'PY2'
+import sys
+path, name, repo = sys.argv[1:4]
+with open(path, encoding="utf-8") as fh:
+    lines = fh.read().splitlines()
+row = f"| {name} | `../{name}` | https://github.com/{repo} | develop / main |"
+lines = [row if line.startswith("| <unit> |") else line for line in lines]
+with open(path, "w", encoding="utf-8") as fh:
+    fh.write("\n".join(lines) + "\n")
+PY2
     git -C "$ledger_dir" add -A
     git -C "$ledger_dir" commit --quiet -m "docs: initial coordination ledger" || fail "ledger commit"
     git -C "$ledger_dir" push --quiet -u origin HEAD || fail "ledger push"
   fi
-  ok "COORDINATION.md + handover/ committed and pushed"
+  ok "standard ledger layout committed and pushed"
 else
   ok "ledger already initialised"
 fi
@@ -311,4 +315,4 @@ if [[ "$protection_skipped" == "plan" ]]; then
   printf '  ACTION: branch protection is OFF (plan limit). Record an owner decision in the ledger\n'
   printf '          (C-xxx: upgrade plan / make repo public / accept no protection) and rerun after a change.\n'
 fi
-printf '  next: register this session as coordinator with the ledger path above.\n'
+printf '  next: fill coordination/PROFILE.md in the ledger, then register this session as coordinator.\n'

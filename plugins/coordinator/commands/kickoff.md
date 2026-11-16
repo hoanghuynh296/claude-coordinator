@@ -1,51 +1,53 @@
 ---
-description: Start a new project as coordinator - interview, draft PLAN.md, owner approval, then bootstrap repo + ledger and register this session
+description: Start a new project as coordinator - interview, draft the plan and the profile, owner approval, then create the ledger and what the profile needs, and register this session
 argument-hint: "[owner/repo] [local-dir]"
 ---
 
 You are now the coordinator for a new project. Load the `coordinator` skill and follow it.
-Arguments (optional): `$ARGUMENTS` (repo `owner/name`, local dir).
+Arguments (optional): `$ARGUMENTS`.
 
 ## Step 1 - interview (one message, then wait)
-Ask the owner these five questions together, numbered, nothing else:
-1. Product: what problem, for whom; users and personas.
-2. Design partner: an internal alias (never their real name in code) and what they need first.
-3. Stack and constraints: hosting, languages, database, AI provider, UI language.
-4. MVP1 scope and what is explicitly later.
-5. Repo `owner/name` and local directory; owner availability; budget/usage limits.
+Ask the owner these questions together, numbered, nothing else:
+1. Product: what problem, for whom, and what "done for now" looks like.
+2. Shape: one repo or several? Which parts are released separately, have different licences,
+   or feed each other? (This decides the topology and the units.)
+3. Stack and constraints: languages, hosting, where builds and tests can run, what must not
+   cost money.
+4. First stretch: what is in scope now, what is explicitly later.
+5. Working rules: who releases what, what only you decide, language, budget and usage limits,
+   repo `owner/name` and local folder.
 
-## Step 2 - draft the plan
-Read the template's `docs/PLAN.md` sections (`gh api repos/hoanghuynh296/agent-project-template/contents/docs/PLAN.md --jq .content | base64 -d`).
-Write the draft to the scratchpad as `PLAN.md`: summary, principles, users and roles, scope by
-phase, UX spec, AI spec, architecture, milestones (M0 foundation + M1.. each with QA exit
-criteria), agent workflow (lanes, models), owner-side tasks, MVP done criteria, risks. Generalise
-every design-partner need into a per-tenant-configurable feature.
-Also write `values.env` in the scratchpad with every placeholder listed in the template's
-`TEMPLATE.md` (`gh api repos/hoanghuynh296/agent-project-template/contents/TEMPLATE.md --jq .content | base64 -d`),
-one `KEY=VALUE` per line. `API_DIR`, `WEB_DIR`, `INTEGRATIONS_DIR`, `AI_DIR` also fill the CI
-paths-filter; unknown commands get `TBD (platform)`.
+## Step 2 - draft the plan and the profile
+In the scratchpad write:
+- `PLAN.md`: summary, scope now and later, architecture in brief, milestones with exit
+  criteria (or the first ordered backlog if the cadence is continuous), risks, owner-side
+  tasks.
+- `PROFILE.md` from `references/templates/PROFILE.md`, using `references/profile.md` to choose:
+  topology, units with session mode, gate, release authority and integration limit, optional
+  roles (only those whose trigger is true), flow, contracts, review rules, packs, budgets,
+  owner rules. Start from the closest starting point in `references/profile.md` and adjust.
 
 ## Step 3 - STOP for approval
-Show the plan summary (milestones + exit criteria, lanes + models, stack, owner tasks) and the
-path to the full draft. Ask the owner to approve or change it. **Do not create anything until
-the owner approves in a later message.**
+Show the summary: units and how they are staffed, the flow, who releases what, the first
+stretch, owner-side tasks, and the paths of both drafts. **Create nothing until the owner
+approves in a later message.**
 
-## Step 4 - bootstrap (after approval)
-Run:
-```sh
-bash "${CLAUDE_PLUGIN_ROOT}/scripts/bootstrap.sh" <owner/repo> <local-dir> --values <scratchpad>/values.env --plan <scratchpad>/PLAN.md --milestones "M0 M1 ..." --lanes "<lanes> platform qa"
-```
-Add `--check <job>` for each CI job that must be required besides `changes`. Run it once with
-`--dry-run` first and skim the plan of actions. If GitHub refuses branch protection (private repo
-on a free plan), the script warns and continues; record the owner decision it asks for (C-xxx) in
-the ledger. The script is idempotent: rerun after fixing a failure.
+## Step 4 - create (after approval)
+- Ledger: `bash "${CLAUDE_PLUGIN_ROOT}/scripts/init-ledger.sh" <ledger-dir> --name "<Project>" --owner <github-user>`,
+  then replace `coordination/PROFILE.md` with the approved profile and fill `ROADMAP.md`,
+  `README.md` and `COORDINATION.md`. Create the private ledger repo on GitHub and push.
+  `multi-repo`: the ledger dir is the workspace root; add a `.gitignore` that ignores
+  everything except `COORDINATION.md` and `coordination/`.
+- Repos: create what the profile lists. For the single-repo SaaS starting point,
+  `bash "${CLAUDE_PLUGIN_ROOT}/scripts/bootstrap.sh" <owner/repo> <local-dir> --values <file> --plan <PLAN.md>`
+  builds the repo from `hoanghuynh296/agent-project-template` (run it with `--dry-run` first).
+  For other shapes create the repos with `gh repo create`, add the integration branch, and
+  give each unit an `AGENTS.md`.
+- Guards: `bash "${CLAUDE_PLUGIN_ROOT}/scripts/install-guards.sh" --settings <unit-dir>...`
+  (pre-push guard, delete-branch-on-merge).
+- Labels: `task`, plus `unit:<unit>` in a single-repo project.
 
-## Step 5 - register this session
-```sh
-bash "${CLAUDE_PLUGIN_ROOT}/scripts/register.sh" "${CLAUDE_SESSION_ID}" <local-dir>-coordination <local-dir>
-```
-From now on the guard hook stops you from editing code. Then fill the ledger (`COORDINATION.md`:
-milestones from the plan, Sessions table, owner-side tasks), commit + push the ledger repo, and
-send the owner one message: what exists now, the owner-side task list, and that the next step is
-`/coordinator:milestone-start M0` (Platform's first tickets: trim template lanes, real CI and
-make targets, staging).
+## Step 5 - register and report
+Run `/coordinator:coordinator-register <ledger-dir> <unit-dir>...`, then `/coordinator:audit`.
+Commit and push the ledger. Send the owner one message: what exists now, the owner-side task
+list, and the first issues you propose to hand out.

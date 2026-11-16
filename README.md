@@ -1,11 +1,29 @@
 # claude-coordinator
 
-A Claude Code plugin marketplace with one plugin, **`coordinator`**: run a software project with
-parallel Claude sessions. A human **owner** approves the plan and makes real decisions; a
-**coordinator** session plans, tickets, reviews, merges and releases but never writes product
-code; long-lived **lane** sessions own directories; a **Platform** lane owns CI and shared files;
-a **QA** session per milestone owns acceptance; a read-only **Reviewer** subagent checks large
-or sensitive PRs.
+A Claude Code plugin marketplace with one plugin, **`coordinator`**: a reusable way to run a
+software project with several Claude sessions, whatever the project's shape.
+
+It has two layers:
+
+- **Core principles**, the same for every project: one owner and one coordinator; state in
+  files, not in sessions; work as issues with acceptance criteria; units that own their ground
+  and meet at versioned contracts; independent review with evidence; bounded integration;
+  machine-enforced rules; lean messaging.
+- **A project profile** (`coordination/PROFILE.md` in the project's ledger repo): how this
+  project applies them. Nothing about the shape is assumed by the commands.
+
+| The profile chooses | Examples |
+|---|---|
+| Topology | one repo split into lanes · several repos that feed each other · a mix |
+| Units and how they are staffed | a standing session per unit · a fresh session per issue |
+| Optional roles | Platform (shared files), QA (acceptance per milestone), Reviewer, one-off builder |
+| Flow | integration and release branches, merge method, what a release is, milestones or a continuous backlog |
+| Gates and limits | the exact command that must be green; how far integration may run ahead of a release |
+| Authority | who releases each unit; what only the owner decides |
+| Packs | `saas-multitenant`, `artifact-contracts`, `ui-product` |
+
+Starting points for common shapes (a SaaS monorepo, a family of repos, one small repo, a
+knowledge base, a library) are in the skill's `references/profile.md`.
 
 ## Install
 
@@ -14,75 +32,89 @@ or sensitive PRs.
 /plugin install coordinator@coordinator-marketplace
 ```
 
-The repo is private: your `gh`/git credentials must have access. Restart the session (or run
-`/reload-plugins`) after installing. Requirements: `gh` (authenticated), `git`, `python3`; `jq`
-is used when present.
+The repo is private: your `gh` and git credentials must have access. Restart the session (or
+run `/reload-plugins`) after installing. Requirements: `gh` (authenticated), `git`, `python3`;
+`jq` is used when present.
 
-## New project: owner's steps
+## New project: the owner's steps
 
-1. Open a session in the desktop app (model Opus) in an empty working folder; name it "Coordinator".
-2. Run `/coordinator:kickoff` and answer the five questions in one reply.
-3. Read the draft `PLAN.md` it shows you. Approve or ask for changes. Nothing is created before
-   you approve.
-4. The coordinator runs `scripts/bootstrap.sh`: repo from
-   [`hoanghuynh296/agent-project-template`](https://github.com/hoanghuynh296/agent-project-template),
-   placeholders filled (including CI), `TEMPLATE.md` removed, `develop` as default branch,
-   delete-branch-on-merge, labels and milestones, private `<repo>-coordination` ledger repo,
-   branch protection with required checks. It then registers itself as coordinator.
-5. Do the owner-side tasks it lists (accounts, domains, secrets, billing).
-6. Say "start M0" (or run `/coordinator:milestone-start M0`) **from the desktop app**: all lane,
-   Platform and QA sessions for the milestone are started in that one turn, because sessions can
-   only be started from your own message. On Remote Control the coordinator falls back to
-   subagents and converts them to sessions when you are back.
-7. From then on: answer decisions when asked, test the demo at milestone close, merge the release
-   PR (`release/*` -> `main`; the tag is created automatically).
+1. Open a session in the desktop app in an empty working folder; name it "Coordinator: <project>".
+2. Run `/coordinator:kickoff` and answer its questions in one reply.
+3. Read the draft plan and the draft profile. Approve or ask for changes. Nothing is created
+   before you approve.
+4. The coordinator creates the ledger, the repos the profile lists, labels and guards, and
+   registers itself.
+5. Do the owner-side tasks it lists (accounts, secrets, billing).
+6. Say "start" from the desktop app: sessions can only be started from your own message.
+7. From then on: answer decisions when asked, and release the units your profile gives you.
+
+## Existing project
+
+Run `/coordinator:adopt`. The coordinator reads how the project works today, proposes a
+profile that matches it plus the changes it recommends, waits for your approval, then creates
+the ledger or migrates an existing one into the standard layout.
+
+## The ledger
+
+A private git repo with the same layout in every project:
+
+```text
+COORDINATION.md            live state only (80-line budget)
+coordination/
+  README.md                read order, units and repos, set-up notes
+  PROFILE.md               how this project runs; the owner's standing rules
+  ROADMAP.md               ordered backlog per unit (issue links), verification debt
+  DECISIONS.md             append-only decision log (C-xxx)
+  handover/<role>.md       what a session had in flight
+  memory/                  portable copy of the coordinator's memory
+```
+
+Each kind of fact has one home. History is git and merged PRs, never the ledger. In a
+multi-repo project the ledger repo is the workspace root and unit repos sit in `products/`
+(git-ignored); in a single-repo project it is a sibling folder `<repo>-coordination`.
 
 ## Commands
 
 | Command | What it does |
 |---|---|
-| `/coordinator:kickoff` | interview -> draft `docs/PLAN.md` -> owner approval -> bootstrap -> register |
-| `/coordinator:coordinator-register <ledger> [project]` | register this session as coordinator of an existing project |
-| `/coordinator:milestone-start <Mn>` | Issues per ticket, contract first, start lane + Platform + QA sessions in this turn |
-| `/coordinator:ticket <lane> <goal>` | one Issue from the ticket form fields |
-| `/coordinator:review-merge <PR>` | CI + scope check, Reviewer when required, squash-merge into `develop`, ledger update |
-| `/coordinator:milestone-close <Mn> [version]` | QA verdict on staging, demo instructions, release PR from `release/*`, tag |
-| `/coordinator:handover [session]` | handover note into the ledger, rotation proposal |
-| `/coordinator:status` | concise status from the ledger + GitHub |
+| `/coordinator:kickoff` | interview → draft plan and profile → owner approval → create ledger, repos, guards → register |
+| `/coordinator:adopt` | existing project: propose a profile, create or migrate the ledger |
+| `/coordinator:coordinator-register <ledger> [unit...]` | register this session as coordinator (edit guard, SessionStart reminder) |
+| `/coordinator:ticket <unit> <goal>` | one task issue with acceptance criteria; adds it to the unit's backlog |
+| `/coordinator:review-merge <repo>#<PR>` | gate evidence, scope, Reviewer when required, manual checks, merge per the profile |
+| `/coordinator:milestone-start <name>` | issues contract-first, ordered backlog, agents started or briefed in one owner turn |
+| `/coordinator:milestone-close <name>` | verify, clear verification debt, release notes, release by whoever the profile names |
+| `/coordinator:handover [unit]` | handover note in the ledger, replacement proposal |
+| `/coordinator:status` | concise status from the ledger and GitHub |
+| `/coordinator:audit` | ledger lint, drift against GitHub, integration limits, idle units, stale delegations |
 
-Also included: the `coordinator` skill (method, templates, review checklist, pitfalls), agents
-`coordinator:reviewer` (Opus, read-only) and `coordinator:oneoff-builder` (Sonnet, worktree,
-pushes its own branch and opens a PR), and scripts `bootstrap.sh`, `register.sh`,
-`check-context.sh` (context size per session from its transcript; flags ~250k for rotation).
+Also included: the `coordinator` skill (principles, profile guide, workflow, roles, state
+files, review checklist, pitfalls, packs, templates) and two agents: `coordinator:reviewer`
+(read-only) and `coordinator:oneoff-builder` (own worktree, own branch, own PR).
 
-## How the guard works
+## Mechanical guards
 
-`/coordinator:kickoff` and `/coordinator:coordinator-register` write
-`~/.claude/coordinator/sessions/<session_id>` with the ledger path (and project path). Two hooks
-read it:
+| Guard | What it stops |
+|---|---|
+| Edit guard (PreToolUse hook) | a registered coordinator editing anything inside a unit except the planning files the profile allows. Understands several units, also when they sit inside the ledger folder. `register.sh --allow <glob>` sets the allowed files; `--no-guard` switches it off for projects whose profile lets the coordinator write code |
+| `scripts/ledger-lint.sh <ledger>` | a ledger out of shape: missing files, over the size budget, session ids or home paths, decision ids cited but not defined, leftover placeholders. Warns on a stale date, on history in the live ledger, on an undated delegation |
+| `scripts/pre-push-guard.sh` (git pre-push hook) | pushing to a branch whose pull request is already merged or closed; optional local protection of release branches |
+| `scripts/install-guards.sh [--settings] <repo>...` | installs the pre-push guard in each clone; `--settings` turns on delete-branch-on-merge on GitHub |
 
-- **PreToolUse** on `Edit|Write|MultiEdit|NotebookEdit`: in a registered session, an edit is
-  denied unless the path is in the ledger repo, `docs/PLAN.md`, `docs/adr/**`,
-  `docs/contracts/README.md` or `AGENTS.md` of the project, `~/.claude/**`, the session
-  scratchpad, or a temp dir. The deny message tells the coordinator to delegate (ticket, lane,
-  Platform or one-off subagent). Unregistered sessions are never affected.
-- **SessionStart**: in a registered session, prints the ledger path and a reminder (read
-  `COORDINATION.md` first; rotate at ~250k).
+Limits: the edit guard covers the edit tools only; a shell redirection is not blocked. The
+pre-push guard fails open when `gh` cannot reach the repo. A forked session gets a new session
+id and must register again.
 
-Limitations: only the edit tools are guarded; a Bash redirection (`>`, `sed -i`, `tee`) is not
-blocked. `AGENTS.md` is allowed as a whole although section 7 belongs to Platform. A forked
-session gets a new session id and must register again; unregister with
-`scripts/register.sh --unregister <session_id>`.
+## Scripts
 
-## Adopting in an existing project
-
-1. Install the plugin, open the coordinator session in the project.
-2. No ledger repo yet: ask the coordinator to create one
-   (`bootstrap.sh <owner/repo> <project-dir> --ledger-only` creates `<repo>-coordination` with
-   `COORDINATION.md` and `handover/`, nothing else).
-3. Run `/coordinator:coordinator-register <ledger-dir> <project-dir>`.
-4. Make sure the project has `OWNERSHIP.md`, `AGENTS.md`, a ticket Issue form and a release
-   workflow for `release/*` branches; copy them from the template if not (via a Platform ticket).
+| Script | Purpose |
+|---|---|
+| `init-ledger.sh <dir> [--name] [--owner] [--workspace]` | write the standard ledger layout from the templates; never overwrites |
+| `ledger-lint.sh [dir]` | see above; budgets in the environment or in `<dir>/.ledger-lint` |
+| `install-guards.sh`, `pre-push-guard.sh` | see above |
+| `register.sh <session> <ledger> [unit...] [--allow glob]... [--no-guard]` | register or `--unregister` a coordinator session |
+| `check-context.sh [session...]` | context size per session from its transcript; flags the rotation threshold (`ROTATE_AT`, default 250000) |
+| `bootstrap.sh <owner/repo> <dir> ...` | the single-repo SaaS starting point: repo from `hoanghuynh296/agent-project-template`, placeholders, `develop`, labels, ledger, branch protection. `--ledger-only` creates just the ledger; `--dry-run` prints every action |
 
 ## Layout
 
@@ -90,16 +122,32 @@ session gets a new session id and must register again; unregister with
 .claude-plugin/marketplace.json
 plugins/coordinator/
   .claude-plugin/plugin.json
-  skills/coordinator/SKILL.md, references/{roles,workflow,review-checklist,pitfalls}.md, references/templates/*.md
+  skills/coordinator/SKILL.md
+  skills/coordinator/references/{principles,profile,workflow,roles,state-files,review-checklist,pitfalls}.md
+  skills/coordinator/references/packs/{saas-multitenant,artifact-contracts,ui-product}.md
+  skills/coordinator/references/templates/*.md
   commands/*.md
   agents/{reviewer,oneoff-builder}.md
   hooks/hooks.json, hooks/{lib,coordinator-guard,session-start}.sh
-  scripts/{bootstrap,register,check-context}.sh
-tests/{hooks,bootstrap,exec-bits}-test.sh
+  scripts/{init-ledger,ledger-lint,install-guards,pre-push-guard,register,check-context,bootstrap}.sh
+tests/{hooks,ledger-lint,pre-push-guard,bootstrap,exec-bits}-test.sh
 ```
 
-Tests: `bash tests/hooks-test.sh` (guard + SessionStart with sample inputs, jq and python3 paths),
-`bash tests/bootstrap-test.sh` (full bootstrap against local bare repos and a fake `gh`, including
-the 403 branch-protection fallback and an idempotent rerun), `bash tests/exec-bits-test.sh`
-(every plugin `*.sh` is executable in git). `bootstrap.sh --dry-run` prints every action without
-changing anything.
+## Tests
+
+```sh
+bash tests/hooks-test.sh           # edit guard and SessionStart, jq and python3 paths, multi-unit workspace
+bash tests/ledger-lint-test.sh     # every lint rule; a fresh ledger passes
+bash tests/pre-push-guard-test.sh  # merged, closed and open PRs with a fake gh; install-guards
+bash tests/bootstrap-test.sh [template-dir]   # full bootstrap against local bare repos and a fake gh
+bash tests/exec-bits-test.sh       # every plugin *.sh is executable in git
+```
+
+## Changes
+
+- **0.2.0**: core principles plus a per-project profile replace the fixed "lanes + Platform +
+  QA" shape, which is now one starting point with its rules in the `saas-multitenant` pack.
+  Standard ledger layout with one home per fact; `adopt` and `audit` commands; ledger lint;
+  pre-push guard; edit guard for several units; per-issue sessions; integration limits and
+  verification debt.
+- **0.1.0**: first version, for one repo created from `agent-project-template`.

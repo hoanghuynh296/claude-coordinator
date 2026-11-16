@@ -1,12 +1,17 @@
 {
   "name": "coordinator",
   "displayName": "Coordinator",
-  "version": "0.1.0",
-  "description": "Run a software project with parallel Claude sessions: /kickoff (plan + bootstrap), /milestone-start, /ticket, /review-merge, /milestone-close, /handover, /status; Reviewer agent; a hook that keeps the coordinator session out of product code.",
+  "version": "0.2.0",
+  "description": "Run a software project with several Claude sessions in any shape (one repo with lanes, several repos, one small repo): core principles + a per-project profile, a standard ledger, task issues, review and release commands, a ledger lint, and guards that keep the coordinator out of product code and agents off merged branches.",
   "author": {
     "name": "hoanghuynh296"
   },
   "repository": "https://github.com/hoanghuynh296/claude-coordinator",
   "license": "MIT",
-  "keywords": ["coordination", "multi-agent", "project-management", "github"]
+  "keywords": [
+    "coordination",
+    "multi-agent",
+    "project-management",
+    "github"
+  ]
 }

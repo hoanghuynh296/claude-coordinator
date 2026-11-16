@@ -53,3 +53,8 @@ registration_file() {
 reg_value() {
   sed -n "s/^$2=//p" "$1" | head -n 1
 }
+
+# reg_values <file> <key> -> every value of a repeated key, one per line
+reg_values() {
+  sed -n "s/^$2=//p" "$1"
+}

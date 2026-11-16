@@ -1,0 +1,70 @@
+# {{PROJECT_NAME}}: project profile
+
+How this project applies the coordinator kit's core principles. This is the only place where
+the project's working rules are written; other files point here. Change it when a rule
+changes, and log the change in `DECISIONS.md`.
+
+Last reviewed: {{DATE}}
+
+## 1. Topology
+
+<single-repo | multi-repo | hybrid>. <One line: why.>
+
+## 2. Units
+
+| Unit | Repo / path | Owns | Model, effort | Session | Gate (must be green to merge) | Released by | Integration limit |
+|---|---|---|---|---|---|---|---|
+| <name> | <owner/repo or dir/**> | <what> | <model>, <effort> | <standing or per-issue> | <exact command or CI job; manual check if any> | <owner or coordinator> | <e.g. 15 PRs or 5 days> |
+
+Agent session names: "Agent: <unit>" (per-issue: "Agent: <unit> #<issue>").
+
+## 3. Roles
+
+| Role | On? | Who / how |
+|---|---|---|
+| Owner | yes | {{OWNER}} |
+| Coordinator | yes | session "Coordinator: {{PROJECT_NAME}}", <model> |
+| Platform | <yes or no> | <unit and what it owns, or why not needed> |
+| QA | <yes or no> | <per milestone, or why not needed> |
+| Reviewer | yes | subagent `coordinator:reviewer`; mandatory for the risk areas in section 6 |
+| One-off builder | yes | subagent `coordinator:oneoff-builder` for small tasks outside a unit's queue |
+
+## 4. Flow
+
+- Integration branch: `<develop>`. Release branch: `<main>`. Merge method: <merge commit or squash>.
+- A release is: <release PR into main | tag | published package | data release>, per unit if they differ.
+- Cadence: <milestone | continuous>.
+- Hotfix: <branch from the release branch, PR into it, then back-merge>.
+
+## 5. Contracts between units
+
+| Producer → consumer | Artifact | Pinned in | Checked by |
+|---|---|---|---|
+| <unit → unit> | <schema, package, data release> | <file> | <test or CI job> |
+
+<Delete this section if there is one unit.>
+
+## 6. Review
+
+- Reviewer mandatory for: <risk areas, e.g. auth, money, contract or lock changes, hardware control>.
+- Reviewer mandatory above: <e.g. 400 changed lines or 15 files>.
+- Checklists: core + packs <list: saas-multitenant, artifact-contracts, ui-product>.
+- Manual checks the gate does not cover: <e.g. browser pass per release by the coordinator>.
+
+## 7. Coordinator edit policy
+
+The coordinator edits the ledger repo and, in the units, only: <e.g. docs/PLAN.md, docs/adr/**>.
+Everything else goes through an issue for the owning unit.
+
+## 8. Budgets
+
+- Replace a session at <250k> context. Reports: at most <6> lines. Reviewer: at most 15 lines.
+- `COORDINATION.md`: at most <80> lines.
+- No ack-only or status-ping messages. One batched message per agent per round.
+
+## 9. Owner rules
+
+- Language: <the owner is addressed in ...; agents, code and docs use ...>.
+- Spending: anything that costs money needs the owner's approval first, with its price.
+- Only the owner decides: <releases of ..., secrets, going public, ...>.
+- <Other standing rules, each once.>
