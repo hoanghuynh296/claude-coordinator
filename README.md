@@ -129,9 +129,9 @@ files, review checklist, pitfalls, packs, templates) and two agents: `coordinato
 | Guard | What it stops |
 |---|---|
 | Edit guard (PreToolUse hook) | a registered coordinator editing anything inside a unit except the planning files the profile allows. Understands several units, also when they sit inside the ledger folder. `register.sh --allow <glob>` sets the allowed files; `--no-guard` switches it off for projects whose profile lets the coordinator write code |
-| Merge reminder (PostToolUse hook on Bash) | a registered coordinator forgetting, after `gh pr merge <N>`, to tell the author what is next or to archive a `per-issue` agent's session. It records N as "pending Next" (state in `~/.claude/coordinator/state/<session>/`) and adds a reminder to the context |
-| Next sent (PostToolUse hook on `SendMessage` and `send_message`) | clears N when the coordinator's message holds `PR #N merged` and a `Next:` line |
-| Next guard (Stop hook) | a coordinator ending its turn while a merged PR's author has not been told `PR #N merged. Next: ...`: the stop is blocked with the PRs and the message format; at most 3 blocks per turn, then a warning. `scripts/next-clear.sh <session> <N> "<reason>"` clears a PR whose author cannot be messaged, logging the reason to the ledger's `coordination/next-cleared.md` |
+| Merge reminder (PostToolUse hook on Bash) | a registered coordinator forgetting, after `gh pr merge <N>`, to tell the author what is next or to archive a `per-issue` agent's session. It splits the command like a shell (`echo gh pr merge 9` does not count), confirms each PR with `gh pr view` and records `owner/repo#N` as "pending Next" only when it is MERGED (state in `~/.claude/coordinator/state/<session>/`); when gh cannot answer it only reminds |
+| Next sent (PostToolUse hook on `SendMessage` and `send_message`) | clears a PR when any message the coordinator sends holds `PR #N merged` (or `PR owner/repo#N merged`, needed when N is pending in two repos) and a `Next:` line, whatever the recipient |
+| Next guard (Stop hook) | a coordinator ending its turn while a merged PR's author has not been told `PR #N merged. Next: ...`: the stop is blocked with the PRs and the message format; at most 3 blocks per turn, then a warning. `scripts/next-clear.sh <session> <owner/repo#N> "<reason>"` clears a PR whose author cannot be messaged, logging the reason to the ledger's `coordination/next-cleared.md` |
 | `scripts/ledger-lint.sh <ledger>` | a ledger out of shape: missing files, over the size budget, session ids or home paths, decision ids cited but not defined, leftover placeholders. Warns on a stale date, on history in the live ledger, on an undated delegation |
 | `scripts/pre-push-guard.sh` (git pre-push hook) | pushing to a branch whose pull request is already merged or closed; optional local protection of release branches |
 | `scripts/install-guards.sh [--settings] <repo>...` | installs the pre-push guard in each clone; `--settings` turns on delete-branch-on-merge on GitHub |
@@ -147,7 +147,7 @@ id and must register again.
 | `init-ledger.sh <dir> [--name] [--owner] [--workspace]` | write the standard ledger layout from the templates; never overwrites |
 | `ledger-lint.sh [dir]` | see above; budgets in the environment or in `<dir>/.ledger-lint` |
 | `install-guards.sh`, `pre-push-guard.sh` | see above |
-| `next-clear.sh <session> <N> <reason>` | clear a merged PR the Stop hook waits on, when its author cannot get the Next message; the reason is appended to `coordination/next-cleared.md` in the ledger. `--list` shows what is pending |
+| `next-clear.sh <session> <owner/repo#N> <reason>` | clear a merged PR the Stop hook waits on, when its author cannot get the Next message; the reason is appended to `coordination/next-cleared.md` in the ledger. `--list` shows what is pending; `--handover` prints it and drops the session's state (written into the handover note); `--add <owner/repo#N>...` lets the replacement take it over |
 | `register.sh <session> <ledger> [unit...] [--allow glob]... [--allow-none] [--no-guard]` | register or `--unregister` a coordinator session |
 | `check-context.sh [--soft N] [--hard N] [--window N] [session...]` | context size per session from its transcript, with a level: `ok`, `SOFT` (finish the current issue, then rotate; default 250k) or `HARD` (rotate now; default 400k). `--window` caps soft at 50% and hard at 75% of the context window. Also `SOFT_AT`, `HARD_AT`, `CONTEXT_WINDOW`; one run per model group |
 | `bootstrap.sh <owner/repo> <dir> ...` | the single-repo SaaS starting point: repo from a template (default `hoanghuynh296/agent-project-template`, which is private: pass `--template <your repo>`), placeholders, `develop`, labels, ledger, branch protection. `--ledger-only` creates just the ledger; `--dry-run` prints every action |
@@ -196,7 +196,7 @@ bash tests/check-context-test.sh   # ok / SOFT / HARD levels, thresholds from en
   registered coordinator: the merge reminder records each merged PR as pending, a PostToolUse
   hook on `SendMessage` / `send_message` clears it when the notice is sent, and a Stop hook
   blocks the end of the turn while any is pending (at most 3 blocks per turn; escape hatch
-  `scripts/next-clear.sh` with a reason logged in the ledger). Updated: the briefs, the
+  `scripts/next-clear.sh` with a reason logged in the ledger; `--handover`/`--add` carry pending PRs across a coordinator rotation). Updated: the briefs, the
   `oneoff-builder` agent, `workflow.md`, SKILL.md, `roles.md`, `profile.md`, the PROFILE
   template, `milestone-start.md`, `principles.md`, pitfall 31.
 - **0.6.0**: a coordinator can no longer be lost to the app's "Auto-archive sessions when

@@ -54,5 +54,8 @@ Review and merge the named pull request. Read the unit's row and the
    The plugin's Stop hook blocks the end of your turn while a merged PR has no such message.
    If the author can no longer receive one (its session was archived or deleted), clear it
    with a reason the ledger keeps:
-   `bash "<plugin>/scripts/next-clear.sh" <session> <n> "<reason>"`.
+   `bash "<plugin>/scripts/next-clear.sh" <session> <owner/repo#n> "<reason>"`.
+   The hook clears a PR on any message you send that holds `PR #<n> merged` and a `Next:`
+   line, whoever receives it: send it to the author only. When the same number is pending in
+   two repos, write `PR <owner/repo>#<n> merged. Next: ...`.
    Reply to the owner only if a decision is needed; otherwise at most 3 lines.

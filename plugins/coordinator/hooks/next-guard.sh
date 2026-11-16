@@ -14,7 +14,7 @@ plugin="$(cd "$(dirname "$0")/.." && pwd -P)"
 input="$(cat)"
 sid="$(json_get "$input" session_id)" || exit 0
 registration_file "$sid" >/dev/null || exit 0
-pending="$(pending_list "$sid")"
+pending="$(pending_keys "$sid")"
 [[ -n "$pending" ]] || exit 0
 
 d="$(state_dir "$sid")" || exit 0
@@ -27,11 +27,10 @@ if [[ "$active" == "true" && -f "$d/stop-blocks" ]]; then
 fi
 
 prs=""; lines=""
-while read -r n repo _; do
-  [[ -n "$n" ]] || continue
-  prs+="#$n, "
-  [[ "$repo" == "-" ]] && repo="" || repo=" ($repo)"
-  lines+=" - PR #$n$repo: send its author \"PR #$n merged. Next: <issue | handover | stand by | done>\"."
+while read -r key; do
+  [[ -n "$key" ]] || continue
+  prs+="$key, "
+  lines+=" - $key: send its author \"PR #${key##*#} merged. Next: <issue | handover | stand by | done>\" (or \"PR $key merged. Next: ...\")."
 done <<<"$pending"
 prs="${prs%, }"
 
@@ -42,5 +41,5 @@ if (( count >= max )); then
   exit 0
 fi
 echo $((count + 1)) >"$d/stop-blocks"
-reason="Coordinator: merged PR(s) ${prs} still need the author told what is next (review-merge.md, step 9). The agent waits after \"PR ready\" and runs only when a message arrives.${lines} Read the author's context first (mcp__ccd_session_mgmt__get_usage): at or past the soft limit, Next: handover; a per-issue agent, Next: done (then archive it); otherwise the next issue, or stand by. Send it with SendMessage to the author's session by name. If the author can no longer receive a message (session archived or deleted), clear it with a reason the ledger keeps: bash \"${plugin}/scripts/next-clear.sh\" ${sid} <N> \"<reason>\"."
+reason="Coordinator: merged PR(s) ${prs} still need the author told what is next (review-merge.md, step 9). The agent waits after \"PR ready\" and runs only when a message arrives.${lines} Read the author's context first (mcp__ccd_session_mgmt__get_usage): at or past the soft limit, Next: handover; a per-issue agent, Next: done (then archive it); otherwise the next issue, or stand by. Send it with SendMessage to the author's session by name. If the author can no longer receive a message (session archived or deleted), clear it with a reason the ledger keeps: bash \"${plugin}/scripts/next-clear.sh\" ${sid} <owner/repo#N> \"<reason>\"."
 printf '{"decision":"block","reason":%s}\n' "$(json_string "$reason")"

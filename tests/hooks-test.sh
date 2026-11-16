@@ -105,81 +105,114 @@ expect_out "wrapper folder with two ledgers"         "several coordination ledge
 expect_out "unit checkout inside a workspace"        "unit of a coordinated project" "$(ss agent-1 "$WS/products/app")"
 expect_out "ordinary folder: silent"                 EMPTY              "$(ss new-3 "$tmp/plain")"
 expect_out "registered session: coordinator text"    "You are the COORDINATOR" "$(ss coord-2 "$tmp/plain")"
-echo "--- PostToolUse merge reminder"
-mr() { printf '{"session_id":"%s","hook_event_name":"PostToolUse","tool_name":"Bash","tool_input":{"command":"%s"}}' "$1" "$2" | bash "$hooks/merge-reminder.sh"; }
-expect_out "merge by coordinator: archive reminder"  "archive_session" "$(mr coord-1 'gh pr merge 12 --repo o/r --merge --delete-branch')"
-expect_out "merge after cd &&: reminder"             "archive_session" "$(mr coord-1 'cd x && gh pr merge 12')"
-expect_out "gh pr view: silent"                      EMPTY "$(mr coord-1 'gh pr view 12')"
-expect_out "merge by unregistered session: silent"   EMPTY "$(mr lane-7 'gh pr merge 12')"
-expect_out "merge reminder via python3" "archive_session" "$(COORDINATOR_NO_JQ=1 mr coord-1 'gh pr merge 12')"
-echo "--- one issue, one lifecycle: pending Next after a merge, cleared by the merge notice, Stop guard"
-rm -rf "$COORDINATOR_HOME/state"
-pend() { cat "$COORDINATOR_HOME/state/$1/pending-next" 2>/dev/null | awk '{printf "%s ", $1}'; }
+echo "--- PostToolUse merge reminder (fake gh: PR state from files in \$FAKE_GH_DIR)"
+export FAKE_GH_DIR="$tmp/gh"; mkdir -p "$FAKE_GH_DIR"
+cat >"$tmp/fake-gh" <<'GH'
+#!/usr/bin/env bash
+# gh pr view <N> --json state,url [-R owner/repo]; default repo o/r; state from $FAKE_GH_DIR/<owner_repo>#<N>
+repo=o/r; n=""; args=("$@")
+for ((i=0; i<${#args[@]}; i++)); do
+  case "${args[$i]}" in -R|--repo) repo="${args[$((i+1))]}"; i=$((i+1)) ;; [0-9]*) [[ -z "$n" ]] && n="${args[$i]}" ;; esac
+done
+echo "$*" >>"$FAKE_GH_DIR/calls"
+f="$FAKE_GH_DIR/${repo/\//_}#$n"
+[[ -f "$f" ]] || { echo "GraphQL: Could not resolve to a PullRequest" >&2; exit 1; }
+printf '{"state":"%s","url":"https://github.com/%s/pull/%s"}\n' "$(cat "$f")" "$repo" "$n"
+GH
+chmod +x "$tmp/fake-gh"; export COORDINATOR_GH="$tmp/fake-gh"
+merged() { for k in "$@"; do echo MERGED >"$FAKE_GH_DIR/${k/\//_}"; done; }
+merged 'o/r#12' 'o/r#13' 'o/r2#13' 'o/r3#14' 'o/r#7' 'o/r#21' 'o/r#22'
+echo OPEN >"$FAKE_GH_DIR/o_r#16"
+mr() { printf '{"session_id":"%s","cwd":"%s","hook_event_name":"PostToolUse","tool_name":"Bash","tool_input":{"command":"%s"},"tool_response":{"stdout":"","stderr":"","interrupted":false}}' "$1" "$tmp" "$2" | bash "$hooks/merge-reminder.sh"; }
+pend() { awk '{printf "%s ", $1}' "$COORDINATOR_HOME/state/$1/pending-next" 2>/dev/null; }
 expect_eq() { # name want got
   if [[ "$2" == "$3" ]]; then pass=$((pass+1)); echo "PASS $1"
   else failn=$((failn+1)); printf 'FAIL %s (want "%s", got "%s")\n' "$1" "$2" "$3"; fi
 }
-mrr() { # session command response-json
-  printf '{"session_id":"%s","hook_event_name":"PostToolUse","tool_name":"Bash","tool_input":{"command":"%s"},"tool_response":%s}' "$1" "$2" "${3:-{\"stdout\":\"\",\"stderr\":\"\",\"interrupted\":false\}}" | bash "$hooks/merge-reminder.sh"; }
-sm() { # session tool field text
-  python3 -I -c 'import json,sys; print(json.dumps({"session_id":sys.argv[1],"hook_event_name":"PostToolUse","tool_name":sys.argv[2],"tool_input":{"to":"Agent: api",sys.argv[3]:sys.argv[4]},"tool_response":{}}))' "$1" "$2" "$3" "$4" \
+sm() { # session tool text
+  python3 -I -c 'import json,sys; t=sys.argv[2]; i={"to":"Agent: api","message":sys.argv[3],"summary":"x"} if t=="SendMessage" else {"session_id":"local_x","message":sys.argv[3]}; print(json.dumps({"session_id":sys.argv[1],"hook_event_name":"PostToolUse","tool_name":t,"tool_input":i,"tool_response":{}}))' "$1" "$2" "$3" \
     | bash "$hooks/next-sent.sh"; }
 stop() { # session stop_hook_active
   printf '{"session_id":"%s","hook_event_name":"Stop","stop_hook_active":%s}' "$1" "$2" | bash "$hooks/next-guard.sh"; }
+reset() { rm -rf "$COORDINATOR_HOME/state"; }
 
-expect_out "merge records pending, says so"            "Pending until sent" "$(mrr coord-1 'gh pr merge 12 --repo o/r --merge --delete-branch')"
-expect_eq  "pending holds #12"                         "12 " "$(pend coord-1)"
-expect_eq  "pending keeps the repo"                    "o/r" "$(awk '{print $2}' "$COORDINATOR_HOME/state/coord-1/pending-next")"
-mrr coord-1 'cd x && gh pr merge -R o/r2 --squash \"#13\" && gh pr merge https://github.com/o/r3/pull/14 --merge' >/dev/null
-expect_eq  "-R, #N and URL forms, two merges"          "12 13 14 " "$(pend coord-1)"
-expect_eq  "URL gives the repo"                        "o/r3" "$(awk '$1==14 {print $2}' "$COORDINATOR_HOME/state/coord-1/pending-next")"
-mrr coord-1 'gh pr merge 15 --auto --squash' >/dev/null
-expect_eq  "--auto is not a merge yet"                 "12 13 14 " "$(pend coord-1)"
-mrr coord-1 'gh pr merge 16' '{"stdout":"","stderr":"GraphQL: Pull request is not mergeable","interrupted":false}' >/dev/null
-expect_eq  "failed merge is not recorded"              "12 13 14 " "$(pend coord-1)"
-mrr coord-1 'gh pr merge 17' '{"stdout":"","stderr":"","interrupted":true}' >/dev/null
-expect_eq  "interrupted merge is not recorded"         "12 13 14 " "$(pend coord-1)"
-expect_out "branch-name merge: asks for the number"    "could not be read" "$(mrr coord-1 'gh pr merge feature-x')"
-mrr lane-7 'gh pr merge 18' >/dev/null
-expect_eq  "unregistered merge: no state"              "" "$(ls "$COORDINATOR_HOME/state" | grep lane-7 || true)"
+for mode in jq python3; do
+  echo "--- merge / Next / Stop via $mode"
+  if [[ $mode == python3 ]]; then export COORDINATOR_NO_JQ=1; fi
+  reset
+  expect_out "merge by coordinator: archive reminder"  "archive_session" "$(mr coord-1 'gh pr merge 12 --repo o/r --merge --delete-branch')"
+  expect_eq  "merge records o/r#12"                    "o/r#12 " "$(pend coord-1)"
+  expect_out "merge after cd &&: reminder"             "archive_session" "$(mr coord-1 'cd x && gh pr merge 13')"
+  expect_eq  "no --repo: repo from gh's url"           "o/r#12 o/r#13 " "$(pend coord-1)"
+  expect_out "gh pr view: silent"                      EMPTY "$(mr coord-1 'gh pr view 12')"
+  expect_out "merge by unregistered session: silent"   EMPTY "$(mr lane-7 'gh pr merge 12')"
+  expect_eq  "unregistered: no state"                  "" "$(ls "$COORDINATOR_HOME/state" | grep lane-7 || true)"
+  mr coord-1 'gh pr merge -R o/r2 --squash \"#13\" && gh pr merge https://github.com/o/r3/pull/14 --merge' >/dev/null
+  expect_eq  "-R, quoted #N, URL; same N in two repos"  "o/r#12 o/r#13 o/r2#13 o/r3#14 " "$(pend coord-1)"
+  mr coord-1 'gh pr merge --subject \"fix: a b\" --body \"x y\" 7 --squash' >/dev/null
+  expect_eq  "quoted subject: PR is 7, not a word of it" "o/r#12 o/r#13 o/r2#13 o/r3#14 o/r#7 " "$(pend coord-1)"
+  out="$(mr coord-1 'echo gh pr merge 21; echo \"gh pr merge 22\"')"
+  expect_eq  "echo gh pr merge: not a merge"           "o/r#12 o/r#13 o/r2#13 o/r3#14 o/r#7 " "$(pend coord-1)"
+  expect_out "echo gh pr merge: silent"                EMPTY "$out"
+  expect_out "failed merge then '; echo ok': silent"   EMPTY "$(mr coord-1 'gh pr merge 16; echo ok')"
+  mr coord-1 'gh pr merge 16 || true' >/dev/null
+  expect_eq  "failed merge (still OPEN) not recorded"  "o/r#12 o/r#13 o/r2#13 o/r3#14 o/r#7 " "$(pend coord-1)"
+  expect_out "--auto: not recorded, says so"           "only queues" "$(mr coord-1 'gh pr merge 15 --auto --squash')"
+  expect_out "gh cannot answer: reminder, not recorded" "could not confirm" "$(mr coord-1 'gh pr merge 99')"
+  expect_out "branch-name merge: asks for the number"  "no PR number" "$(mr coord-1 'gh pr merge feature-x')"
+  expect_eq  "still five pending"                      "o/r#12 o/r#13 o/r2#13 o/r3#14 o/r#7 " "$(pend coord-1)"
 
-out="$(stop coord-1 false)"
-expect_out "Stop blocks while pending"                 '"decision":"block"' "$out"
-expect_out "Stop reason names each PR"                 'PR #13 merged. Next:' "$out"
-expect_out "Stop reason gives the escape hatch"        'next-clear.sh' "$out"
-expect_out "Stop reason via python3"                   '"decision":"block"' "$(COORDINATOR_NO_JQ=1 stop coord-1 false)"
+  out="$(stop coord-1 false)"
+  expect_out "Stop blocks while pending"               '"decision":"block"' "$out"
+  expect_out "Stop reason names each PR"               'o/r2#13' "$out"
+  expect_out "Stop reason gives the format"            'PR #14 merged. Next:' "$out"
+  expect_out "Stop reason gives the escape hatch"      'next-clear.sh' "$out"
 
-expect_eq  "message without Next: line keeps pending"  "" "$(sm coord-1 SendMessage message 'PR #12 merged.')"
-expect_eq  "wrong PR number keeps pending"             "" "$(sm coord-1 SendMessage message $'PR #99 merged.\nNext: #50')"
-expect_eq  "empty Next: keeps pending"                 "" "$(sm coord-1 SendMessage message 'PR #12 merged. Next:   ')"
-expect_eq  "unregistered sender: silent"               "" "$(sm lane-7 SendMessage message 'PR #12 merged. Next: #50')"
-expect_eq  "still 12 13 14"                            "12 13 14 " "$(pend coord-1)"
-expect_out "notice clears #12, lists what is left"     "Still pending: #13 #14" "$(sm coord-1 SendMessage message 'PR #12 merged. Next: #50 https://github.com/o/r/issues/50')"
-expect_out "send_message tool clears #13 (Next on its own line)" "Next sent for #13" \
-  "$(sm coord-1 mcp__ccd_session_mgmt__send_message message $'PR #13 merged.\nNext: handover')"
-expect_eq  "only #14 left"                             "14 " "$(pend coord-1)"
+  expect_eq  "message without Next: keeps pending"     "" "$(sm coord-1 SendMessage 'PR #12 merged.')"
+  expect_eq  "wrong PR number keeps pending"           "" "$(sm coord-1 SendMessage $'PR #98 merged.\nNext: #50')"
+  expect_eq  "empty Next: keeps pending"               "" "$(sm coord-1 SendMessage 'PR #12 merged. Next:   ')"
+  expect_eq  "unregistered sender: silent"             "" "$(sm lane-7 SendMessage 'PR #12 merged. Next: #50')"
+  expect_out "bare #13 in two repos: not cleared"      "more than one repo" "$(sm coord-1 SendMessage 'PR #13 merged. Next: #50')"
+  expect_eq  "still five after the ambiguous notice"   "o/r#12 o/r#13 o/r2#13 o/r3#14 o/r#7 " "$(pend coord-1)"
+  expect_out "PR o/r2#13 clears only that one"         "Next sent for o/r2#13" "$(sm coord-1 SendMessage 'PR o/r2#13 merged. Next: stand by')"
+  expect_out "now bare #13 clears o/r#13"              "Next sent for o/r#13" "$(sm coord-1 SendMessage 'PR #13 merged. Next: handover')"
+  expect_out "notice clears #12, lists what is left"   "Still pending: o/r3#14 o/r#7" "$(sm coord-1 SendMessage 'PR #12 merged. Next: #50 https://github.com/o/r/issues/50')"
+  expect_out "send_message {session_id,message}, Next on its own line" "Next sent for o/r3#14" \
+    "$(sm coord-1 mcp__ccd_session_mgmt__send_message $'PR #14 merged.\nNext: done')"
+  expect_eq  "only o/r#7 left"                         "o/r#7 " "$(pend coord-1)"
 
-echo "--- Stop guard cannot loop: at most 3 blocks per turn, then allow with a warning"
-rm -f "$COORDINATOR_HOME/state/coord-1/stop-blocks"
-expect_out "turn end: block 1"                         '"decision":"block"' "$(stop coord-1 false)"
-expect_out "continued: block 2"                        '"decision":"block"' "$(stop coord-1 true)"
-expect_out "continued: block 3"                        '"decision":"block"' "$(stop coord-1 true)"
-out="$(stop coord-1 true)"
-expect_out "continued: 4th stop allowed with warning"  'systemMessage' "$out"
-[[ "$out" != *'"decision":"block"'* ]] && { pass=$((pass+1)); echo "PASS 4th stop is not blocked"; } || { failn=$((failn+1)); echo "FAIL 4th stop blocked"; }
-expect_out "next turn blocks again"                    '"decision":"block"' "$(stop coord-1 false)"
-expect_eq  "unregistered Stop: silent"                 "" "$(stop lane-7 false)"
-expect_eq  "registered, nothing pending: silent"       "" "$(stop coord-2 false)"
+  rm -f "$COORDINATOR_HOME/state/coord-1/stop-blocks"
+  expect_out "turn end: block 1"                       '"decision":"block"' "$(stop coord-1 false)"
+  expect_out "continued: block 2"                      '"decision":"block"' "$(stop coord-1 true)"
+  expect_out "continued: block 3"                      '"decision":"block"' "$(stop coord-1 true)"
+  out="$(stop coord-1 true)"
+  expect_out "continued: 4th stop allowed, warning"    'systemMessage' "$out"
+  [[ "$out" != *'"decision":"block"'* ]] && { pass=$((pass+1)); echo "PASS 4th stop is not blocked"; } || { failn=$((failn+1)); echo "FAIL 4th stop blocked"; }
+  expect_out "next turn blocks again"                  '"decision":"block"' "$(stop coord-1 false)"
+  expect_eq  "unregistered Stop: silent"               "" "$(stop lane-7 false)"
+  expect_eq  "registered, nothing pending: silent"     "" "$(stop coord-2 false)"
+done
+unset COORDINATOR_NO_JQ
 
-echo "--- escape hatch: next-clear.sh needs a reason and logs it in the ledger"
+echo "--- escape hatch and handover: next-clear.sh"
 nc="$root/plugins/coordinator/scripts/next-clear.sh"
-if bash "$nc" coord-1 14 >/dev/null 2>&1; then failn=$((failn+1)); echo "FAIL clear without reason accepted"; else pass=$((pass+1)); echo "PASS clear without reason rejected"; fi
-if bash "$nc" lane-7 14 "x" >/dev/null 2>&1; then failn=$((failn+1)); echo "FAIL unregistered clear accepted"; else pass=$((pass+1)); echo "PASS unregistered clear rejected"; fi
+merged 'o/r9#7'; mr coord-1 'gh pr merge 7 -R o/r9' >/dev/null
+if bash "$nc" coord-1 'o/r#7' >/dev/null 2>&1; then failn=$((failn+1)); echo "FAIL clear without reason accepted"; else pass=$((pass+1)); echo "PASS clear without reason rejected"; fi
+if bash "$nc" lane-7 'o/r#7' "x" >/dev/null 2>&1; then failn=$((failn+1)); echo "FAIL unregistered clear accepted"; else pass=$((pass+1)); echo "PASS unregistered clear rejected"; fi
+if bash "$nc" coord-1 7 "x" >/dev/null 2>&1; then failn=$((failn+1)); echo "FAIL ambiguous bare 7 cleared"; else pass=$((pass+1)); echo "PASS ambiguous bare 7 rejected"; fi
 mkdir -p "$L/coordination"
-bash "$nc" coord-1 '#14' "author session archived before the merge" >/dev/null
-expect_eq  "cleared: nothing pending"                  "" "$(pend coord-1)"
-expect_out "reason is in the ledger"                   "PR #14: author session archived" "$(cat "$L/coordination/next-cleared.md")"
-expect_eq  "Stop allowed once cleared"                 "" "$(stop coord-1 false)"
+bash "$nc" coord-1 'o/r#7' "author session archived before the merge" >/dev/null
+expect_eq  "cleared: o/r9#7 left"                      "o/r9#7 " "$(pend coord-1)"
+expect_out "reason is in the ledger"                   "o/r#7: author session archived" "$(cat "$L/coordination/next-cleared.md")"
+expect_eq  "--handover prints the list"                "o/r9#7" "$(bash "$nc" coord-1 --handover)"
+expect_eq  "--handover drops the old state"            "no" "$([[ -d "$COORDINATOR_HOME/state/coord-1" ]] && echo yes || echo no)"
+expect_eq  "old session's Stop then allowed"           "" "$(stop coord-1 false)"
+bash "$nc" coord-2 --add 'o/r9#7' >/dev/null
+expect_eq  "replacement takes it over (--add)"         "o/r9#7 " "$(pend coord-2)"
+expect_out "replacement's Stop blocks"                 '"decision":"block"' "$(stop coord-2 false)"
+if bash "$nc" coord-2 --add 'bad' >/dev/null 2>&1; then failn=$((failn+1)); echo "FAIL --add accepted a bad key"; else pass=$((pass+1)); echo "PASS --add rejects a bad key"; fi
+"$root/plugins/coordinator/scripts/register.sh" --unregister coord-2 >/dev/null
+expect_eq  "unregister removes hook state"             "no" "$([[ -d "$COORDINATOR_HOME/state/coord-2" ]] && echo yes || echo no)"
 python3 -I -c 'import json,sys; json.load(open(sys.argv[1]))' "$hooks/hooks.json" && { pass=$((pass+1)); echo "PASS hooks.json parses"; } \
   || { failn=$((failn+1)); echo "FAIL hooks.json does not parse"; }
 echo "---"

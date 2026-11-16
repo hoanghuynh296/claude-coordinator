@@ -21,7 +21,12 @@ try:
     v = json.load(sys.stdin)
     for k in f:
         v = v.get(k) if isinstance(v, dict) else None
-    print("" if v is None else v)
+    if v is None:
+        print("")
+    elif isinstance(v, (bool, dict, list)):
+        print(json.dumps(v))
+    else:
+        print(v)
 except Exception:
     print("")
 ' "$field"
@@ -61,7 +66,7 @@ reg_values() {
 
 # Per-session hook state of a registered coordinator: $COORD_HOME/state/<session_id>/
 #   pending-next   one line per merged PR still waiting for "PR #N merged. Next: ..":
-#                  "<N> <repo or -> <UTC time>"
+#                  "<owner/repo>#<N> <UTC time>" (the key is the first field)
 #   stop-blocks    how many times the Stop hook has blocked in the current turn
 state_dir() {
   local sid="$1"
@@ -70,28 +75,51 @@ state_dir() {
   mkdir -p "$d" && printf '%s' "$d"
 }
 
-# pending_add <sid> <pr> <repo>: record (or refresh) PR <pr> as waiting for its Next message
+# valid_key <owner/repo#N>
+valid_key() { [[ "$1" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+#[0-9]+$ ]]; }
+
+# pending_add <sid> <owner/repo#N>: record (or refresh) a merged PR waiting for its Next message
 pending_add() {
+  valid_key "$2" || return 1
   local d f; d="$(state_dir "$1")" || return 1; f="$d/pending-next"
-  pending_remove "$1" "$2"
-  printf '%s %s %s\n' "$2" "${3:--}" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" >>"$f"
+  pending_remove "$1" "$2" || true
+  printf '%s %s\n' "$2" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" >>"$f"
   rm -f "$d/stop-blocks"
 }
 
-# pending_remove <sid> <pr>: returns 0 when the PR was pending
+# pending_remove <sid> <owner/repo#N>: returns 0 when that PR was pending
 pending_remove() {
   local d f; d="$(state_dir "$1")" || return 1; f="$d/pending-next"
   [[ -f "$f" ]] || return 1
-  grep -q "^$2 " "$f" || return 1
-  grep -v "^$2 " "$f" >"$f.tmp" || true
+  awk -v k="$2" '$1 == k {found=1} END {exit !found}' "$f" || return 1
+  awk -v k="$2" '$1 != k' "$f" >"$f.tmp" || true
   mv "$f.tmp" "$f"
   [[ -s "$f" ]] || rm -f "$f" "$d/stop-blocks"
   return 0
 }
 
-# pending_list <sid>: the pending PR lines (nothing when none)
-pending_list() {
+# pending_keys <sid> [N]: the pending keys, one per line (only those for PR number N if given)
+pending_keys() {
   local d; d="$(state_dir "$1")" || return 0
-  [[ -f "$d/pending-next" ]] && cat "$d/pending-next"
-  return 0
+  [[ -f "$d/pending-next" ]] || return 0
+  if [[ -n "${2:-}" ]]; then awk -v n="#$2" '{ if (substr($1, length($1) - length(n) + 1) == n) print $1 }' "$d/pending-next"
+  else awk '{print $1}' "$d/pending-next"; fi
+}
+
+# pending_resolve <sid> <ref>: <ref> is owner/repo#N, #N or N. Prints the one pending key it
+# names; returns 1 when none, 2 when a bare number matches PRs in several repos.
+pending_resolve() {
+  local ref="${2#PR }"; ref="${ref# }"
+  if valid_key "$ref"; then
+    pending_keys "$1" | grep -qxF "$ref" && { printf '%s' "$ref"; return 0; }
+    return 1
+  fi
+  ref="${ref#\#}"
+  [[ "$ref" =~ ^[0-9]+$ ]] || return 1
+  local keys n
+  keys="$(pending_keys "$1" "$ref")"
+  n="$(printf '%s' "$keys" | grep -c . || true)"
+  [[ "$n" -eq 0 ]] && return 1
+  [[ "$n" -gt 1 ]] && return 2
+  printf '%s' "$keys"
 }

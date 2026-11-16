@@ -21,7 +21,8 @@ if [[ "${1:-}" == "--unregister" ]]; then
   [[ "$sid" =~ ^[A-Za-z0-9_-]+$ ]] || { echo "invalid session id: $sid" >&2; exit 1; }
   if [[ -f "$home/sessions/$sid" ]]; then
     mv "$home/sessions/$sid" "$home/sessions/$sid.unregistered"
-    echo "unregistered $sid (file kept as $sid.unregistered)"
+    rm -rf "${home:?}/state/$sid"
+    echo "unregistered $sid (file kept as $sid.unregistered; hook state removed)"
   else
     echo "session $sid was not registered"
   fi

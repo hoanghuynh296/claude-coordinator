@@ -32,6 +32,10 @@ goes into the unit's own docs first; rules go into `PROFILE.md`; state goes into
 1.
 2.
 
+## Pending Next (coordinator only)
+- <owner/repo#N, from `next-clear.sh <session> --handover`: merged, author not yet sent
+  "PR #N merged. Next: ..."> <or "none">
+
 ## Waiting on
 - Owner: <question or task>
 - Other units: <dependency>
