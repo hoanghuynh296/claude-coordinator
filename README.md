@@ -131,6 +131,7 @@ files, review checklist, pitfalls, packs, templates) and two agents: `coordinato
 | Edit guard (PreToolUse hook) | a registered coordinator editing anything inside a unit except the planning files the profile allows. Understands several units, also when they sit inside the ledger folder. `register.sh --allow <glob>` sets the allowed files; `--no-guard` switches it off for projects whose profile lets the coordinator write code |
 | Merge reminder (PostToolUse hook on Bash) | a registered coordinator forgetting, after `gh pr merge <N>`, to tell the author what is next or to archive a `per-issue` agent's session. It splits the command like a shell (`echo gh pr merge 9` does not count), confirms each PR with `gh pr view` (one 20 s deadline for all; `--auto` included, since a ready PR merges at once) and records `owner/repo#N` as "pending Next" only when it is MERGED (state in `~/.claude/coordinator/state/<session>/`); when gh cannot answer, or a `gh pr merge` cannot be parsed, it only reminds |
 | Next sent (PostToolUse hook on `SendMessage` and `send_message`) | clears a PR when any message the coordinator sends holds `PR #N merged` (or `PR owner/repo#N merged`, needed when N is pending in two repos) and a `Next:` line, whatever the recipient |
+| CI watch reminder (UserPromptSubmit hook, and PostToolUse on `ReadNotifications` / `FetchInboxMessage`) | a registered coordinator receiving "PR ready" and forgetting to start the background CI watch: it is reminded in that turn, with a ready-to-run `ci-watch.sh` command for each PR link in the message. A reminder, never a block |
 | Next guard (Stop hook) | a coordinator ending its turn while a merged PR's author has not been told `PR #N merged. Next: ...`: the stop is blocked with the PRs and the message format; at most 3 blocks per turn, then a warning. `scripts/next-clear.sh <session> <owner/repo#N> "<reason>"` clears a PR whose author cannot be messaged, logging the reason to the ledger's `coordination/next-cleared.md` |
 | `scripts/ledger-lint.sh <ledger>` | a ledger out of shape: missing files, over the size budget, session ids or home paths, decision ids cited but not defined, leftover placeholders. Warns on a stale date, on history in the live ledger, on an undated delegation |
 | `scripts/pre-push-guard.sh` (git pre-push hook) | pushing to a branch whose pull request is already merged or closed; optional local protection of release branches |
@@ -148,6 +149,7 @@ id and must register again.
 | `ledger-lint.sh [dir]` | see above; budgets in the environment or in `<dir>/.ledger-lint` |
 | `install-guards.sh`, `pre-push-guard.sh` | see above |
 | `next-clear.sh <session> <owner/repo#N> <reason>` | clear a merged PR the Stop hook waits on, when its author cannot get the Next message; the reason is appended to `coordination/next-cleared.md` in the ledger. `--list` shows what is pending; `--handover` prints it and drops the session's state (written into the handover note); `--add <owner/repo#N>...` lets the replacement take it over |
+| `ci-watch.sh <owner/repo> <N> [<sha>]` | watch a PR's CI until it ends and print one line: `green` (exit 0), `red: <checks> <link>` (1, at the first failure), `error` (2), `stale-head` when the head is not or no longer the reported SHA (3), `timeout` (4, `CI_WATCH_DEADLINE`, default 90 min), `no-checks` (5, `CI_WATCH_NOCHECKS`, default 15 min), not open (6). The coordinator runs it with `run_in_background` on every "PR ready": its exit wakes the coordinator when CI ends |
 | `register.sh <session> <ledger> [unit...] [--allow glob]... [--allow-none] [--no-guard]` | register or `--unregister` a coordinator session |
 | `check-context.sh [--soft N] [--hard N] [--window N] [session...]` | context size per session from its transcript, with a level: `ok`, `SOFT` (finish the current issue, then rotate; default 250k) or `HARD` (rotate now; default 400k). `--window` caps soft at 50% and hard at 75% of the context window. Also `SOFT_AT`, `HARD_AT`, `CONTEXT_WINDOW`; one run per model group |
 | `bootstrap.sh <owner/repo> <dir> ...` | the single-repo SaaS starting point: repo from a template (default `hoanghuynh296/agent-project-template`, which is private: pass `--template <your repo>`), placeholders, `develop`, labels, ledger, branch protection. `--ledger-only` creates just the ledger; `--dry-run` prints every action |
@@ -165,15 +167,16 @@ plugins/coordinator/
   skills/coordinator/references/templates/*.md
   commands/*.md
   agents/{reviewer,oneoff-builder}.md
-  hooks/hooks.json, hooks/{lib,coordinator-guard,session-start,merge-reminder,next-sent,next-guard}.sh
-  scripts/{init-ledger,ledger-lint,install-guards,pre-push-guard,register,check-context,next-clear,bootstrap}.sh
+  hooks/hooks.json, hooks/{lib,coordinator-guard,session-start,merge-reminder,next-sent,next-guard,ci-watch-reminder}.sh
+  scripts/{init-ledger,ledger-lint,install-guards,pre-push-guard,register,check-context,next-clear,ci-watch,bootstrap}.sh
 tests/{hooks,ledger-lint,pre-push-guard,structure,bootstrap,exec-bits,check-context}-test.sh
 ```
 
 ## Tests
 
 ```sh
-bash tests/hooks-test.sh           # edit guard, SessionStart, merge/Next/Stop hooks, jq and python3 paths, multi-unit workspace
+bash tests/hooks-test.sh           # edit guard, SessionStart, merge/Next/Stop hooks, CI watch reminder, jq and python3 paths, multi-unit workspace
+bash tests/ci-watch-test.sh        # ci-watch.sh with a fake gh: green, red, stale and moved head, no checks, timeout, errors
 bash tests/ledger-lint-test.sh     # every lint rule; a fresh ledger passes
 bash tests/pre-push-guard-test.sh  # merged, closed and open PRs with a fake gh; install-guards
 bash tests/bootstrap-test.sh [template-dir]   # full bootstrap against local bare repos and a fake gh
@@ -184,6 +187,24 @@ bash tests/check-context-test.sh   # ok / SOFT / HARD levels, thresholds from en
 
 ## Changes
 
+- **0.8.0**: agents report on push, the coordinator owns the CI wait. An agent pushed, saw CI
+  queued on the single self-hosted runner and ended its turn, "I'll report once CI is green".
+  Sessions run only when a message arrives and Auto-fix wakes an agent on CI failure only, so
+  the green run woke nobody and the coordinator never heard "PR ready" (the mirror of the
+  0.7.0 stall). Now an agent reports "PR ready" as soon as the PR is pushed and the local gate
+  (lint and tests) is green, with the head SHA and the CI state then (pending, green or red),
+  ending `Context: <k tokens>`; it never waits for CI. Review and CI fixes are reported the
+  same way. On every "PR ready" the coordinator starts, in the same turn,
+  `scripts/ci-watch.sh <owner/repo> <N> <sha>` with `run_in_background` (new: polls
+  `gh pr checks` with a deadline, catches a moved head and a PR with no checks yet, prints one
+  line: green / red / stale-head / timeout / no-checks), reviews in parallel, and merges only
+  when CI is green on the reported head and the review passed (`--match-head-commit` in the
+  merge command); after fixes it starts a new watch. A new hook reminds a registered
+  coordinator to start the watch when a "PR ready" reaches it (UserPromptSubmit, and the inbox
+  tools); a reminder only, since how messages arrive depends on the host. The 0.7.0 Next hooks
+  are unchanged. Updated: the unit, platform and QA briefs, the PROFILE template, `profile.md`,
+  `roles.md`, `workflow.md`, `review-merge.md` (step 2: start the CI watch), SKILL.md, the
+  `oneoff-builder` agent, the SessionStart agent line, pitfall 32 "Both sides waited for CI".
 - **0.7.0**: one issue, one full lifecycle. An agent reported "PR ready, next #50" and ended
   its turn; the coordinator merged and, as `review-merge.md` step 9 then said, told it nothing.
   Agent sessions run only when a message arrives, so both waited and nothing noticed. Now an

@@ -113,13 +113,22 @@ Read before starting a stretch of work. Each entry: what went wrong, then the fi
     full lifecycle: the agent works one issue, reports "PR ready" and waits; in the same turn
     as the merge the coordinator sends `PR #<n> merged. Next: <issue | handover | stand by |
     done>`. The plugin's Stop hook blocks the coordinator's turn from ending until it has.
+32. **Both sides waited for CI.** An agent pushed, saw CI queued on the single self-hosted
+    runner and ended its turn: "I'll report once CI is green". Sessions run only when a message
+    arrives; Auto-fix wakes an agent on CI failure only, so the green run woke nobody, and the
+    coordinator never heard "PR ready" (SME Hub PR #69, 2026-11-17; the mirror of 31). → Agents
+    report "PR ready" on push, once the local gate is green, with the head SHA and the CI state;
+    they never wait for CI. The coordinator owns the CI wait: on every "PR ready" it starts
+    `scripts/ci-watch.sh <owner/repo> <N> <sha>` in the background in the same turn (the
+    command's exit wakes it), reviews in parallel, and merges only on CI green for the reported
+    head. A hook reminds it when a "PR ready" arrives.
 
 ## Tooling
 
-32. **`ubuntu-latest` moved** and broke a pinned tool. → Pin runner images and tool versions.
-33. **Branch protection on private repos** needs a paid GitHub plan. → On GitHub's 403 the
+33. **`ubuntu-latest` moved** and broke a pinned tool. → Pin runner images and tool versions.
+34. **Branch protection on private repos** needs a paid GitHub plan. → On GitHub's 403 the
     bootstrap script warns and continues; record the owner's choice in `DECISIONS.md`.
-34. **Scripts lose their exec bit** when a tool rewrites them. → Commands call scripts with
+35. **Scripts lose their exec bit** when a tool rewrites them. → Commands call scripts with
     `bash <path>`; `tests/exec-bits-test.sh` checks the mode in git.
-35. **Template placeholders left behind** in CI files matched nothing. → The bootstrap script
+36. **Template placeholders left behind** in CI files matched nothing. → The bootstrap script
     fails while any placeholder remains.

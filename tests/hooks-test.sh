@@ -235,6 +235,22 @@ expect_out "replacement's Stop blocks"                 '"decision":"block"' "$(s
 if bash "$nc" coord-2 --add 'bad' >/dev/null 2>&1; then failn=$((failn+1)); echo "FAIL --add accepted a bad key"; else pass=$((pass+1)); echo "PASS --add rejects a bad key"; fi
 "$root/plugins/coordinator/scripts/register.sh" --unregister coord-2 >/dev/null
 expect_eq  "unregister removes hook state"             "no" "$([[ -d "$COORDINATOR_HOME/state/coord-2" ]] && echo yes || echo no)"
+echo "--- CI watch reminder on \"PR ready\" (UserPromptSubmit, inbox tools)"
+"$root/plugins/coordinator/scripts/register.sh" coord-6 "$tmp/ledger" "$tmp/proj" >/dev/null
+up() { python3 -I -c 'import json,sys; print(json.dumps({"session_id":sys.argv[1],"hook_event_name":"UserPromptSubmit","prompt":sys.argv[2]}))' "$1" "$2" | bash "$hooks/ci-watch-reminder.sh"; }
+rn() { python3 -I -c 'import json,sys; print(json.dumps({"session_id":sys.argv[1],"hook_event_name":"PostToolUse","tool_name":"ReadNotifications","tool_input":{},"tool_response":{"notifications":[{"body":sys.argv[2]}]}}))' "$1" "$2" | bash "$hooks/ci-watch-reminder.sh"; }
+for mode in jq python3; do
+  if [[ $mode == python3 ]]; then export COORDINATOR_NO_JQ=1; fi
+  r="$(up coord-6 'Agent: api. #12 PR ready https://github.com/o/r/pull/12 head abc1234, CI pending. Context: 80k')"
+  expect_out "$mode: PR ready prompt -> start the watch"   'run_in_background' "$r"
+  expect_out "$mode: names the event"                       '"hookEventName":"UserPromptSubmit"' "$r"
+  expect_out "$mode: ready-to-run command for the PR link"  ' o/r 12 <head sha>' "$r"
+  expect_out "$mode: case-insensitive"                      'ci-watch.sh' "$(up coord-6 'pr ready: #3')"
+  expect_out "$mode: inbox tool result -> reminder"         '"hookEventName":"PostToolUse"' "$(rn coord-6 'PR ready https://github.com/a/b/pull/4')"
+  expect_out "$mode: other prompt -> silent"                EMPTY "$(up coord-6 'what is the status?')"
+  expect_out "$mode: unregistered session -> silent"        EMPTY "$(up lane-7 'PR ready #3')"
+done
+unset COORDINATOR_NO_JQ
 python3 -I -c 'import json,sys; json.load(open(sys.argv[1]))' "$hooks/hooks.json" && { pass=$((pass+1)); echo "PASS hooks.json parses"; } \
   || { failn=$((failn+1)); echo "FAIL hooks.json does not parse"; }
 echo "---"

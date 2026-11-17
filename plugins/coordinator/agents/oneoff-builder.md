@@ -16,8 +16,10 @@ Rules:
    can be cleaned up during a pause, and the work is lost.
 3. Read the unit's `AGENTS.md` first and follow it. Touch only what the issue allows and what
    the unit owns. Need something elsewhere? Report "blocked: need <change> from <unit>".
-4. Run the unit's gate, or the part of it your change can affect. Paste the evidence; say
-   `UNVERIFIED: <what>` for anything you could not check.
+4. Run the unit's gate locally, or the part of it your change can affect. Paste the evidence;
+   say `UNVERIFIED: <what>` for anything you could not check. Report as soon as the PR is
+   pushed and that local gate is green, with the head SHA and the CI state then (pending,
+   green or red); never wait for CI. The coordinator watches it.
 5. Open the PR yourself into the integration branch, closing the issue. Never merge.
 6. Before every push check the branch's PR state; if it is merged or closed, cut a new branch.
 7. An investigation without code: write the findings into the issue or the PR, not into the
@@ -26,7 +28,7 @@ Rules:
 9. Context: past the soft threshold in the brief (default 250k) finish the task but take no
    new one; past the hard one (default 400k) stop at the next safe point, push, write what is
    done and what is left into the PR, and report "blocked: rotate".
-10. Final report, at most 6 lines: PR link, gate evidence, what changed, what is unverified,
+10. Final report, at most 6 lines: PR link, head SHA and CI state, gate evidence, what changed, what is unverified,
    open questions. No progress updates before that. As a subagent your final answer is the
    report. Run as a session, send it (and any "blocked") as a message to the coordinator
    session by name ("Coordinator: <project>"): a top-level session sends no turn-end note.

@@ -199,5 +199,54 @@ m = [e["matcher"] for e in h["PostToolUse"] if any("next-sent.sh" in x["command"
 assert m and "SendMessage" in m[0] and "mcp__ccd_session_mgmt__send_message" in m[0]
 PY2
 
+
+# Agents report on push, the coordinator owns the CI wait (0.8.0): "PR ready" goes out once the
+# PR is pushed and the local gate is green, with head SHA and CI state; agents never wait for
+# CI; the coordinator starts scripts/ci-watch.sh in the background on every "PR ready".
+for f in references/templates/unit-brief.md references/templates/platform-brief.md \
+         references/templates/qa-brief.md ../../agents/oneoff-builder.md references/workflow.md \
+         SKILL.md references/roles.md references/profile.md references/templates/PROFILE.md \
+         references/procedures/review-merge.md ../../hooks/session-start.sh; do
+  has "$f" 'never wait for CI\|never waiting for CI\|never waits for CI' \
+    && ok "$f: agents never wait for CI" || bad "$f does not say agents never wait for CI"
+  has "$f" 'head SHA\|<head sha>' && ok "$f: the report or watch names the head SHA" \
+    || bad "$f does not name the head SHA"
+done
+for f in references/templates/unit-brief.md references/templates/PROFILE.md references/workflow.md \
+         references/profile.md ../../hooks/session-start.sh SKILL.md; do
+  has "$f" 'local gate' && ok "$f: reports on the local gate" || bad "$f does not speak of the local gate"
+done
+for f in SKILL.md references/workflow.md references/procedures/review-merge.md references/roles.md \
+         references/templates/PROFILE.md references/profile.md references/pitfalls.md; do
+  has "$f" 'ci-watch.sh' && ok "$f names scripts/ci-watch.sh" || bad "$f does not name ci-watch.sh"
+done
+has references/procedures/review-merge.md 'run_in_background' \
+  && has references/procedures/review-merge.md 'new watch for the new head\|new CI watch for the new head' \
+  && has references/procedures/review-merge.md 'match-head-commit' \
+  && has references/procedures/review-merge.md 'only when CI is green on the reported head' \
+  && ok "review-merge: background watch, a new watch after fixes, merge on green reported head" \
+  || bad "review-merge lacks the background watch, re-watch after fixes or the merge condition"
+for phrase in 'must be green before you report. Paste' 'Report "PR ready" when the gate is green' \
+              'PR ready and gate green' 'PR ready, gate$' 'Agents own their PR until the gate is green'; do
+  if grep -rq -- "$phrase" "$plugin"; then bad "the kit still says \"$phrase\""; else ok "the kit no longer says \"$phrase\""; fi
+done
+has references/pitfalls.md 'Both sides waited for CI' && ok "pitfalls record the CI-wait stall" \
+  || bad "pitfalls miss \"Both sides waited for CI\""
+ci="$plugin/scripts/ci-watch.sh"
+[[ -f "$ci" ]] && ok "scripts/ci-watch.sh exists" || bad "scripts/ci-watch.sh missing"
+for word in green red stale-head timeout no-checks run_in_background 'gh pr checks'; do
+  grep -q -- "$word" "$ci" && ok "ci-watch.sh documents $word" || bad "ci-watch.sh does not document $word"
+done
+grep -q 'ci-watch-reminder.sh' "$plugin/hooks/hooks.json" && ok "hooks.json wires ci-watch-reminder.sh" \
+  || bad "hooks.json does not wire ci-watch-reminder.sh"
+python3 -I - "$plugin/hooks/hooks.json" <<'PY3' && ok "hooks.json: UserPromptSubmit and inbox tools run ci-watch-reminder" || bad "hooks.json ci-watch-reminder wiring"
+import json, sys
+h = json.load(open(sys.argv[1]))["hooks"]
+assert any("ci-watch-reminder.sh" in x["command"] for e in h["UserPromptSubmit"] for x in e["hooks"])
+m = [e["matcher"] for e in h["PostToolUse"] if any("ci-watch-reminder.sh" in x["command"] for x in e["hooks"])]
+assert m and "ReadNotifications" in m[0] and "FetchInboxMessage" in m[0]
+PY3
+grep -q '^- \*\*0\.8\.0\*\*' "$root/README.md" && grep -q '"version": "0.8.0"' "$plugin/.claude-plugin/plugin.json" \
+  && ok "README changelog and plugin.json at 0.8.0" || bad "0.8.0 missing from README or plugin.json"
 echo "passed $pass, failed $failn"
 [[ $failn -eq 0 ]]

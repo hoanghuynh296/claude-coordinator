@@ -35,16 +35,20 @@ verification gate, who may release it, and its integration limit.
 `per-issue` only works if the unit's `AGENTS.md` and docs carry everything a cold start needs.
 If a per-issue agent keeps asking the same questions, fix the docs, not the mode.
 
-In either mode an agent works one issue at a time through its full lifecycle: PR, gate green,
-"PR ready" (ending `Context: <k tokens>`), review fixes, then it waits for the coordinator's
-`PR #<n> merged. Next: <issue | handover | stand by | done>`. Never hand out a queue.
+In either mode an agent works one issue at a time through its full lifecycle: PR pushed,
+local gate green, "PR ready" (head SHA, CI state, ending `Context: <k tokens>`; never waiting
+for CI), review and CI fixes, then it waits for the coordinator's
+`PR #<n> merged. Next: <issue | handover | stand by | done>`. Never hand out a queue. The
+coordinator owns the CI wait: a background `scripts/ci-watch.sh` per "PR ready".
 
 In either mode every session sits at the top level of the sidebar: whoever starts it detaches
 it right away, and it reports by message to "Coordinator: <project>". This is not a profile
 choice; nested sessions are archived with their parent and lose their reports at rotation.
 
 **Gate.** The command (or CI job) that must be green before a PR may merge, plus any manual
-check that CI cannot do (for example a browser pass for UI). Write the exact command.
+check that CI cannot do (for example a browser pass for UI). Write the exact command. Name
+the local part (lint and tests the agent runs before "PR ready") and the CI job the
+coordinator watches before merging; they may be the same checks.
 
 **Release authority.** `owner` or `coordinator`, per unit. Typical: the owner releases what
 users see; the coordinator releases libraries, data and internal tools.

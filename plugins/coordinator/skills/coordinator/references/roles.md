@@ -8,8 +8,8 @@ project's `PROFILE.md` (see `profile.md` for when each one pays).
 | Role | Kind | Does | Never does |
 |---|---|---|---|
 | Owner | human | approves the plan and the profile; answers real decisions; approves anything that costs money; releases the units the profile marks owner-released; does non-code tasks (accounts, secrets, billing) | receives status pings or ack-only messages |
-| Coordinator | one Claude session | keeps the ledger, roadmap and decisions; writes issues; starts and briefs agents; reviews; merges into the integration branch, tells the author `PR #<n> merged. Next: ...` in the same turn, and archives the `per-issue` agent's session; detaches every session it starts to the top level; releases the units the profile gives it; reports to the owner | writes product code (unless the profile says so); does agents' git plumbing; does for an agent what that agent's permissions denied |
-| Unit agent | Claude session, `standing` or `per-issue` | owns one unit; one branch and one PR per issue; keeps its gate green; moves what it learns into the unit's docs; reports once per PR, by message to "Coordinator: <project>", then waits for `PR #<n> merged. Next: ...`; one issue at a time | edits another unit's files; merges its own PR; decides anything that costs money |
+| Coordinator | one Claude session | keeps the ledger, roadmap and decisions; writes issues; starts and briefs agents; reviews; on every "PR ready" starts a background CI watch (`scripts/ci-watch.sh`) and merges only on green CI for the reported head; merges into the integration branch, tells the author `PR #<n> merged. Next: ...` in the same turn, and archives the `per-issue` agent's session; detaches every session it starts to the top level; releases the units the profile gives it; reports to the owner | writes product code (unless the profile says so); does agents' git plumbing; does for an agent what that agent's permissions denied |
+| Unit agent | Claude session, `standing` or `per-issue` | owns one unit; one branch and one PR per issue; keeps its gate green; moves what it learns into the unit's docs; reports "PR ready" once per push that needs review (local gate green, head SHA, CI state; never waiting for CI), by message to "Coordinator: <project>", then waits for `PR #<n> merged. Next: ...`; one issue at a time | edits another unit's files; merges its own PR; decides anything that costs money |
 
 ## Optional
 
@@ -25,8 +25,11 @@ project's `PROFILE.md` (see `profile.md` for when each one pays).
 - **The coordinator keeps its context for coordination.** Its context holds the plan, every
   open issue and every review. Code, logs and git plumbing fill it fast and force an early
   rotation. Where the profile forbids coordinator edits, the guard hook enforces it.
-- **Agents own their PR until the gate is green.** A green CI run sends the coordinator no
-  wake-up; the agent that watches its own PR reports once.
+- **Agents report on push; the coordinator owns the CI wait.** A session runs only when a
+  message arrives, and a green CI run sends nobody one (Auto-fix wakes an agent on CI failure
+  only). An agent that waits for CI before reporting is never woken when CI passes. So the
+  agent reports "PR ready" once its local gate is green, with the head SHA and the CI state,
+  and the coordinator starts a background watch whose exit wakes it when CI ends.
 - **One issue, one full lifecycle.** An agent runs only when a message arrives. It works on the
   one issue it was given, reports "PR ready", and waits; the coordinator's message after the
   merge (`PR #<n> merged. Next: ...`) is what starts its next step. Nothing else wakes it.

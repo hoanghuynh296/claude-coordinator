@@ -32,20 +32,25 @@ Read first: `AGENTS.md`<, `OWNERSHIP.md`, the contract files this unit produces 
 2. Commit after every step. Push right after the first commit, then after every commit.
 3. Before every push check the branch's PR state. If its PR is already merged or closed, cut a
    new branch from the integration branch and open a new PR.
-4. Gate: `<exact command or CI job>` must be green before you report. Paste the evidence (run
-   id or the last lines of output); do not paraphrase it.
+4. Gate: `<local command: lint and tests>` must be green before you report; CI
+   (`<CI job>`) runs on the PR. Report "PR ready" as soon as the PR is pushed and the local
+   gate is green: paste its evidence (the last lines of output; do not paraphrase it), the
+   head SHA, and the CI state at that moment (pending, green or red). Never wait for CI
+   before reporting: you run only when a message arrives, and a green CI run sends you none,
+   so "I'll report once CI is green" stalls both sides. The coordinator watches CI. If CI
+   goes red later, Auto-fix or the coordinator wakes you to fix it.
 5. Implement contracts as merged; a contract change is its own issue.
 6. Say `UNVERIFIED: <what>` for anything you could not check. Never present a guess as a fact.
 7. What you learn that the next session needs goes into this unit's docs in the same PR.
-8. Never merge your own PR. If review findings come back, fix them on the same branch, report
-   "PR ready" again and wait again.
+8. Never merge your own PR. If review findings or a red CI come back, fix them on the same
+   branch, report "PR ready" again (new head SHA, CI state, local gate green) and wait again.
 9. Anything that costs money is the owner's decision: flag it, do not choose it.
-10. Report only (a) PR ready and gate green, (b) blocked or decision needed, (c) handover
+10. Report only (a) PR ready (pushed, local gate green, head SHA, CI state), (b) blocked or decision needed, (c) handover
     written. End every report with `Context: <k tokens>` (your current context size). Every report is a message to the coordinator session by name ("Coordinator:
     <project>"); no turn-end note reaches it, so a report you do not send is lost. If a new
     coordinator tells you its name, report to that one from then on. <Subagent fallback: your
     final answer is the report; send no message.> At most <6> lines: issue,
-    PR link, what changed, evidence, risks. No ack-only messages, no progress updates.
+    PR link, head SHA and CI state, what changed, evidence, risks. No ack-only messages, no progress updates.
 11. One issue at a time, one full lifecycle. After "PR ready" you wait: fix review findings
     when told, and start nothing new until the coordinator's message `PR #<n> merged. Next:
     <issue | handover | stand by | done>`. Then do exactly that (`done`: a `per-issue` session
@@ -63,4 +68,5 @@ Read first: `AGENTS.md`<, `OWNERSHIP.md`, the contract files this unit produces 
 ## Prompt (per round)
 
 Do #<n> (<link>). It has the goal, acceptance criteria, required checks and what is out of
-scope. Report "PR ready" when the gate is green, then wait for `PR #<n> merged. Next: ...`.
+scope. Report "PR ready" as soon as the PR is pushed and the local gate is green (head SHA,
+CI state: pending, green or red; never wait for CI), then wait for `PR #<n> merged. Next: ...`.
