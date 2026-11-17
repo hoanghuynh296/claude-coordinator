@@ -5,29 +5,48 @@
 Review and merge the named pull request. Read the unit's row and the
 "Review" section of `coordination/PROFILE.md` first.
 
-1. `gh pr view <n> --repo <repo> --json title,state,baseRefName,headRefName,mergeable,statusCheckRollup,files,additions,deletions,closingIssuesReferences,body`
+1. `gh pr view <n> --repo <repo> --json title,state,baseRefName,headRefName,headRefOid,mergeable,statusCheckRollup,files,additions,deletions,closingIssuesReferences,body`
    - Already merged or closed → stop and say so.
    - Base is not the integration branch (a stacked PR) → `gh pr edit <n> --base <integration>`
      before merging anything under it.
-2. **Gate.** The unit's gate from the profile must be green for this head commit. Look at the
-   evidence yourself (the check run, or run the command in a scratch worktree, never in the
-   agent's checkout). A gate the CI does not cover and nobody ran is not green.
+2. **Start the CI watch, in this turn.** Agents report "PR ready" on push, with the local gate
+   green, the head SHA and the CI state; they never wait for CI. A green CI run wakes nobody,
+   so you own the wait. On every "PR ready" (the first and each one after fixes) start, with
+   the Bash tool's `run_in_background`:
+   `bash "<plugin>/scripts/ci-watch.sh" <owner/repo> <n> <head sha>`
+   Its exit wakes you with one line: `green`, `red: <checks> <link>`, `stale-head` (the head
+   moved: wait for the agent's next report), `timeout`, `no-checks` or `error`. Then go on
+   with steps 3 to 5 in parallel; do not wait for CI to review. Already green in step 1's
+   `statusCheckRollup` for the reported head → no watch needed.
+   - `red` → one message to the agent: the failing checks and the link (skip it if Auto-fix
+     already woke the agent on this failure). It fixes, reports "PR ready" again; start a new
+     watch for the new head.
+   - `timeout` or `no-checks` → check the runner (`gh run list --repo <repo> --limit 5`);
+     a stuck runner is an owner task; start the watch again once it runs.
+   **Gate.** The unit's gate from the profile must be green for this head commit: the local
+   part from the agent's evidence, CI from the watch's `green` (or the check runs) for the
+   reported head, never from the report alone. Look at the evidence yourself (or run the
+   command in a scratch worktree, never in the agent's checkout). A gate the CI does not cover
+   and nobody ran is not green.
 3. **Scope.** The diff stays inside the unit's ownership and the issue's scope. Otherwise
    send it back.
 4. **Reviewer.** Mandatory when the diff touches a risk area or exceeds the size limit in the
    profile. Spawn `coordinator:reviewer` with the repo, PR number, issue link, risk area and
    the packs that apply. Otherwise review the diff yourself against
    `references/review-checklist.md` plus the profile's packs.
-   - Blocking findings → one batched message to the agent; stop until it reports again. It
-     fixes them on the same branch, reports "PR ready" again and waits again; review that
-     report from step 1.
+   - Blocking findings → one batched message to the agent (with a red CI's failures, if the
+     watch has ended red); stop until it reports again. It fixes them on the same branch,
+     reports "PR ready" again and waits again; review that report from step 1 and start a new
+     CI watch for the new head (step 2).
    - Non-blocking → a new issue, or a line under "Ideas" in `ROADMAP.md`.
 5. **Manual checks** the profile lists for this unit (for example a browser pass). Done → say
    what you checked. Not done → the merge is allowed only if the profile defers that check to
    release time; then add a row to "Verification debt" in `ROADMAP.md`.
-6. **Merge** with the profile's method, deleting the branch:
-   `gh pr merge <n> --repo <repo> --merge --delete-branch` (or `--squash`). Pass a literal PR
-   number. With `--auto` the merge may only be queued: the hook records the PR only once it
+6. **Merge** only when CI is green on the reported head (step 2) and the review passed
+   (steps 3 to 5), with the profile's method, deleting the branch:
+   `gh pr merge <n> --repo <repo> --merge --delete-branch --match-head-commit <head sha>`
+   (or `--squash`). Pass a literal PR number; `--match-head-commit` refuses the merge if the
+   head moved after what you reviewed. With `--auto` the merge may only be queued: the hook records the PR only once it
    is MERGED, so see step 9.
    - The author is a `per-issue` agent: send it `PR #<n> merged. Next: done` (step 9), then
      archive its session

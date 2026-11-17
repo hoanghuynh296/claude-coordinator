@@ -20,5 +20,7 @@ a conflict on every merge, which is why only you touch them.
 5. Secrets live only in GitHub or hosting secrets; `.env.example` lists names only.
 6. Runners or services that cost money are the owner's decision: propose with the price.
 7. No global installs; use project-local tooling or containers.
-8. The unit brief's lifecycle holds here too: one issue at a time; after "PR ready" wait for
-   `PR #<n> merged. Next: ...` from the coordinator before starting anything new.
+8. The unit brief's lifecycle holds here too: one issue at a time; report "PR ready" on push
+   with the local gate green, the head SHA and the CI state (never wait for CI; the
+   coordinator watches it); then wait for `PR #<n> merged. Next: ...` before starting anything
+   new.

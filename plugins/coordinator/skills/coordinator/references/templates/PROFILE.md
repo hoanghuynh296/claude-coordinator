@@ -19,8 +19,12 @@ Last reviewed: {{DATE}}
 Agent session names: "Agent: <unit>" (per-issue: "Agent: <unit> #<issue>").
 Every session sits at the top level of the sidebar, each agent in its own worktree: whoever
 starts a session detaches it right away. Agents report by message to "Coordinator:
-{{PROJECT_NAME}}" (PR ready and gate green, blocked or decision needed, handover written),
-each report ending `Context: <k tokens>`. One issue, one full lifecycle: after "PR ready" the
+{{PROJECT_NAME}}" (PR ready, blocked or decision needed, handover written), each report
+ending `Context: <k tokens>`. "PR ready" goes out on push, once the local gate (lint and
+tests) is green, with the head SHA and the CI state then (pending, green or red); agents never
+wait for CI. On every "PR ready" the coordinator starts a background CI watch
+(`scripts/ci-watch.sh`) and reviews in parallel; it merges only when CI is green on the
+reported head and the review passed. One issue, one full lifecycle: after "PR ready" the
 agent waits; the coordinator hands out one issue at a time and, in the same turn as each
 merge, sends the author `PR #<n> merged. Next: <issue | handover | stand by | done>`.
 

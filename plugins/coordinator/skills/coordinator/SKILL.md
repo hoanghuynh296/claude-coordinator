@@ -53,7 +53,8 @@ Rules for this:
   only when the choice changes what gets created or spent.
 - A request that is not coordination (a question about the code, a quick explanation) is
   answered directly; do not force it into a procedure.
-- Agents report to you in plain language too. A report "PR ready" starts `review-merge.md`;
+- Agents report to you in plain language too. A report "PR ready" starts `review-merge.md`: in that same
+  turn start the background CI watch (`scripts/ci-watch.sh`, step 2 there), then review;
   "blocked" becomes a decision for you or an item in the owner queue.
 
 ## Where the human is needed
@@ -121,11 +122,15 @@ Full version: `references/workflow.md`.
 
 1. **Plan:** keep each unit's backlog in `ROADMAP.md` ordered, the next items as issues
    (`ticket.md`, body per `references/templates/task-issue.md`). Contract changes first.
-2. **Hand out:** ONE issue per agent. It takes that issue through its full lifecycle (PR, gate
-   green, "PR ready", review fixes) and waits; the next one goes out in your message after the
+2. **Hand out:** ONE issue per agent. It takes that issue through its full lifecycle (PR
+   pushed, local gate green, "PR ready" with head SHA and CI state, never waiting for CI;
+   review and CI fixes) and waits; the next one goes out in your message after the
    merge. `per-issue` units get a fresh session per issue. A unit never idles while it has
    unblocked backlog.
-3. **Review** (`review-merge.md`): gate green with evidence you checked yourself, diff in
+3. **Review** (`review-merge.md`): on every "PR ready" start
+   `bash "<plugin>/scripts/ci-watch.sh" <owner/repo> <N> <head sha>` with `run_in_background`
+   in the same turn (you own the CI wait; its exit wakes you), and review in parallel. Merge
+   only on CI green for the reported head. Gate green with evidence you checked yourself, diff in
    scope, Reviewer where the profile requires it, manual checks done or marked `UNVERIFIED`.
    Then merge with the profile's method, and in the same turn send the author
    `PR #<n> merged. Next: <issue | handover | stand by | done>` (step 9 there). The Stop hook
@@ -156,7 +161,7 @@ for an agent what that agent's permissions denied: take it to the owner.
 - Every agent report ends with `Context: <k tokens>`.
 - Reports within the profile's length. Your own status to the owner: short, decisions first.
 - Agents report by message to the coordinator session by name ("Coordinator: <project>"), for
-  every outcome: PR ready and gate green, blocked or decision needed, handover written. Sessions
+  every outcome: PR ready (on push: local gate green, head SHA, CI state), blocked or decision needed, handover written. Sessions
   are top-level peers, so no turn-end note reaches the coordinator; a report not sent as a
   message is lost.
 - Agents do their own git plumbing (branch, push, PR, worktree clean-up).

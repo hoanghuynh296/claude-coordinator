@@ -50,14 +50,17 @@ Never leave a unit idle while its `ROADMAP.md` list has an item that is not bloc
 ## 4. The agent's loop (agents do this, not the coordinator)
 
 Fresh branch from the integration branch → commit after each step, push after the first commit
-and after every commit → PR that closes the issue → keep the unit's gate green → report once,
-by message to the coordinator session by name ("Coordinator: <project>"): "PR ready, gate
-green" (with the evidence: run id or command output), "blocked / decision needed", or
-"handover written", ending with `Context: <k tokens>`. Before every push the agent checks that
+and after every commit → PR that closes the issue → local gate (lint and tests) green → report once, by message to the
+coordinator session by name ("Coordinator: <project>"): "PR ready" (with the local gate's
+evidence, the head SHA and the CI state at that moment: pending, green or red), "blocked /
+decision needed", or "handover written", ending with `Context: <k tokens>`. The agent reports
+as soon as the PR is pushed and the local gate is green; it never waits for CI, because it
+runs only when a message arrives and a green CI run sends none. The coordinator owns the CI
+wait (section 5). Before every push the agent checks that
 the branch's PR is not already merged.
 
-Then the agent waits. It fixes review findings when told (same branch, reports again, waits
-again) and starts nothing new until the coordinator's message `PR #<n> merged. Next: <issue |
+Then the agent waits. It fixes review findings or a red CI when told or woken by Auto-fix
+(same branch, reports "PR ready" again with the new head SHA, waits again) and starts nothing new until the coordinator's message `PR #<n> merged. Next: <issue |
 handover | stand by | done>`. Sessions run only when a message arrives: an agent that reports
 "PR ready, next #50" and ends its turn, and a coordinator that merges and says nothing, leave
 both waiting forever. So the coordinator always sends that message in the same turn as the
@@ -66,7 +69,11 @@ until it has.
 
 ## 5. Review and merge (procedure `review-merge.md`)
 
-1. Gate green, per the profile. Evidence checked by the coordinator, not taken from the report.
+1. On every "PR ready", in the same turn: start a background CI watch,
+   `scripts/ci-watch.sh <owner/repo> <N> <head sha>` with `run_in_background`. Its exit wakes
+   the coordinator when CI ends (green, red or stale-head). Review runs in parallel.
+   Gate green, per the profile: the local gate's evidence and CI green on the reported head,
+   checked by the coordinator, not taken from the report. Merge only then.
 2. Diff inside the unit's ownership and the issue's scope.
 3. Reviewer subagent when the profile's risk areas or size limits say so.
 4. Manual checks the gate cannot do (per the profile: a browser pass, a run on real hardware).
