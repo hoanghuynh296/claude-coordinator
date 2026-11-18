@@ -6,6 +6,9 @@
 #     - installs scripts/pre-push-guard.sh as the repo's pre-push hook (shared by all its
 #       worktrees). An existing pre-push hook that is not ours is kept, and the install is
 #       refused unless --force (then the old hook is saved as pre-push.before-coordinator).
+#     - in a ledger repo (COORDINATION.md at its top level) also installs a pre-commit hook that
+#       runs ledger-lint.sh and refuses the commit on errors (a copy of the lint sits next to it).
+#       A foreign pre-commit hook is handled like a foreign pre-push hook.
 #   --protect "a b"  also set `git config coordinator.protectedBranches` so direct pushes to
 #                    those branches are refused locally (pull requests only).
 #   --settings       also turn on "delete branch on merge" on GitHub for the repo's origin
@@ -14,7 +17,7 @@
 # Hooks are local to a clone: run this again on every new machine and for every new clone.
 set -euo pipefail
 
-usage() { sed -n '2,15p' "$0" | sed 's/^# \{0,1\}//'; exit 2; }
+usage() { sed -n '2,18p' "$0" | sed 's/^# \{0,1\}//'; exit 2; }
 
 settings=0; force=0; protect=""; repos=()
 while [[ $# -gt 0 ]]; do
@@ -59,6 +62,30 @@ for repo in "${repos[@]}"; do
   fi
   cp "$src" "$dst" && chmod +x "$dst"
   echo "    pre-push guard installed ($dst)"
+
+  top="$(git -C "$repo" rev-parse --show-toplevel 2>/dev/null || true)"
+  if [[ -n "$top" && -f "$top/COORDINATION.md" ]]; then
+    pc="$hooks/pre-commit"; pmarker="coordinator-kit ledger-lint pre-commit"
+    if [[ -e "$pc" ]] && ! grep -q "$pmarker" "$pc"; then
+      if [[ $force -eq 1 ]]; then
+        mv "$pc" "$pc.before-coordinator"
+        echo "    existing pre-commit hook saved as pre-commit.before-coordinator"
+      else
+        echo "    FAILED: a different pre-commit hook exists ($pc); rerun with --force to replace it" >&2
+        rc=1; continue
+      fi
+    fi
+    cp "$(dirname "$src")/ledger-lint.sh" "$hooks/coordinator-ledger-lint.sh"
+    cat >"$pc" <<'HOOK'
+#!/usr/bin/env bash
+# coordinator-kit ledger-lint pre-commit: refuse a commit that breaks the ledger rules.
+top="$(git rev-parse --show-toplevel)"
+[[ -f "$top/COORDINATION.md" ]] || exit 0
+exec bash "$(dirname "$0")/coordinator-ledger-lint.sh" "$top"
+HOOK
+    chmod +x "$pc"
+    echo "    ledger-lint pre-commit installed ($pc)"
+  fi
 
   if [[ -n "$protect" ]]; then
     git -C "$repo" config coordinator.protectedBranches "$protect"

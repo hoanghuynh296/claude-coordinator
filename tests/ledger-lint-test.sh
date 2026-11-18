@@ -71,6 +71,37 @@ expect_lint "undated delegation is a warning" ok "$w/k" "delegation without a da
 fresh l; for i in 1 2 3 4 5 6 7; do echo "- unit PR $i merged" >> "$w/l/COORDINATION.md"; done
 expect_lint "history in the ledger is a warning" ok "$w/l" "live state only"
 
+fresh m; printf '| unit | %s |\n' "$(printf 'x%.0s' $(seq 1 300))" >> "$w/m/COORDINATION.md"
+expect_lint "long table row is exempt from the line limit" ok "$w/m" "0 error(s)"
+fresh m2; printf 'prose %s\n' "$(printf 'x%.0s' $(seq 1 300))" >> "$w/m2/COORDINATION.md"
+expect_lint "long prose line still fails" fail "$w/m2" "budget 240"
+
+fresh n; echo "Waits on other:C-099 from the other ledger." >> "$w/n/COORDINATION.md"
+expect_lint "project:C-NNN reference is allowed" ok "$w/n" "0 error(s)"
+fresh n2; echo "Waits on C-099." >> "$w/n2/COORDINATION.md"
+expect_lint "bare unknown decision id is an error" fail "$w/n2" "C-099 is cited"
+
+fresh o; echo "- C-002: use bullets" >> "$w/o/coordination/DECISIONS.md"
+expect_lint "decision as a bullet says how to write the row" fail "$w/o" "write a table row"
+
+# stale "Updated:" against the last commit touching COORDINATION.md
+fresh p
+old="$(python3 -c 'import datetime;print(datetime.date.today()-datetime.timedelta(days=3))')"
+sed -i.bak "s/^Updated: .*/Updated: $old/" "$w/p/COORDINATION.md"; rm "$w/p/COORDINATION.md.bak"
+( cd "$w/p" && git init -q . && git add -A && git -c user.name=t -c user.email=t@t commit -qm init )
+expect_lint "Updated older than the last commit is a warning" ok "$w/p" "older than its last commit"
+
+# install-guards installs a pre-commit hook that stops a broken ledger
+fresh q; ( cd "$w/q" && git init -q . )
+bash "$scripts/install-guards.sh" "$w/q" >/dev/null
+[[ -x "$w/q/.git/hooks/pre-commit" ]] && { pass=$((pass+1)); echo "PASS install-guards installs the ledger pre-commit hook"; } \
+  || { failn=$((failn+1)); echo "FAIL no pre-commit hook in the ledger repo"; }
+( cd "$w/q" && git add -A && git -c user.name=t -c user.email=t@t commit -qm ok >/dev/null 2>&1 ) \
+  && { pass=$((pass+1)); echo "PASS clean ledger commits"; } || { failn=$((failn+1)); echo "FAIL clean ledger commit was refused"; }
+echo "Waits on C-777." >> "$w/q/COORDINATION.md"
+( cd "$w/q" && git add -A && git -c user.name=t -c user.email=t@t commit -qm bad >/dev/null 2>&1 ) \
+  && { failn=$((failn+1)); echo "FAIL broken ledger was committed"; } || { pass=$((pass+1)); echo "PASS broken ledger commit is refused"; }
+
 [[ -n "${KEEP:-}" ]] || rm -rf "${w:?}"
 echo "passed $pass, failed $failn"
 [[ $failn -eq 0 ]]

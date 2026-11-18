@@ -4,13 +4,16 @@
 #
 # Errors (exit 1):
 #   - a required file is missing (COORDINATION.md, coordination/{README,PROFILE,ROADMAP,DECISIONS}.md)
-#   - COORDINATION.md is longer than MAX_LINES (default 80) or has a line over MAX_LINE_LEN (240)
+#   - COORDINATION.md is longer than MAX_LINES (default 80) or has a prose line over MAX_LINE_LEN (240; table rows are exempt)
 #   - COORDINATION.md has no "Updated: YYYY-MM-DD" line
 #   - a ledger file holds a session id (local_xxxxxxxx) or a home path (/Users/x, /home/x, C:\Users\x)
 #   - a decision id (C-123) is cited in the ledger but has no row in DECISIONS.md, or a row id repeats
+#     (a reference written <project>:C-123 points at another ledger and is allowed)
+#   - a decision in DECISIONS.md written as a bullet instead of a table row
 #   - a template placeholder ({{NAME}}) is left in a ledger file
 # Warnings (exit 0):
-#   - "Updated:" is older than STALE_DAYS (default 7)
+#   - "Updated:" is older than STALE_DAYS (default 7), or more than a day older than the last
+#     commit that touched COORDINATION.md
 #   - COORDINATION.md looks like a log (more than HISTORY_MAX lines that describe finished work)
 #   - a "delegat..." line in COORDINATION.md carries no date
 #   - PROFILE.md still has unfilled <...> fields
@@ -24,7 +27,7 @@ dir="${1:-.}"
 command -v python3 >/dev/null 2>&1 || { echo "ledger-lint.sh needs python3" >&2; exit 2; }
 
 python3 -I - "$dir" "${MAX_LINES:-}" "${MAX_LINE_LEN:-}" "${STALE_DAYS:-}" "${HISTORY_MAX:-}" <<'PY'
-import datetime, os, re, sys
+import datetime, os, re, subprocess, sys
 
 root = os.path.abspath(sys.argv[1])
 cfg = {"MAX_LINES": 80, "MAX_LINE_LEN": 240, "STALE_DAYS": 7, "HISTORY_MAX": 5}
@@ -86,8 +89,8 @@ if ledger is not None:
         err(f"COORDINATION.md: {len(ledger)} lines, budget {cfg['MAX_LINES']} "
             "(delete finished items; rules go to PROFILE.md, next work to ROADMAP.md, reasons to DECISIONS.md)")
     for i, line in enumerate(ledger, 1):
-        if len(line) > cfg["MAX_LINE_LEN"]:
-            err(f"COORDINATION.md:{i}: line of {len(line)} characters, budget {cfg['MAX_LINE_LEN']}")
+        if len(line) > cfg["MAX_LINE_LEN"] and not line.lstrip().startswith("|"):
+            err(f"COORDINATION.md:{i}: line of {len(line)} characters, budget {cfg['MAX_LINE_LEN']} (table rows are exempt; shorten the prose)")
     updated = None
     for line in ledger:
         m = re.match(r"\s*Updated:\s*(\d{4}-\d{2}-\d{2})", line)
@@ -101,6 +104,15 @@ if ledger is not None:
             age = (datetime.date.today() - datetime.date.fromisoformat(updated)).days
             if age > cfg["STALE_DAYS"]:
                 warn(f"COORDINATION.md: 'Updated: {updated}' is {age} days old")
+            try:
+                out = subprocess.run(["git", "-C", root, "log", "-1", "--format=%cs", "--", "COORDINATION.md"],
+                                     capture_output=True, text=True, timeout=10).stdout.strip()
+                if out:
+                    lag = (datetime.date.fromisoformat(out) - datetime.date.fromisoformat(updated)).days
+                    if lag > 1:
+                        warn(f"COORDINATION.md: 'Updated: {updated}' is {lag} days older than its last commit ({out}); bump it")
+            except (OSError, ValueError, subprocess.SubprocessError):
+                pass
         except ValueError:
             err(f"COORDINATION.md: 'Updated: {updated}' is not a date")
     history = re.compile(r"\b(merged|released|RELEASED|DONE|done)\b")
@@ -120,6 +132,10 @@ if decisions is not None:
         m = re.match(r"\s*\|\s*(C-\d+)\s*\|", line)
         if m:
             defined.append(m.group(1))
+    for i, line in enumerate(decisions, 1):
+        if re.match(r"\s*[-*]\s*\**C-\d+", line):
+            err(f"coordination/DECISIONS.md:{i}: a decision as a bullet; write a table row: "
+                "| C-NNN | YYYY-MM-DD | owner or coordinator | units it binds | the decision |")
     seen = set()
     for d in defined:
         if d in seen:
@@ -130,7 +146,7 @@ if decisions is not None:
         if rel == "coordination/DECISIONS.md":
             continue
         for i, line in enumerate(read(rel) or [], 1):
-            for d in re.findall(r"\bC-\d+\b", line):
+            for d in re.findall(r"(?<![\w:-])C-\d+\b", line):
                 cited.setdefault(d, f"{rel}:{i}")
     for d, where in sorted(cited.items()):
         if d not in seen:

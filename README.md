@@ -187,6 +187,7 @@ bash tests/check-context-test.sh   # ok / SOFT / HARD levels, thresholds from en
 
 ## Changes
 
+- **Unreleased**: ledger-lint (#14): table rows are exempt from the line limit, `<project>:C-NNN` references to another ledger are allowed, a decision written as a bullet gets a message showing the row format, "Updated:" a day behind its last commit warns, and `install-guards.sh` installs a pre-commit hook in a ledger repo that runs the lint (nonzero exit on errors, tested). `profile.md` headings now match the PROFILE template (Owner rules is 11).
 - **Unreleased**: template gaps (#15). PROFILE gains "Deploy" (with a Deploy-only debt class) and
   "Files with no unit"; ROADMAP a "Release notes draft"; COORDINATION "Pending starts"; new
   `ops-brief.md` and a cross-lane mini-exception in `unit-brief.md`; review-merge and workflow
