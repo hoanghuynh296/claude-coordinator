@@ -187,40 +187,44 @@ bash tests/check-context-test.sh   # ok / SOFT / HARD levels, thresholds from en
 
 ## Changes
 
-- **Unreleased**: one release standard (#12). With a `develop`, a release is branch
-  `release/vX.Y.Z` from `develop` → PR into `main` → tag → back-merge `main` into `develop`;
-  `develop` is never a PR head, so delete-branch-on-merge cannot delete it (milestone-close,
-  workflow, PROFILE template, profile guide, kickoff, pitfall 10). The Next guard
-  exemption is decided in `merge-reminder.sh` (the one `gh pr view` that confirms the merge): a
-  PR whose head is `release/*`, `backmerge/*` or `coordinator/*`, or whose author is
-  `$COORDINATOR_GH_LOGIN`, is never recorded as pending, so `next-guard.sh` makes no gh call.
-  Warning: do not set `COORDINATOR_GH_LOGIN` to an account the agents share, it would exempt every
-  agent PR. An agent naming its branch `coordinator/*` is exempt too. Fail open when `gh` cannot
-  answer. The coordinator names its own branches `release/vX.Y.Z`, `backmerge/vX.Y.Z` or
-  `coordinator/<topic>`; the release PR is a merge commit; back-merge conflicts are resolved on the
-  back-merge branch. review-merge: the coordinator
-  closes the linked issue after merging into `develop` ("Closes #N" fires only on the default
-  branch). PROFILE template: a one-line note for tag-only repos. Test cases in `hooks-test.sh`.
-- **Unreleased**: hooks fire on events, not text (#11). merge-reminder reads the command as the
-  shell would (heredoc bodies, comments and quoted text are ignored; `bash -c` and `eval` are
-  read; the exit code is ignored) and records a merge only when `gh pr view`
-  shows MERGED. The PR-ready reminder fires only when a message's FIRST line starts with
-  `PR ready` (case-insensitive); the unit brief now tells agents to open their PR report with
-  `PR ready:` and to use the phrase nowhere else (also in session-start, SKILL, roles and PROFILE).
-  Merges the reader cannot parse (`bash -lc`, `$(...)`, backticks, `gh -R x pr merge`, sudo) still
-  remind (fail open) or are read; a non-zero exit still checks `gh pr view`. Tests cover heredoc,
-  quoted and progress-note false positives and these parser misses.
-- **Unreleased**: ledger-lint (#14): table rows are exempt from the line limit, `<project>:C-NNN` references to another ledger are allowed, a decision written as a bullet gets a message showing the row format, "Updated:" a day behind its last commit warns, and `install-guards.sh` installs a pre-commit hook in a ledger repo that runs the lint (nonzero exit on errors, tested). `profile.md` headings now match the PROFILE template (Owner rules is 11).
-- **Unreleased**: template gaps (#15). PROFILE gains "Deploy" (with a Deploy-only debt class) and
-  "Files with no unit"; ROADMAP a "Release notes draft"; COORDINATION "Pending starts"; new
-  `ops-brief.md` and a cross-lane mini-exception in `unit-brief.md`; review-merge and workflow
-  gain the Reviewer re-run on fix commits, the contract/logic/UI split above the threshold,
-  measured (not self-reported) context and the producer-ledger rule for cross-project items.
-- **Unreleased**: archive fallback. `archive_session` is refused in all six projects (the app's hook
-  rewrites the input). The kit now says: call it; if refused with a rewritten input, call once more
-  with exactly that input; if still refused, rename the session "<name> (old)" and add it to ONE
-  owner-queue line "Archive finished sessions: <names>". `audit` checks that line and that no
-  "(old)" session is still working.
+- **Unreleased**: (nothing yet)
+- **0.10.0** (2026-11-18): one release standard, event-driven hooks, ledger-lint pre-commit,
+  template gaps and an archive fallback.
+  - Existing ledgers: re-run `install-guards.sh` (new pre-commit lint hook).
+  - One release standard (#12). With a `develop`, a release is branch `release/vX.Y.Z` from
+    `develop` → PR into `main` (a merge commit, never a squash) → tag → back-merge `main` into
+    `develop` from `backmerge/vX.Y.Z` (conflicts resolved on that branch, no force-push);
+    `develop` is never a PR head, so delete-branch-on-merge cannot delete it (milestone-close,
+    workflow, PROFILE template, profile guide, kickoff, pitfall 10). The coordinator names its own
+    branches `release/vX.Y.Z`, `backmerge/vX.Y.Z` or `coordinator/<topic>`. The Next-guard
+    exemption is decided in `merge-reminder.sh` (the `gh pr view` that confirms the merge): a PR
+    with a `release/*`, `backmerge/*` or `coordinator/*` head, or whose author is
+    `$COORDINATOR_GH_LOGIN`, is never recorded as pending, so `next-guard.sh` makes no gh call (an
+    agent naming its branch `coordinator/*` is exempt too; fail open when `gh` cannot answer).
+    `COORDINATOR_GH_LOGIN` is optional and set in the hook environment (settings `env`); never set
+    it to an account the agents share, it would exempt every agent PR. review-merge: the
+    coordinator closes the linked issue after merging into `develop` ("Closes #N" fires only on the
+    default branch). PROFILE template: a one-line note for tag-only repos.
+  - hooks fire on events, not text (#11). merge-reminder reads the command as the
+    shell would (heredoc bodies, comments and quoted text are ignored; `bash -c` and `eval` are
+    read; the exit code is ignored) and records a merge only when `gh pr view`
+    shows MERGED. The PR-ready reminder fires only when a message's FIRST line starts with
+    `PR ready` (case-insensitive); the unit brief now tells agents to open their PR report with
+    `PR ready:` and to use the phrase nowhere else (also in session-start, SKILL, roles and PROFILE).
+    Merges the reader cannot parse (`bash -lc`, `$(...)`, backticks, `gh -R x pr merge`, sudo) still
+    remind (fail open) or are read; a non-zero exit still checks `gh pr view`. Tests cover heredoc,
+    quoted and progress-note false positives and these parser misses.
+  - ledger-lint (#14): table rows are exempt from the line limit, `<project>:C-NNN` references to another ledger are allowed, a decision written as a bullet gets a message showing the row format, "Updated:" a day behind its last commit warns, and `install-guards.sh` installs a pre-commit hook in a ledger repo that runs the lint (nonzero exit on errors, tested). `profile.md` headings now match the PROFILE template (Owner rules is 11).
+  - template gaps (#15). PROFILE gains "Deploy" (with a Deploy-only debt class) and
+    "Files with no unit"; ROADMAP a "Release notes draft"; COORDINATION "Pending starts"; new
+    `ops-brief.md` and a cross-lane mini-exception in `unit-brief.md`; review-merge and workflow
+    gain the Reviewer re-run on fix commits, the contract/logic/UI split above the threshold,
+    measured (not self-reported) context and the producer-ledger rule for cross-project items.
+  - archive fallback. `archive_session` is refused in all six projects (the app's hook
+    rewrites the input). The kit now says: call it; if refused with a rewritten input, call once more
+    with exactly that input; if still refused, rename the session "<name> (old)" and add it to ONE
+    owner-queue line "Archive finished sessions: <names>". `audit` checks that line and that no
+    "(old)" session is still working.
 - **0.9.0**: same-session next issue for `per-issue` agents, under strict conditions. The kit
   required a fresh session per issue and archiving after merge, but `archive_session` was refused
   in all six projects, session starts fail while the owner is on Remote Control, and a fresh
