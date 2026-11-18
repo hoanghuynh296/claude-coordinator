@@ -51,7 +51,10 @@ Review and merge the named pull request. Read the unit's row and the
    - The author is a `per-issue` agent: send it `PR #<n> merged. Next: done` (step 9), then
      archive its session (but if step 9 allows `Next: #<m> (same session)`, send that and archive
      nothing)
-     (`mcp__ccd_session_mgmt__archive_session`, found by name "Agent: <unit> #<issue>"). Its
+     (`mcp__ccd_session_mgmt__archive_session`, found by name "Agent: <unit> #<issue>"; if it is
+     refused, follow the archive procedure in SKILL.md "Sessions": call once more with the
+     rewritten input, then rename "<name> (old)" and add it to the one owner line "Archive finished
+     sessions: <names>"). Its
      work is in the PR; anything left for a next session is in the PR or the issue.
    - The author is a `standing` session: leave it running; it is archived only on rotation.
    - Fallback, only while the app setting `auto_archive_on_pr_close` is still on: the app has

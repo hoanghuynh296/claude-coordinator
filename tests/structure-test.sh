@@ -255,5 +255,15 @@ done
 for f in references/procedures/review-merge.md SKILL.md references/profile.md; do
   has "$f" '50%' && has "$f" 'fewer than 3' && ok "$f states the 50% and fewer-than-3 conditions" || bad "$f lacks the 50% / 3-issue conditions"
 done
+# Archive fallback: two calls, then rename "(old)" and one batched owner line.
+for f in SKILL.md references/procedures/review-merge.md references/workflow.md references/procedures/handover.md; do
+  has "$f" '(old)' && has "$f" 'Archive finished sessions: <names>' \
+    && ok "$f gives the archive fallback (rename (old), one owner line)" \
+    || bad "$f does not give the archive fallback (rename \"(old)\", one line \"Archive finished sessions: <names>\")"
+done
+has references/procedures/audit.md 'Archive finished sessions' && has references/procedures/audit.md '(old)' \
+  && ok "audit checks the archive line and (old) sessions" || bad "audit does not check the archive line and (old) sessions"
+has references/pitfalls.md 'Archive finished sessions: <names>' && ok "pitfalls records the archive fallback" \
+  || bad "pitfalls lacks the archive fallback entry"
 echo "passed $pass, failed $failn"
 [[ $failn -eq 0 ]]

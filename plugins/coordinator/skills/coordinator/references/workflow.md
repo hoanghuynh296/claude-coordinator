@@ -85,8 +85,9 @@ until it has.
    the verification debt list in `ROADMAP.md`.
 5. A stacked PR is retargeted to the integration branch before its base merges.
 6. Merge with the profile's method. After merging a `per-issue` agent's PR, archive that
-   agent's session (`mcp__ccd_session_mgmt__archive_session`); a `standing` session is archived
-   only on rotation. Fallback only while the app setting `auto_archive_on_pr_close` is still
+   agent's session (`mcp__ccd_session_mgmt__archive_session`; if refused, call once more with the
+   rewritten input, then rename it "<name> (old)" and add it to the one owner line "Archive
+   finished sessions: <names>"); a `standing` session is archived only on rotation. Fallback only while the app setting `auto_archive_on_pr_close` is still
    on: check `mcp__ccd_pr__get_status` and unbind (`mcp__ccd_pr__unbind_pr`) any PR bound to you.
    Update the ledger (remove the item; adjust "ahead by"). In the same turn, read the author's
    context (`mcp__ccd_session_mgmt__get_usage`) and send it `PR #<n> merged. Next: <issue |

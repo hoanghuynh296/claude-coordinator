@@ -191,6 +191,11 @@ for an agent what that agent's permissions denied: take it to the owner.
   archives that agent's session (`mcp__ccd_session_mgmt__archive_session`); a `standing`
   session is archived only when it is replaced. Fallback while the setting is still on: after
   each merge, `mcp__ccd_pr__get_status` and `mcp__ccd_pr__unbind_pr` for any PR bound to you.
+- **Archive procedure** (used wherever this kit says "archive"): call `archive_session`; if it is
+  refused with a rewritten input (the app's hook rewrites it, and auto mode then refuses the first
+  call), call once more with exactly that input; if it is still refused, rename the session
+  "<name> (old)" (`set_session_title`) and add it to ONE owner-queue line "Archive finished
+  sessions: <names>" (one line for all, never one item each). `audit` checks that line.
 - **Same-session next issue (`per-issue` units only).** A `per-issue` agent stops after the
   merge notice, unless the notice is `PR #<n> merged. Next: #<m> (same session)`. Send that form
   only when ALL hold: (1) `#m` is in the same unit; (2) the agent's context, measured with
