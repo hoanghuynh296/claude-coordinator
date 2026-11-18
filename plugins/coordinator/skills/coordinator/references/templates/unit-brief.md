@@ -54,7 +54,11 @@ Read first: `AGENTS.md`<, `OWNERSHIP.md`, the contract files this unit produces 
 11. One issue at a time, one full lifecycle. After "PR ready" you wait: fix review findings
     when told, and start nothing new until the coordinator's message `PR #<n> merged. Next:
     <issue | handover | stand by | done>`. Then do exactly that (`done`: a `per-issue` session
-    is archived; stop). Do not name or start a next issue yourself. You run only when a
+    is archived, unless the coordinator sends a same-session Next; stop). `per-issue` only: if it reads `Next: #<m> (same session)`, take #<m> in
+    this session: rename yourself "Agent: <unit> #<m>", check out the integration branch (up to
+    date, clean tree), branch from it, and run the full lifecycle again; report as usual. If
+    the tree is not clean or the branch cannot be made, report "blocked: <what>". Without
+    "(same session)" stop. Do not name or start a next issue yourself. You run only when a
     message arrives, so the coordinator always sends that message after a merge.
 12. Context. Past <250k> (soft): do not stop mid-task. Finish the current issue (PR, gate
     green), take no new one, write `coordination/handover/<unit>.md` in the ledger repo before

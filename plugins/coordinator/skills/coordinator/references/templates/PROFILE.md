@@ -44,6 +44,10 @@ merge, sends the author `PR #<n> merged. Next: <issue | handover | stand by | do
 - Integration branch: `<develop>`. Release branch: `<main>`. Merge method: <merge commit or squash>.
   After merging a `per-issue` agent's PR, the coordinator archives that agent's session; a
   `standing` session is archived only on rotation.
+- Same-session next issue (`per-issue` units): `PR #<n> merged. Next: #<m> (same session)`, only
+  if `#m` is in the same unit, the agent's measured context is under 50% of the unit's soft
+  threshold, `#m` is not in a Reviewer-mandatory risk area, and the session has done fewer than 3
+  issues in a row; otherwise a fresh session.
 - App setting `auto_archive_on_pr_close`: off (checked <date>). With it on, the app archives
   every session bound to a PR when that PR closes, the coordinator included.
 - A release is: <release PR into main | tag | published package | data release>, per unit if they differ.

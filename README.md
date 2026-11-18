@@ -187,6 +187,16 @@ bash tests/check-context-test.sh   # ok / SOFT / HARD levels, thresholds from en
 
 ## Changes
 
+- **0.9.0**: same-session next issue for `per-issue` agents, under strict conditions. The kit
+  required a fresh session per issue and archiving after merge, but `archive_session` was refused
+  in all six projects, session starts fail while the owner is on Remote Control, and a fresh
+  session re-reads every doc for a small issue. The merge notice now has a same-session form,
+  `PR #<n> merged. Next: #<m> (same session)`, which the coordinator sends only when `#m` is in the
+  same unit, the agent's context (measured with `get_usage` / `check-context.sh`) is under 50% of
+  the unit's soft threshold, `#m` is not in a Reviewer-mandatory risk area, and the session has
+  done fewer than 3 issues in a row. Without `(same session)` the agent behaves as before. On it,
+  the agent renames itself "Agent: <unit> #<m>" and branches fresh from the integration branch.
+  `next-guard.sh` / `next-sent.sh` accept the form; docs and templates updated.
 - **0.8.0**: agents report on push, the coordinator owns the CI wait. An agent pushed, saw CI
   queued on the single self-hosted runner and ended its turn, "I'll report once CI is green".
   Sessions run only when a message arrives and Auto-fix wakes an agent on CI failure only, so

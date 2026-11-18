@@ -30,7 +30,7 @@ prs=""; lines=""
 while read -r key; do
   [[ -n "$key" ]] || continue
   prs+="$key, "
-  lines+=" - $key: send its author \"PR #${key##*#} merged. Next: <issue | handover | stand by | done>\" (or \"PR $key merged. Next: ...\")."
+  lines+=" - $key: send its author \"PR #${key##*#} merged. Next: <issue | handover | stand by | done>\" (a per-issue agent meeting the strict conditions: \"Next: #<m> (same session)\"; or \"PR $key merged. Next: ...\")."
 done <<<"$pending"
 prs="${prs%, }"
 
