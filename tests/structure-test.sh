@@ -265,5 +265,21 @@ has references/procedures/audit.md 'Archive finished sessions' && has references
   && ok "audit checks the archive line and (old) sessions" || bad "audit does not check the archive line and (old) sessions"
 has references/pitfalls.md 'Archive finished sessions: <names>' && ok "pitfalls records the archive fallback" \
   || bad "pitfalls lacks the archive fallback entry"
+
+# Template gaps: Deploy, files with no unit, release notes, pending starts, briefs, review rules.
+has references/templates/PROFILE.md '## 9. Deploy' && has references/templates/PROFILE.md 'Deploy-only' \
+  && has references/templates/PROFILE.md 'Files with no unit' && ok "PROFILE template has Deploy and Files with no unit" \
+  || bad "PROFILE template lacks Deploy / Files with no unit"
+has references/templates/ROADMAP.md 'Release notes draft' && ok "ROADMAP template has Release notes draft" || bad "ROADMAP template lacks Release notes draft"
+has references/templates/COORDINATION.md 'Pending starts' && ok "COORDINATION template has Pending starts" || bad "COORDINATION template lacks Pending starts"
+[[ -f "$skill/references/templates/ops-brief.md" ]] && has references/templates/ops-brief.md 'No PR' \
+  && ok "ops-brief template exists" || bad "ops-brief template missing"
+has references/templates/unit-brief.md 'Cross-lane mini-exception' && ok "unit-brief has the cross-lane mini-exception" || bad "unit-brief lacks the cross-lane mini-exception"
+for f in references/procedures/review-merge.md references/workflow.md; do
+  has "$f" 'fix commits' && has "$f" 'contract or migration PR first\|contract or' && ok "$f: Reviewer re-run on fix commits and the risk split" \
+    || bad "$f lacks the fix-commit re-review / risk split rule"
+done
+has references/workflow.md 'waits on <project>#N' && has references/workflow.md 'self-report' \
+  && ok "workflow: cross-project items and measured context" || bad "workflow lacks cross-project / measured-context rules"
 echo "passed $pass, failed $failn"
 [[ $failn -eq 0 ]]

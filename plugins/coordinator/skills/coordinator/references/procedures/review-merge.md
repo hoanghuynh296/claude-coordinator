@@ -38,6 +38,11 @@ Review and merge the named pull request. Read the unit's row and the
      watch has ended red); stop until it reports again. It fixes them on the same branch,
      reports "PR ready" again and waits again; review that report from step 1 and start a new
      CI watch for the new head (step 2).
+   - Fix commits in a risk area: run the Reviewer again on the fix commits before merging.
+   - Above the Reviewer line threshold in a risk area, send the work back to be split: the
+     contract or migration PR first, then the logic, then the UI.
+   - A cross-lane mini-exception (a small change in another lane's file) is allowed only if the
+     issue names it; the Reviewer checks it.
    - Non-blocking → a new issue, or a line under "Ideas" in `ROADMAP.md`.
 5. **Manual checks** the profile lists for this unit (for example a browser pass). Done → say
    what you checked. Not done → the merge is allowed only if the profile defers that check to

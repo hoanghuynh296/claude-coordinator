@@ -88,7 +88,23 @@ Everything else goes through an issue for the owning unit.
   notice `PR #<n> merged. Next: ...` is not a ping: it is the only thing that starts an
   agent's next step.
 
-## 9. Owner rules
+## 9. Deploy
+
+- Where prod runs: <host / platform / URL>; which checkout and branch is deployed: <repo, branch>.
+- Who deploys: <owner | a named ops agent | CI>. The coordinator never deploys.
+- Deploy-only items that no gate can check (a prod migration, a real device, a live webhook) are
+  merged as `UNVERIFIED: <what>` and kept as their own debt class "Deploy-only" in
+  `ROADMAP.md` "Verification debt", cleared by whoever deploys.
+
+<Delete this section if nothing is deployed.>
+
+## 10. Files with no unit
+
+Root and tooling files that belong to no unit: <.claude/**, .vscode/**, README.md, OWNERSHIP.md, ...>.
+Owner of each: <unit | the coordinator | the owner>. A change to them goes through an issue for
+that owner, like any other file.
+
+## 11. Owner rules
 
 - Language: <the owner is addressed in ...; agents, code and docs use ...>.
 - Spending: anything that costs money needs the owner's approval first, with its price.

@@ -238,5 +238,5 @@ release that needs a huge review). Log the change in `DECISIONS.md`.
 - `references/packs/`: `saas-multitenant.md`, `artifact-contracts.md`, `ui-product.md`. Use the
   packs the profile lists.
 - `references/templates/`: `PROFILE.md`, `COORDINATION.md`, `ROADMAP.md`, `DECISIONS.md`,
-  `README.md`, `handover.md`, `unit-brief.md`, `platform-brief.md`, `qa-brief.md`,
+  `README.md`, `handover.md`, `unit-brief.md`, `platform-brief.md`, `qa-brief.md`, `ops-brief.md`,
   `task-issue.md`.

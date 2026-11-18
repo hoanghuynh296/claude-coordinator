@@ -79,7 +79,9 @@ until it has.
    Gate green, per the profile: the local gate's evidence and CI green on the reported head,
    checked by the coordinator, not taken from the report. Merge only then.
 2. Diff inside the unit's ownership and the issue's scope.
-3. Reviewer subagent when the profile's risk areas or size limits say so.
+3. Reviewer subagent when the profile's risk areas or size limits say so. Re-run it on fix
+   commits in a risk area. Above the line threshold in a risk area, split the work: contract or
+   migration PR first, then logic, then UI.
 4. Manual checks the gate cannot do (per the profile: a browser pass, a run on real hardware).
    If a manual check is skipped, the merge note says `UNVERIFIED: <what>` and the item goes on
    the verification debt list in `ROADMAP.md`.
@@ -142,3 +144,10 @@ After a release, clear the unit's verification debt items that the release cover
 - Usage limit: every agent stops at once. The ledger says who was doing what. After the
   reset, continue each standing agent with one message; start per-issue agents again from
   their issue.
+
+## Measuring and cross-project items
+
+- Context is measured with the session tools (`get_usage`, `scripts/check-context.sh`); an
+  agent's self-report is a hint, never the measure.
+- A cross-project item lives in the producer's ledger; the consumer's ledger writes
+  "waits on <project>#N" and nothing more.

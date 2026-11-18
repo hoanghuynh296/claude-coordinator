@@ -187,6 +187,11 @@ bash tests/check-context-test.sh   # ok / SOFT / HARD levels, thresholds from en
 
 ## Changes
 
+- **Unreleased**: template gaps (#15). PROFILE gains "Deploy" (with a Deploy-only debt class) and
+  "Files with no unit"; ROADMAP a "Release notes draft"; COORDINATION "Pending starts"; new
+  `ops-brief.md` and a cross-lane mini-exception in `unit-brief.md`; review-merge and workflow
+  gain the Reviewer re-run on fix commits, the contract/logic/UI split above the threshold,
+  measured (not self-reported) context and the producer-ledger rule for cross-project items.
 - **Unreleased**: archive fallback. `archive_session` is refused in all six projects (the app's hook
   rewrites the input). The kit now says: call it; if refused with a rewritten input, call once more
   with exactly that input; if still refused, rename the session "<name> (old)" and add it to ONE
