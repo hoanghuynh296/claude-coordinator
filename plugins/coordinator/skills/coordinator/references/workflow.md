@@ -103,7 +103,9 @@ until it has.
 Who releases each unit is in the profile.
 
 - **Coordinator-released units:** gate green on the integration branch, evidence checked,
-  release per the profile (release PR, tag, published artifact). Record it in the ledger.
+  release per the profile (published artifact, record in the ledger). With a `develop`, a
+  release is: branch `release/vX.Y.Z` from `develop` → PR into `main` → tag → back-merge `main`
+  into `develop`. `develop` is never a PR head (delete-branch-on-merge would remove it).
 - **Owner-released units:** prepare the release: what changed in plain words, what was
   verified and how, what is still `UNVERIFIED`, steps for the owner to try. The owner decides.
 - `milestone` cadence adds procedure `milestone-close.md`: QA verdict on the exit criteria,

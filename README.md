@@ -187,6 +187,14 @@ bash tests/check-context-test.sh   # ok / SOFT / HARD levels, thresholds from en
 
 ## Changes
 
+- **Unreleased**: one release standard (#12). With a `develop`, a release is branch
+  `release/vX.Y.Z` from `develop` → PR into `main` → tag → back-merge `main` into `develop`;
+  `develop` is never a PR head, so delete-branch-on-merge cannot delete it (milestone-close,
+  workflow, PROFILE template, profile guide, kickoff, pitfall 10). The Next guard
+  (`next-guard.sh`) skips PRs whose head is `release/*` or `coordinator/*`, or whose author is
+  `$COORDINATOR_GH_LOGIN`; fail open when `gh` cannot answer. review-merge: the coordinator
+  closes the linked issue after merging into `develop` ("Closes #N" fires only on the default
+  branch). PROFILE template: a one-line note for tag-only repos. Test cases in `hooks-test.sh`.
 - **Unreleased**: hooks fire on events, not text (#11). merge-reminder reads the command as the
   shell would (heredoc bodies, comments and quoted text are ignored; `bash -c` and `eval` are
   read; the exit code is ignored) and records a merge only when `gh pr view`

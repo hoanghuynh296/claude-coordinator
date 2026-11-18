@@ -44,7 +44,9 @@ approves in a later message.**
   For other shapes create the repos with `gh repo create`, add the integration branch, and
   give each unit an `AGENTS.md`.
 - Guards: `bash "<plugin>/scripts/install-guards.sh" --settings <unit-dir>...`
-  (pre-push guard, delete-branch-on-merge).
+  (pre-push guard, delete-branch-on-merge). Releases follow one standard: `release/vX.Y.Z`
+  from `develop` → PR into `main` → tag → back-merge `main` into `develop`, so `develop` is
+  never a PR head and delete-branch-on-merge cannot remove it.
 - Labels: `task`, plus `unit:<unit>` in a single-repo project.
 
 ## Step 5 - register and report

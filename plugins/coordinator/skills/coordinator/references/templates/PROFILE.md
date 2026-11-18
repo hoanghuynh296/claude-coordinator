@@ -51,6 +51,9 @@ merge, sends the author `PR #<n> merged. Next: <issue | handover | stand by | do
 - App setting `auto_archive_on_pr_close`: off (checked <date>). With it on, the app archives
   every session bound to a PR when that PR closes, the coordinator included.
 - A release is: <release PR into main | tag | published package | data release>, per unit if they differ.
+  With a `develop`: branch `release/vX.Y.Z` from `develop` → PR into `main` → tag → back-merge
+  `main` into `develop`; `develop` is never a PR head, so delete-branch-on-merge is safe.
+  Tag-only repo (no `develop`): delete the line above and write "released by tag on `main`; no release PR, no back-merge".
 - Cadence: <milestone | continuous>.
 - Hotfix: <branch from the release branch, PR into it, then back-merge>.
 

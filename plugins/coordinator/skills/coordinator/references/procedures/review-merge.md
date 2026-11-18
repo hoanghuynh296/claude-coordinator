@@ -53,6 +53,11 @@ Review and merge the named pull request. Read the unit's row and the
    (or `--squash`). Pass a literal PR number; `--match-head-commit` refuses the merge if the
    head moved after what you reviewed. With `--auto` the merge may only be queued: the hook records the PR only once it
    is MERGED, so see step 9.
+   - **Close the linked issue.** "Closes #N" fires only when a PR merges into the default
+     branch, so after merging into an integration branch other than it (`develop`) run
+     `gh issue close <N> --repo <repo> --comment "Merged in #<n>"`. Release PRs
+     (`release/*` heads) and PRs you opened yourself get no `Next:` message: the Next guard
+     skips them.
    - The author is a `per-issue` agent: send it `PR #<n> merged. Next: done` (step 9), then
      archive its session (but if step 9 allows `Next: #<m> (same session)`, send that and archive
      nothing)

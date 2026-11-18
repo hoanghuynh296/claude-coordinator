@@ -79,7 +79,8 @@ None is mandatory. Add a role when its trigger is true; remove it when it stops 
 
 - **Branches:** the integration branch (for example `develop`), the release branch (`main`),
   the merge method (merge commit or squash), and what a release is (a release PR, a tag, a
-  published package, a data release).
+  published package, a data release). With a `develop` it is always `release/vX.Y.Z` →
+  PR into `main` → tag → back-merge; a repo with no `develop` is released by tag.
 - **Cadence:** `milestone` (work is planned in milestones with exit criteria and closed with a
   demo) or `continuous` (an ordered backlog per unit; release when the gate and the owner say
   so). A project may use milestones for one unit and a continuous backlog for another.
