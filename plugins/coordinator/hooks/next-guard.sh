@@ -10,27 +10,10 @@ set -u
 # shellcheck source=lib.sh
 . "$(dirname "$0")/lib.sh"
 
-# timeout_run <cmd...>: run with a 10 s cap when `timeout` exists (a hung gh must not hang Stop)
-timeout_run() { if command -v timeout >/dev/null 2>&1; then timeout 10 "$@"; else "$@"; fi; }
-
 plugin="$(cd "$(dirname "$0")/.." && pwd -P)"
 input="$(cat)"
 sid="$(json_get "$input" session_id)" || exit 0
 registration_file "$sid" >/dev/null || exit 0
-pending="$(pending_keys "$sid")"
-[[ -n "$pending" ]] || exit 0
-
-# Drop exempt PRs (release/* heads, coordinator-authored) from the pending list.
-while read -r key; do
-  [[ -n "$key" ]] || continue
-  info="$(timeout_run "${COORDINATOR_GH:-gh}" pr view "${key##*#}" -R "${key%#*}" --json headRefName,author \
-    --jq '.headRefName + " " + .author.login' 2>/dev/null)" || continue
-  head="${info%% *}"; author="${info#* }"
-  if [[ "$head" == release/* || "$head" == coordinator/* || \
-        ( -n "${COORDINATOR_GH_LOGIN:-}" && "$author" == "$COORDINATOR_GH_LOGIN" ) ]]; then
-    pending_remove "$sid" "$key" || true
-  fi
-done <<<"$pending"
 pending="$(pending_keys "$sid")"
 [[ -n "$pending" ]] || exit 0
 

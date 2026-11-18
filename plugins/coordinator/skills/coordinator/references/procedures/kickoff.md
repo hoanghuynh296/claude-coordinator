@@ -46,7 +46,8 @@ approves in a later message.**
 - Guards: `bash "<plugin>/scripts/install-guards.sh" --settings <unit-dir>...`
   (pre-push guard, delete-branch-on-merge). Releases follow one standard: `release/vX.Y.Z`
   from `develop` → PR into `main` → tag → back-merge `main` into `develop`, so `develop` is
-  never a PR head and delete-branch-on-merge cannot remove it.
+  never a PR head and delete-branch-on-merge cannot remove it. The coordinator names its own
+  branches `release/vX.Y.Z`, `backmerge/vX.Y.Z` or `coordinator/<topic>` (the Next guard skips them).
 - Labels: `task`, plus `unit:<unit>` in a single-repo project.
 
 ## Step 5 - register and report

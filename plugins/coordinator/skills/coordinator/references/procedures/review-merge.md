@@ -56,8 +56,9 @@ Review and merge the named pull request. Read the unit's row and the
    - **Close the linked issue.** "Closes #N" fires only when a PR merges into the default
      branch, so after merging into an integration branch other than it (`develop`) run
      `gh issue close <N> --repo <repo> --comment "Merged in #<n>"`. Release PRs
-     (`release/*` heads) and PRs you opened yourself get no `Next:` message: the Next guard
-     skips them.
+     (`release/*`), back-merge PRs (`backmerge/*`) and PRs you opened yourself get no `Next:`
+     message: the Next guard skips heads `release/*`, `backmerge/*` and `coordinator/*`, so name
+     every branch you open yourself `coordinator/<topic>`.
    - The author is a `per-issue` agent: send it `PR #<n> merged. Next: done` (step 9), then
      archive its session (but if step 9 allows `Next: #<m> (same session)`, send that and archive
      nothing)

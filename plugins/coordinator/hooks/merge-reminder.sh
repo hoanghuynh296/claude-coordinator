@@ -17,7 +17,12 @@
 # cannot answer, when a `gh ... pr merge` outside a plain argument is seen but not parsed, or when
 # the parser itself fails, nothing is recorded and the reminder is shown anyway (only a state gh reports as OPEN stays
 # silent). After a `cd` (and no -R / GH_REPO=) the PR is not looked up: the reminder is shown. A user prompt is not read here.
-# Unregistered sessions and other commands: no output, no state. Needs python3 to record.
+# Exempt PRs (no author to tell what is next) are not recorded: a PR whose head branch is
+# release/*, backmerge/* or coordinator/* (the coordinator's own branches; an agent that names its
+# branch coordinator/* is exempt too), or whose author is $COORDINATOR_GH_LOGIN. Do NOT set
+# COORDINATOR_GH_LOGIN to an account the agents share: every agent PR would be exempt. The decision
+# is made here, from the same `gh pr view` that confirms the merge, so next-guard.sh makes no gh
+# call. Unregistered sessions and other commands: no output, no state. Needs python3 to record.
 set -u
 
 # shellcheck source=lib.sh
@@ -39,7 +44,7 @@ emit() { printf '{"hookSpecificOutput":{"hookEventName":"PostToolUse","additiona
 
 if ! command -v python3 >/dev/null 2>&1; then emit "$generic (python3 missing: the merge was not recorded.)"; exit 0; fi
 
-# One line per finding: MERGED <repo#N> | OPEN <ref> <state> | ERROR <ref> | AUTO <ref> | CD <ref> | UNPARSED
+# One line per finding: EXEMPT <repo#N> | MERGED <repo#N> | OPEN <ref> <state> | ERROR <ref> | AUTO <ref> | CD <ref> | UNPARSED
 result="$(python3 -I - "${COORDINATOR_GH:-gh}" "${cwd:-$PWD}" "$cmd" "${COORDINATOR_GH_DEADLINE:-20}" <<'PY'
 import json, os, re, shlex, subprocess, sys, time
 gh, cwd = sys.argv[1], sys.argv[2]
@@ -198,7 +203,7 @@ for pr, repo, auto, cd in merges:
     left = deadline - time.monotonic()
     if left <= 0.2:
         print("ERROR", ref); continue
-    args = [gh, "pr", "view", num, "--json", "state,url"] + (["-R", repo] if repo else [])
+    args = [gh, "pr", "view", num, "--json", "state,url,headRefName,author"] + (["-R", repo] if repo else [])
     try:
         r = subprocess.run(args, cwd=cwd if os.path.isdir(cwd) else None, capture_output=True,
                            text=True, timeout=left)
@@ -209,7 +214,12 @@ for pr, repo, auto, cd in merges:
         print("ERROR", ref); continue
     s = re.match(r"^https?://[^/]+/([^/]+/[^/]+)/pull/(\d+)", data.get("url", ""))
     key = (s.group(1) + "#" + s.group(2)) if s else (repo and repo + "#" + num)
-    if data.get("state") == "MERGED" and key:
+    head = data.get("headRefName") or ""
+    login = os.environ.get("COORDINATOR_GH_LOGIN", "")
+    who = (data.get("author") or {}).get("login", "")
+    if data.get("state") == "MERGED" and key and (re.match(r"^(release|backmerge|coordinator)/", head) or (login and who == login)):
+        print("EXEMPT", key)           # release / back-merge / coordinator PR: nobody to tell
+    elif data.get("state") == "MERGED" and key:
         print("MERGED", key)          # also --auto on a PR that was ready: gh merged it at once
     elif auto:
         print("AUTO", ref)
@@ -226,6 +236,7 @@ while read -r kind ref extra; do
     ERROR) notes+=" ${ref}: gh could not confirm the merge, so it was NOT recorded; if it merged, send its Next message anyway." ;;
     UNPARSED) notes+=" A gh pr merge whose PR number could not be read (pass a literal number) was NOT recorded; if it merged, send its Next message anyway." ;;
     CD) notes+=" ${ref}: the command changed directory first, so the PR was NOT looked up (it could be in another repo); if it merged, send its Next message anyway." ;;
+    EXEMPT) ;;  # exempt PR: not recorded, nothing to say
     OPEN) ;;  # the merge did not happen: nothing to say
   esac
 done <<<"$result"

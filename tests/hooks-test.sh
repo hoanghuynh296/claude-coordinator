@@ -118,9 +118,8 @@ echo "$*" >>"$FAKE_GH_DIR/calls"
 f="$FAKE_GH_DIR/${repo/\//_}#$n"
 [[ -f "$f" ]] || { echo "GraphQL: Could not resolve to a PullRequest" >&2; exit 1; }
 [[ "$(cat "$f")" == SLOW ]] && exec sleep 30
-# next-guard lookup: --json headRefName,author --jq ...: prints "<head> <author>" (file $f.head, default feature/x dev)
-if [[ "$*" == *headRefName* ]]; then cat "$f.head" 2>/dev/null || echo "feature/x dev"; exit 0; fi
-printf '{"state":"%s","url":"https://github.com/%s/pull/%s"}\n' "$(cat "$f")" "$repo" "$n"
+hd="feature/x dev"; [[ -f "$f.head" ]] && hd="$(cat "$f.head")"
+printf '{"state":"%s","url":"https://github.com/%s/pull/%s","headRefName":"%s","author":{"login":"%s"}}\n' "$(cat "$f")" "$repo" "$n" "${hd% *}" "${hd#* }"
 GH
 chmod +x "$tmp/fake-gh"; export COORDINATOR_GH="$tmp/fake-gh"
 merged() { for k in "$@"; do echo MERGED >"$FAKE_GH_DIR/${k/\//_}"; done; }
@@ -238,34 +237,33 @@ for mode in jq python3; do
 done
 unset COORDINATOR_NO_JQ
 
-echo "--- Next guard exempts release/* and coordinator-authored PRs"
+echo "--- exempt PRs (release/*, backmerge/*, coordinator/*, \$COORDINATOR_GH_LOGIN) are never pending"
 rm -rf "$COORDINATOR_HOME/state/coord-3"
-merged 'o/r#90' 'o/r#91' 'o/r#92' 'o/r#93' 'o/r#94'
+merged 'o/r#90' 'o/r#91' 'o/r#92' 'o/r#93' 'o/r#94' 'o/r#97'
 echo "release/v1.2.0 dev" >"$FAKE_GH_DIR/o_r#90.head"
-echo "coordinator/notes dev" >"$FAKE_GH_DIR/o_r#91.head"
+echo "backmerge/v1.2.0 dev" >"$FAKE_GH_DIR/o_r#91.head"
 echo "feature/y claude-coord" >"$FAKE_GH_DIR/o_r#92.head"
 echo "releases/x dev" >"$FAKE_GH_DIR/o_r#93.head"
-mr coord-3 'gh pr merge 90; gh pr merge 91; gh pr merge 92; gh pr merge 93' >/dev/null
-expect_eq  "four merges pending before Stop"            "o/r#90 o/r#91 o/r#92 o/r#93 " "$(pend coord-3)"
-out="$(stop coord-3 false)"
-expect_out "Stop still blocks for non-exempt PRs"       '"decision":"block"' "$out"
-expect_out "Stop reason names the feature PR"           'o/r#92' "$out"
-[[ "$out" != *'o/r#90'* && "$out" != *'o/r#91'* ]] && { pass=$((pass+1)); echo "PASS release/* and coordinator/* heads not named"; } || { failn=$((failn+1)); echo "FAIL exempt PR named: $out"; }
-expect_out "releases/x (not release/) is not exempt"    'o/r#93' "$out"
-expect_eq  "exempt PRs dropped from pending"            "o/r#92 o/r#93 " "$(pend coord-3)"
-export COORDINATOR_GH_LOGIN=claude-coord
-out="$(stop coord-3 false)"
-expect_out "author == COORDINATOR_GH_LOGIN is exempt"   'o/r#93' "$out"
-expect_eq  "coordinator-authored dropped"               "o/r#93 " "$(pend coord-3)"
-unset COORDINATOR_GH_LOGIN
-rm -rf "$COORDINATOR_HOME/state/coord-3"; echo SLOW >"$FAKE_GH_DIR/o_r#95"; rm -f "$FAKE_GH_DIR/o_r#95"
-mkdir -p "$COORDINATOR_HOME/state/coord-3"; echo "o/r#95 2026-01-01T00:00:00Z" >"$COORDINATOR_HOME/state/coord-3/pending-next"
-expect_out "gh cannot answer: PR stays pending (fail open)" '"decision":"block"' "$(stop coord-3 false)"
+echo "coordinator/agent-made dev" >"$FAKE_GH_DIR/o_r#94.head"
+echo "feature/z dev" >"$FAKE_GH_DIR/o_r#97.head"
+expect_out "release/* PR merged: silent, not recorded"  EMPTY "$(mr coord-3 'gh pr merge 90')"
+expect_out "backmerge/* PR merged: silent"              EMPTY "$(mr coord-3 'gh pr merge 91')"
+expect_out "coordinator/* PR (even agent-named): exempt" EMPTY "$(mr coord-3 'gh pr merge 94')"
+expect_eq  "exempt PRs recorded nothing"                "" "$(pend coord-3)"
+mr coord-3 'gh pr merge 92; gh pr merge 93; gh pr merge 97' >/dev/null
+expect_eq  "feature/ and releases/ heads are pending"   "o/r#92 o/r#93 o/r#97 " "$(pend coord-3)"
 rm -rf "$COORDINATOR_HOME/state/coord-3"
-merged 'o/r#96'; echo "release/v2.0.0 dev" >"$FAKE_GH_DIR/o_r#96.head"; mr coord-3 'gh pr merge 96' >/dev/null
-expect_eq  "only a release PR pending: Stop silent"     "" "$(stop coord-3 false)"
-expect_eq  "release PR removed from state"              "" "$(pend coord-3)"
+COORDINATOR_GH_LOGIN=claude-coord mr coord-3 'gh pr merge 92; gh pr merge 97' >/dev/null
+expect_eq  "author == COORDINATOR_GH_LOGIN exempt, others not" "o/r#97 " "$(pend coord-3)"
+n0="$(wc -l <"$FAKE_GH_DIR/calls")"
+out="$(stop coord-3 false)"
+expect_out "Stop blocks for the pending agent PR"       '"decision":"block"' "$out"
+expect_eq  "next-guard makes no gh call"                "$n0" "$(wc -l <"$FAKE_GH_DIR/calls")"
 rm -rf "$COORDINATOR_HOME/state/coord-3"
+echo SLOW >"$FAKE_GH_DIR/o_r#98"; echo "release/v9 dev" >"$FAKE_GH_DIR/o_r#98.head"
+out="$(COORDINATOR_GH_DEADLINE=1 mr coord-3 'gh pr merge 98')"
+expect_out "hung gh: not exempted, reminder shown"      "could not confirm" "$out"
+rm -f "$FAKE_GH_DIR/o_r#98" "$FAKE_GH_DIR/o_r#98.head"
 
 echo "--- one total deadline for every gh lookup"
 t0=$SECONDS
