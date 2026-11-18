@@ -5,14 +5,18 @@
 #     "PR #N merged. Next: ..." (cleared by next-sent.sh) or the coordinator cleared it with
 #     scripts/next-clear.sh;
 #   - reminds it to send that message and to archive a per-issue agent's session.
-# The command is split like a shell would (python shlex): only `gh pr merge` at the start of a
-# command counts (not `echo gh pr merge 9`), quoted flag values are skipped. Whether the merge
-# happened is not guessed from the output (a `; echo ok` or `|| true` hides a failure): each PR
-# is looked up with `gh pr view` and recorded only when its state is MERGED (with --auto too:
-# gh merges a ready PR at once). All lookups share one deadline (COORDINATOR_GH_DEADLINE,
-# default 20 s; hooks.json gives the hook 45 s). When gh cannot
-# answer, or a `gh pr merge` was seen but not parsed, nothing is recorded and the reminder is
-# shown anyway (fail open).
+# The command is first reduced to what the shell would run (heredoc bodies and comments removed),
+# then split like a shell would (python shlex): `gh [-R x] pr merge` at the start of a command
+# counts (also after sudo/env/xargs/... and inside `bash -lc '...'`, eval, $(...) and backticks).
+# Heredoc bodies, comments, quoted arguments (git commit -m "..") and echo/printf arguments are
+# silent. Whether the merge happened is not guessed from the output or the exit code (a
+# `; echo ok` or `|| true` hides a failure, `&& git pull` can fail after a real merge): each PR is
+# looked up with `gh pr view` and recorded only when its state is MERGED, whatever the exit code
+# (with --auto too: gh merges a ready PR at once). All lookups share one deadline
+# (COORDINATOR_GH_DEADLINE, default 20 s; hooks.json gives the hook 45 s). Fail open: when gh
+# cannot answer, when a `gh ... pr merge` outside a plain argument is seen but not parsed, or when
+# the parser itself fails, nothing is recorded and the reminder is shown anyway (only a state gh reports as OPEN stays
+# silent). After a `cd` (and no -R / GH_REPO=) the PR is not looked up: the reminder is shown. A user prompt is not read here.
 # Unregistered sessions and other commands: no output, no state. Needs python3 to record.
 set -u
 
@@ -25,8 +29,9 @@ sid="$(json_get "$input" session_id)" || exit 0
 registration_file "$sid" >/dev/null || exit 0
 
 cmd="$(json_get "$input" tool_input.command)"
-[[ "$cmd" =~ gh[[:space:]]+pr[[:space:]]+merge ]] || exit 0
-[[ "$(json_get "$input" tool_response.interrupted)" == "true" ]] && exit 0
+[[ "$cmd" =~ gh[[:space:]].*pr[[:space:]]+merge ]] || exit 0
+# The exit code is not read: a merge can succeed and a later `&& git pull` or --delete-branch
+# fail, so every outcome goes through `gh pr view` below (and an interrupted command too).
 cwd="$(json_get "$input" cwd)"
 
 generic="Coordinator: a PR may have been merged. If so, send its author \"PR #<N> merged. Next: <issue | handover | stand by | done>\" in this turn (review-merge.md, step 9); for a per-issue agent, archive its session afterwards (mcp__ccd_session_mgmt__archive_session); a standing session is archived only on rotation."
@@ -34,7 +39,7 @@ emit() { printf '{"hookSpecificOutput":{"hookEventName":"PostToolUse","additiona
 
 if ! command -v python3 >/dev/null 2>&1; then emit "$generic (python3 missing: the merge was not recorded.)"; exit 0; fi
 
-# One line per finding: MERGED <repo#N> | OPEN <ref> <state> | ERROR <ref> | AUTO <ref> | UNPARSED
+# One line per finding: MERGED <repo#N> | OPEN <ref> <state> | ERROR <ref> | AUTO <ref> | CD <ref> | UNPARSED
 result="$(python3 -I - "${COORDINATOR_GH:-gh}" "${cwd:-$PWD}" "$cmd" "${COORDINATOR_GH_DEADLINE:-20}" <<'PY'
 import json, os, re, shlex, subprocess, sys, time
 gh, cwd = sys.argv[1], sys.argv[2]
@@ -42,53 +47,143 @@ try:
     deadline = time.monotonic() + float(sys.argv[4])   # one budget for every gh call
 except (IndexError, ValueError):
     deadline = time.monotonic() + 20
-cmd = sys.argv[3].replace("\n", " ; ")
-try:
-    lex = shlex.shlex(cmd, posix=True, punctuation_chars=True)
-    lex.whitespace_split = True
-    toks = list(lex)
-except ValueError:
-    toks = cmd.split()
-seps = {";", "&&", "||", "|", "&", "(", ")", "|&", ";;"}
+def sanitize(text):
+    """The command as the shell would run it: heredoc bodies and comments removed, unquoted
+    newlines turned into ';'. Quoted text is kept (the lexer reads it as one word)."""
+    out, i, n, q = [], 0, len(text), None
+    pending = []                        # heredoc delimiters waiting for the next newline
+    while i < n:
+        c = text[i]
+        if q:
+            out.append(c)
+            if c == "\\" and q == '"' and i + 1 < n:
+                out.append(text[i+1]); i += 2; continue
+            if c == q:
+                q = None
+            i += 1; continue
+        if c == "\\" and i + 1 < n:
+            out.append(c + text[i+1]); i += 2; continue
+        if c in "'\"":
+            q = c; out.append(c); i += 1; continue
+        if c == "#" and (i == 0 or text[i-1] in " \t\n;&|("):
+            while i < n and text[i] != "\n":
+                i += 1
+            continue
+        if text.startswith("$((", i):     # arithmetic: its << is a shift, not a heredoc
+            d, j = 0, i + 1
+            while j < n:
+                d += (text[j] == "(") - (text[j] == ")")
+                j += 1
+                if d == 0:
+                    break
+            out.append(text[i:j]); i = j; continue
+        if text.startswith("<<", i) and not text.startswith("<<<", i):
+            m = re.match(r"<<(-?)[ \t]*(?:'([^']*)'|\"([^\"]*)\"|\\?([A-Za-z0-9_.-]+))", text[i:])
+            if m:
+                pending.append((m.group(1) == "-", m.group(2) or m.group(3) or m.group(4)))
+                i += m.end(); out.append(" "); continue
+        if c == "\n":
+            out.append(" ; "); i += 1
+            for strip, word in pending:  # skip each body up to its delimiter line
+                while i < n:
+                    j = text.find("\n", i); j = n if j < 0 else j
+                    line = text[i:j]; i = min(j + 1, n)
+                    if (line.strip("\t") if strip else line) == word:
+                        break
+            pending = []
+            continue
+        out.append(c); i += 1
+    return "".join(out)
+
+def is_sep(t):    # shlex glues adjacent punctuation: "));" and "&&" are one token
+    return bool(re.fullmatch(r"[();&|]+", t))
 with_value = {"-t", "--subject", "-b", "--body", "-F", "--body-file", "-A", "--author-email",
               "--match-head-commit"}
-merges, i, start = [], 0, True
-while i < len(toks):
-    t = toks[i]
-    if t in seps:
-        start = True; i += 1; continue
-    if start and re.match(r"^[A-Za-z_][A-Za-z0-9_]*=", t):   # VAR=value prefix
-        i += 1; continue
-    # words after which a new command starts: shell keywords and command prefixes
-    if start and t in ("then", "do", "else", "elif", "if", "while", "until", "{", "!", "time",
-                       "sudo", "command", "exec", "env", "xargs", "nohup", "nice", "timeout"):
-        i += 1
-        while i < len(toks) and toks[i].startswith("-") and toks[i] not in seps:  # their options
+merges = []
+
+def scan(cmd, depth=0):
+    cmd = sanitize(cmd)
+    try:
+        lex = shlex.shlex(cmd, posix=True, punctuation_chars=True)
+        lex.whitespace_split = True
+        lex.commenters = ""
+        toks = list(lex)
+    except ValueError:
+        toks = cmd.split()
+    i, start, segstart, cdseen, envrepo = 0, True, 0, False, None
+    while i < len(toks):
+        t = toks[i]
+        if is_sep(t):
+            start = True; i += 1; segstart = i; envrepo = None; continue
+        if start and re.match(r"^[A-Za-z_][A-Za-z0-9_]*=", t):   # VAR=value prefix
+            if t.startswith("GH_REPO="):
+                envrepo = t.split("=", 1)[1]
+            i += 1; continue
+        if start and t in ("cd", "pushd", "popd"):    # later commands run in another directory
+            cdseen = True
+        # words after which a new command starts: shell keywords and command prefixes
+        if start and t in ("then", "do", "else", "elif", "if", "while", "until", "{", "!", "time",
+                           "sudo", "command", "exec", "env", "xargs", "nohup", "nice", "timeout"):
             i += 1
-        if t == "timeout" and i < len(toks) and re.match(r"^\d", toks[i]):
-            i += 1
-        continue
-    if start and t == "gh" and toks[i+1:i+3] == ["pr", "merge"]:
-        j, pr, repo, auto = i + 3, None, None, False
-        while j < len(toks) and toks[j] not in seps:
-            a = toks[j]
-            if a in ("-R", "--repo") and j + 1 < len(toks):
-                repo = toks[j+1]; j += 2; continue
-            if a.startswith("--repo="):
-                repo = a.split("=", 1)[1]
-            elif a in with_value:
-                j += 2; continue
-            elif a == "--auto":
-                auto = True
-            elif not a.startswith("-") and pr is None:
-                pr = a
-            j += 1
-        merges.append((pr, repo, auto))
-        i = j; start = False; continue
-    start = False; i += 1
-if not merges:
-    print("UNPARSED")                 # the gate matched but no merge was read: remind anyway
-for pr, repo, auto in merges:
+            while i < len(toks) and not is_sep(toks[i]) and toks[i] != "gh" and \
+                    not re.match(r"^(ba|z|da|k)?sh$|^eval$", toks[i]):   # their options and values
+                i += 1
+            continue
+        # bash -c '...' / sh -c / eval: the string is a command line too
+        if start and depth < 3 and re.match(r"^(ba|z|da|k)?sh$", t) and any(re.match(r"^-[a-zA-Z]*c$", x) for x in toks[i+1:i+4]):
+            k = next(i + 1 + m for m, x in enumerate(toks[i+1:i+4]) if re.match(r"^-[a-zA-Z]*c$", x))
+            if k + 1 < len(toks):
+                scan(toks[k+1], depth + 1)
+            i = k + 2; start = False; continue
+        if start and depth < 3 and t == "eval" and i + 1 < len(toks):
+            scan(" ".join(toks[i+1:]), depth + 1)
+            return
+        k, grepo = i + 1, envrepo
+        while start and t == "gh" and k < len(toks) and toks[k].startswith("-") and not is_sep(toks[k]):
+            if toks[k] in ("-R", "--repo") and k + 1 < len(toks):
+                grepo = toks[k+1]; k += 2
+            else:
+                if toks[k].startswith("--repo="):
+                    grepo = toks[k].split("=", 1)[1]
+                k += 1
+        if start and t == "gh" and toks[k:k+2] == ["pr", "merge"]:
+            j, pr, repo, auto = k + 2, None, grepo, False
+            while j < len(toks) and not is_sep(toks[j]):
+                a = toks[j]
+                if a in ("-R", "--repo") and j + 1 < len(toks):
+                    repo = toks[j+1]; j += 2; continue
+                if a.startswith("--repo="):
+                    repo = a.split("=", 1)[1]
+                elif a in with_value:
+                    j += 2; continue
+                elif a == "--auto":
+                    auto = True
+                elif not a.startswith("-") and pr is None:
+                    pr = a
+                j += 1
+            merges.append((pr, repo, auto, cdseen and repo is None))
+            i = j; start = False; continue
+        if t == "gh" and depth < 5:      # gh ... pr merge somewhere we did not read as a command
+            k = i + 1
+            while k < len(toks) and toks[k].startswith("-") and not is_sep(toks[k]):
+                k += 2 if toks[k] in ("-R", "--repo") else 1
+            seg = toks[segstart:i]
+            if toks[k:k+2] == ["pr", "merge"] and not (seg and seg[0] in ("echo", "printf")):
+                merges.append((None, None, False, False))
+        start = False; i += 1
+    # $(...) and `...`, also inside double quotes (single-quoted text is literal)
+    if depth < 3:
+        plain = re.sub(r"'[^']*'", "''", cmd)
+        for m in re.finditer(r"\$\(([^()]*)\)|`([^`]*)`", plain):
+            scan(m.group(1) or m.group(2) or "", depth + 1)
+
+try:
+    scan(sys.argv[3])
+except Exception:
+    merges.append((None, None, False, False))
+merges[:] = list(dict.fromkeys(merges))
+# no merge at command position (heredoc body, string, comment, echo): nothing ran, say nothing
+for pr, repo, auto, cd in merges:
     m = re.match(r"^#?(\d+)$", pr or "")
     u = re.match(r"^https?://[^/]+/([^/]+/[^/]+)/pull/(\d+)", pr or "")
     if u:
@@ -98,6 +193,8 @@ for pr, repo, auto in merges:
     else:
         print("UNPARSED"); continue
     ref = (repo + "#" + num) if repo else ("#" + num)
+    if cd:
+        print("CD", ref); continue
     left = deadline - time.monotonic()
     if left <= 0.2:
         print("ERROR", ref); continue
@@ -119,8 +216,7 @@ for pr, repo, auto in merges:
     else:
         print("OPEN", ref, data.get("state", "?"))
 PY
-)"
-[[ -n "$result" ]] || result="UNPARSED"
+)" || result="UNPARSED"   # a crash of the reader reminds instead of going silent
 
 recorded=(); notes=""
 while read -r kind ref extra; do
@@ -129,9 +225,11 @@ while read -r kind ref extra; do
     AUTO) notes+=" ${ref}: --auto queued the merge (not merged yet), so it was NOT recorded; check it (gh pr view <N> --json state,autoMergeRequest) and send the Next message once it has merged (review-merge.md, step 9)." ;;
     ERROR) notes+=" ${ref}: gh could not confirm the merge, so it was NOT recorded; if it merged, send its Next message anyway." ;;
     UNPARSED) notes+=" A gh pr merge whose PR number could not be read (pass a literal number) was NOT recorded; if it merged, send its Next message anyway." ;;
+    CD) notes+=" ${ref}: the command changed directory first, so the PR was NOT looked up (it could be in another repo); if it merged, send its Next message anyway." ;;
     OPEN) ;;  # the merge did not happen: nothing to say
   esac
 done <<<"$result"
+true
 
 if [[ ${#recorded[@]} -gt 0 ]]; then
   list="$(printf '%s, ' "${recorded[@]}")"; list="${list%, }"

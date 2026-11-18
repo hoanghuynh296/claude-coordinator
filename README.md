@@ -187,6 +187,15 @@ bash tests/check-context-test.sh   # ok / SOFT / HARD levels, thresholds from en
 
 ## Changes
 
+- **Unreleased**: hooks fire on events, not text (#11). merge-reminder reads the command as the
+  shell would (heredoc bodies, comments and quoted text are ignored; `bash -c` and `eval` are
+  read; the exit code is ignored) and records a merge only when `gh pr view`
+  shows MERGED. The PR-ready reminder fires only when a message's FIRST line starts with
+  `PR ready` (case-insensitive); the unit brief now tells agents to open their PR report with
+  `PR ready:` and to use the phrase nowhere else (also in session-start, SKILL, roles and PROFILE).
+  Merges the reader cannot parse (`bash -lc`, `$(...)`, backticks, `gh -R x pr merge`, sudo) still
+  remind (fail open) or are read; a non-zero exit still checks `gh pr view`. Tests cover heredoc,
+  quoted and progress-note false positives and these parser misses.
 - **Unreleased**: ledger-lint (#14): table rows are exempt from the line limit, `<project>:C-NNN` references to another ledger are allowed, a decision written as a bullet gets a message showing the row format, "Updated:" a day behind its last commit warns, and `install-guards.sh` installs a pre-commit hook in a ledger repo that runs the lint (nonzero exit on errors, tested). `profile.md` headings now match the PROFILE template (Owner rules is 11).
 - **Unreleased**: template gaps (#15). PROFILE gains "Deploy" (with a Deploy-only debt class) and
   "Files with no unit"; ROADMAP a "Release notes draft"; COORDINATION "Pending starts"; new

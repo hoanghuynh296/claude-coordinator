@@ -24,9 +24,52 @@ else
   event="PostToolUse"
   text="$(json_get "$input" tool_response)"
 fi
-shopt -s nocasematch
-[[ "$text" =~ PR[[:space:]]+(is[[:space:]]+)?ready ]] || exit 0
-shopt -u nocasematch
+# Only a report counts: a message whose FIRST line starts with "PR ready" (any case). The phrase
+# later in the text, in a quote or in a progress note does not (agents' format: unit-brief.md).
+# Inbox results hold several messages (JSON): any one of them may qualify; a message starts at the
+# top, or at a <cross-session-message ...> wrapper tag (inline or alone on its line), and leading
+# blank lines are skipped. A user prompt that quotes a wrapper block with "PR ready" right after
+# the tag still fires: accepted. Markdown-wrapped first lines (`**PR ready:**`) do not count.
+# No python3, or a crash of the reader: the old rule applies (the phrase anywhere in the text).
+loose() {   # fail open: the old rule, the phrase anywhere in the text
+  shopt -s nocasematch
+  [[ "$text" =~ PR[[:space:]]+(is[[:space:]]+)?ready ]] && printf '%s' "$text"
+  shopt -u nocasematch
+  return 0
+}
+if command -v python3 >/dev/null 2>&1; then
+firsts="$(printf '%s' "$text" | python3 -I -c '
+import json, re, sys
+raw = sys.stdin.read()
+def strings(v):
+    if isinstance(v, str):
+        yield v
+    elif isinstance(v, dict):
+        for x in v.values(): yield from strings(x)
+    elif isinstance(v, list):
+        for x in v: yield from strings(x)
+try:
+    items = list(strings(json.loads(raw)))
+except ValueError:
+    items = [raw]
+head = re.compile(r"PR\s+(is\s+)?ready\b", re.I)
+wrap = re.compile(r"<\\?cross-session-message[^>]*>")
+for t in items:
+    at_start, hit = True, False
+    for line in t.split("\n"):
+        l = line.strip()
+        m = wrap.match(l)
+        if m:                       # a wrapper tag opens a new message, inline or on its own line
+            l, at_start = l[m.end():].strip(), True
+        if not at_start or not l:
+            continue
+        hit = hit or bool(head.match(l)); at_start = False
+    if hit:
+        print(t)
+' 2>/dev/null)" || firsts="$(loose)"   # reader crashed: fail open
+else firsts="$(loose)"; fi   # no python3: fail open, as merge-reminder does
+[[ -n "$firsts" ]] || exit 0
+text="$firsts"
 
 cmds=(); rest="$text"
 re='github\.com/([A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+)/pull/([0-9]+)(.*)'

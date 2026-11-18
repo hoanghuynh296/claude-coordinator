@@ -58,6 +58,9 @@ unit.
     coordinator tells you its name, report to that one from then on. <Subagent fallback: your
     final answer is the report; send no message.> At most <6> lines: issue,
     PR link, head SHA and CI state, what changed, evidence, risks. No ack-only messages, no progress updates.
+    The FIRST line of a PR report starts with `PR ready:` (then the PR number and head SHA); the
+    coordinator's hook starts its CI watch only on that, so use the phrase in no other message
+    (a progress or blocked note never opens with it, and nothing else quotes it on its first line).
 11. One issue at a time, one full lifecycle. After "PR ready" you wait: fix review findings
     when told, and start nothing new until the coordinator's message `PR #<n> merged. Next:
     <issue | handover | stand by | done>`. Then do exactly that (`done`: a `per-issue` session

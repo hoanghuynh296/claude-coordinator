@@ -145,7 +145,7 @@ for mode in jq python3; do
   reset
   expect_out "merge by coordinator: archive reminder"  "archive_session" "$(mr coord-1 'gh pr merge 12 --repo o/r --merge --delete-branch')"
   expect_eq  "merge records o/r#12"                    "o/r#12 " "$(pend coord-1)"
-  expect_out "merge after cd &&: reminder"             "archive_session" "$(mr coord-1 'cd x && gh pr merge 13')"
+  expect_out "merge after &&: reminder"                "archive_session" "$(mr coord-1 'true && gh pr merge 13')"
   expect_eq  "no --repo: repo from gh's url"           "o/r#12 o/r#13 " "$(pend coord-1)"
   expect_out "gh pr view: silent"                      EMPTY "$(mr coord-1 'gh pr view 12')"
   expect_out "merge by unregistered session: silent"   EMPTY "$(mr lane-7 'gh pr merge 12')"
@@ -156,7 +156,34 @@ for mode in jq python3; do
   expect_eq  "quoted subject: PR is 7, not a word of it" "o/r#12 o/r#13 o/r2#13 o/r3#14 o/r#7 " "$(pend coord-1)"
   out="$(mr coord-1 'echo gh pr merge 21; echo \"gh pr merge 22\"')"
   expect_eq  "echo gh pr merge: not a merge"           "o/r#12 o/r#13 o/r2#13 o/r3#14 o/r#7 " "$(pend coord-1)"
-  expect_out "echo gh pr merge: fail-open reminder"    "could not be read" "$out"
+  expect_eq  "echo gh pr merge: silent (nothing ran)"  "" "$out"
+  expect_out "heredoc body with gh pr merge: silent"   EMPTY "$(mr coord-1 'cat <<EOF > n.md\ngh pr merge 12 --merge\nEOF\ngit add n.md')"
+  expect_out "quoted heredoc + <<- tabs: silent"       EMPTY "$(mr coord-1 'cat <<-\"EOF\"\n\tgh pr merge 12\n\tEOF')"
+  expect_out "double-quoted string: silent"            EMPTY "$(mr coord-1 'git commit -m \"docs: gh pr merge 12\"')"
+  expect_out "comment line: silent"                    EMPTY "$(mr coord-1 'ls # then gh pr merge 12\n# gh pr merge 13')"
+  expect_out "heredoc then a real merge: recorded"     "merged o/r#31" "$(mr coord-1 'cat <<EOF\ngh pr merge 12\nEOF\ngh pr merge 31')"
+  expect_out "bash -c merge: recorded"                 "merged o/r#32" "$(mr coord-1 'bash -c \"gh pr merge 32 --squash\"')"
+  merged 'o/r#70' 'a/b#71' 'o/r#72' 'o/r#73' 'o/r#74' 'o/r#75' 'o/r#76'
+  expect_out "bash -lc: recorded"                      "merged o/r#70" "$(mr coord-1 'bash -lc \"gh pr merge 70\"')"
+  expect_out "gh -R x pr merge: recorded"              "merged a/b#71" "$(mr coord-1 'gh -R a/b pr merge 71 --squash')"
+  expect_out "sudo -u me gh pr merge: recorded"        "merged o/r#72" "$(mr coord-1 'sudo -u me gh pr merge 72')"
+  expect_out "echo \"\$(gh pr merge N)\": recorded"     "merged o/r#73" "$(mr coord-1 'echo \"$(gh pr merge 73)\"')"
+  expect_out "backticks: recorded"                     "merged o/r#74" "$(mr coord-1 'echo `gh pr merge 74`')"
+  expect_out "\$((1<<2)) is not a heredoc: recorded"   "merged o/r#75" "$(mr coord-1 'echo $((1<<2)); gh pr merge 75')"
+  expect_out "unreadable merge inside \$(): reminder"  "could not be read" "$(mr coord-1 'x=$(gh pr merge $P)')"
+  expect_out "quoted <<'EOF' heredoc: silent"          EMPTY "$(mr coord-1 'cat <<\x27EOF\x27\ngh pr merge 12\nEOF')"
+  expect_out "non-zero exit but MERGED: recorded"      "merged o/r#76" "$(printf '{"session_id":"coord-1","cwd":"%s","tool_name":"Bash","tool_input":{"command":"gh pr merge 76 && git pull"},"tool_response":{"exit_code":1}}' "$tmp" | bash "$hooks/merge-reminder.sh")"
+  expect_out "non-zero exit, PR still OPEN: silent"    EMPTY "$(printf '{"session_id":"coord-1","cwd":"%s","tool_name":"Bash","tool_input":{"command":"gh pr merge 16"},"tool_response":{"exit_code":1}}' "$tmp" | bash "$hooks/merge-reminder.sh")"
+  fx() { printf '{"session_id":"coord-1","cwd":"%s","tool_name":"Bash","tool_input":{"command":"%s"},"tool_response":{"exit_code":1}}' "$tmp" "$1" | bash "$hooks/merge-reminder.sh"; }
+  expect_out "exit 1, gh cannot confirm: reminder"     "could not confirm" "$(fx 'gh pr merge 99 && git pull')"
+  expect_out "exit 1, unreadable PR: reminder"         "could not be read" "$(fx 'bash -lc \"gh pr merge $P\"')"
+  merged 'o/r#78' 'a/b#79' 'o/r#80'
+  expect_out "GH_REPO= prefix: -R from it"             "merged a/b#79" "$(mr coord-1 'GH_REPO=a/b gh pr merge 79')"
+  expect_out "cd first: not looked up, reminder"       "changed directory" "$(mr coord-1 'cd other && gh pr merge 78')"
+  expect_out "cd first but -R given: recorded"         "merged o/r#80" "$(mr coord-1 'cd other && gh pr merge 80 -R o/r')"
+  for k in o/r#70 a/b#71 o/r#72 o/r#73 o/r#74 o/r#75 o/r#76 a/b#79 o/r#80; do bash "$root/plugins/coordinator/scripts/next-clear.sh" coord-1 "$k" "test" >/dev/null 2>&1; done
+  for k in o/r#31 o/r#32; do bash "$root/plugins/coordinator/scripts/next-clear.sh" coord-1 "$k" "test" >/dev/null 2>&1; done
+  expect_eq  "false positives recorded nothing"        "o/r#12 o/r#13 o/r2#13 o/r3#14 o/r#7 " "$(pend coord-1)"
   expect_out "failed merge then '; echo ok': silent"   EMPTY "$(mr coord-1 'gh pr merge 16; echo ok')"
   mr coord-1 'gh pr merge 16 || true' >/dev/null
   expect_eq  "failed merge (still OPEN) not recorded"  "o/r#12 o/r#13 o/r2#13 o/r3#14 o/r#7 " "$(pend coord-1)"
@@ -239,18 +266,32 @@ expect_out "replacement's Stop blocks"                 '"decision":"block"' "$(s
 if bash "$nc" coord-2 --add 'bad' >/dev/null 2>&1; then failn=$((failn+1)); echo "FAIL --add accepted a bad key"; else pass=$((pass+1)); echo "PASS --add rejects a bad key"; fi
 "$root/plugins/coordinator/scripts/register.sh" --unregister coord-2 >/dev/null
 expect_eq  "unregister removes hook state"             "no" "$([[ -d "$COORDINATOR_HOME/state/coord-2" ]] && echo yes || echo no)"
+nopy="$tmp/nopy"; mkdir -p "$nopy"
+for c in bash cat sed head awk grep mkdir mv rm date dirname jq tr; do p="$(command -v $c 2>/dev/null)" && ln -sf "$p" "$nopy/$c"; done
+echo "--- CI watch reminder fails open without python3"
+"$root/plugins/coordinator/scripts/register.sh" coord-7 "$tmp/ledger" "$tmp/proj" >/dev/null
+expect_out "no python3: phrase anywhere -> reminder"   'run_in_background' "$(printf '{"session_id":"coord-7","hook_event_name":"UserPromptSubmit","prompt":"x PR ready #3"}' | PATH="$nopy" "$nopy/bash" "$hooks/ci-watch-reminder.sh")"
+expect_out "no python3: other prompt -> silent"        EMPTY "$(printf '{"session_id":"coord-7","hook_event_name":"UserPromptSubmit","prompt":"status?"}' | PATH="$nopy" "$nopy/bash" "$hooks/ci-watch-reminder.sh")"
 echo "--- CI watch reminder on \"PR ready\" (UserPromptSubmit, inbox tools)"
 "$root/plugins/coordinator/scripts/register.sh" coord-6 "$tmp/ledger" "$tmp/proj" >/dev/null
 up() { python3 -I -c 'import json,sys; print(json.dumps({"session_id":sys.argv[1],"hook_event_name":"UserPromptSubmit","prompt":sys.argv[2]}))' "$1" "$2" | bash "$hooks/ci-watch-reminder.sh"; }
 rn() { python3 -I -c 'import json,sys; print(json.dumps({"session_id":sys.argv[1],"hook_event_name":"PostToolUse","tool_name":"ReadNotifications","tool_input":{},"tool_response":{"notifications":[{"body":sys.argv[2]}]}}))' "$1" "$2" | bash "$hooks/ci-watch-reminder.sh"; }
 for mode in jq python3; do
   if [[ $mode == python3 ]]; then export COORDINATOR_NO_JQ=1; fi
-  r="$(up coord-6 'Agent: api. #12 PR ready https://github.com/o/r/pull/12 head abc1234, CI pending. Context: 80k')"
+  r="$(up coord-6 'PR ready: #12 https://github.com/o/r/pull/12 head abc1234, CI pending. Context: 80k')"
   expect_out "$mode: PR ready prompt -> start the watch"   'run_in_background' "$r"
   expect_out "$mode: names the event"                       '"hookEventName":"UserPromptSubmit"' "$r"
   expect_out "$mode: ready-to-run command for the PR link"  ' o/r 12 <head sha>' "$r"
   expect_out "$mode: case-insensitive"                      'ci-watch.sh' "$(up coord-6 'pr ready: #3')"
   expect_out "$mode: inbox tool result -> reminder"         '"hookEventName":"PostToolUse"' "$(rn coord-6 'PR ready https://github.com/a/b/pull/4')"
+  expect_out "$mode: quoted on a later line -> silent"      EMPTY "$(up coord-6 $'Progress on #12.\nAgent said: PR ready https://github.com/o/r/pull/12')"
+  expect_out "$mode: progress note mentioning it -> silent" EMPTY "$(up coord-6 'Still working; will send PR ready once the gate is green')"
+  expect_out "$mode: quote at the start of a line 2 -> silent" EMPTY "$(up coord-6 $'> forwarded:\n> PR ready #3')"
+  expect_out "$mode: first line starts with PR ready"       'run_in_background' "$(up coord-6 $'PR ready: o/r#12 abc\nmore')"
+  expect_out "$mode: inbox, wrapped message"                'run_in_background' "$(rn coord-6 $'<cross-session-message from=\"Agent: x\">\nPR ready: o/r#4 abc')"
+  expect_out "$mode: inbox, phrase only in a later line"    EMPTY "$(rn coord-6 $'Status\nPR ready #4')"
+  expect_out "$mode: inline wrapper"                        'run_in_background' "$(rn coord-6 '<cross-session-message from="x">PR ready: #3')"
+  expect_out "$mode: blank line before the first line"      'run_in_background' "$(up coord-6 $'\n\nPR ready: #3')"
   expect_out "$mode: other prompt -> silent"                EMPTY "$(up coord-6 'what is the status?')"
   expect_out "$mode: unregistered session -> silent"        EMPTY "$(up lane-7 'PR ready #3')"
 done
