@@ -187,6 +187,11 @@ bash tests/check-context-test.sh   # ok / SOFT / HARD levels, thresholds from en
 
 ## Changes
 
+- **Unreleased**: archive fallback. `archive_session` is refused in all six projects (the app's hook
+  rewrites the input). The kit now says: call it; if refused with a rewritten input, call once more
+  with exactly that input; if still refused, rename the session "<name> (old)" and add it to ONE
+  owner-queue line "Archive finished sessions: <names>". `audit` checks that line and that no
+  "(old)" session is still working.
 - **0.9.0**: same-session next issue for `per-issue` agents, under strict conditions. The kit
   required a fresh session per issue and archiving after merge, but `archive_session` was refused
   in all six projects, session starts fail while the owner is on Remote Control, and a fresh

@@ -140,3 +140,11 @@ Read before starting a stretch of work. Each entry: what went wrong, then the fi
     same unit, measured context is under 50% of soft, `#m` is not in a Reviewer-mandatory risk
     area, and the session has done fewer than 3 issues in a row. After the 3rd issue the next one
     goes to a fresh session. The agent renames itself "Agent: <unit> #<m>" and branches fresh.
+38. **Finished sessions piled up in the owner queue.** In all six projects the app's hook rewrites
+    the `archive_session` input, auto mode refuses the first call, a second call with the hook's
+    `session` field usually works and sometimes is denied; ~25 finished sessions sat live, one
+    owner-queue item each (coordination review 2026-11-18). → One procedure: call
+    `archive_session`; if refused with a rewritten input, call once more with exactly that input;
+    if still refused, rename the session "<name> (old)" and add it to ONE owner-queue line
+    "Archive finished sessions: <names>". `audit` checks that line and that no "(old)" session is
+    still working.
