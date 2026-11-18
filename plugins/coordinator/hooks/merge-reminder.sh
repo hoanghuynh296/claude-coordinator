@@ -15,8 +15,8 @@
 # (with --auto too: gh merges a ready PR at once). All lookups share one deadline
 # (COORDINATOR_GH_DEADLINE, default 20 s; hooks.json gives the hook 45 s). Fail open: when gh
 # cannot answer, when a `gh ... pr merge` outside a plain argument is seen but not parsed, or when
-# the parser itself fails, nothing is recorded and the reminder is shown anyway (a failed or
-# interrupted command only reports what gh shows MERGED). A user prompt is not read here.
+# the parser itself fails, nothing is recorded and the reminder is shown anyway (only a state gh reports as OPEN stays
+# silent). After a `cd` (and no -R / GH_REPO=) the PR is not looked up: the reminder is shown. A user prompt is not read here.
 # Unregistered sessions and other commands: no output, no state. Needs python3 to record.
 set -u
 
@@ -30,11 +30,8 @@ registration_file "$sid" >/dev/null || exit 0
 
 cmd="$(json_get "$input" tool_input.command)"
 [[ "$cmd" =~ gh[[:space:]].*pr[[:space:]]+merge ]] || exit 0
-failed=0   # non-zero exit or interrupted: the merge may still have happened; only MERGED counts
-[[ "$(json_get "$input" tool_response.interrupted)" == "true" ]] && failed=1
-for f in tool_response.exit_code tool_response.exitCode; do
-  ec="$(json_get "$input" "$f")"; [[ -z "$ec" || "$ec" == 0 ]] || failed=1
-done
+# The exit code is not read: a merge can succeed and a later `&& git pull` or --delete-branch
+# fail, so every outcome goes through `gh pr view` below (and an interrupted command too).
 cwd="$(json_get "$input" cwd)"
 
 generic="Coordinator: a PR may have been merged. If so, send its author \"PR #<N> merged. Next: <issue | handover | stand by | done>\" in this turn (review-merge.md, step 9); for a per-issue agent, archive its session afterwards (mcp__ccd_session_mgmt__archive_session); a standing session is archived only on rotation."
@@ -42,7 +39,7 @@ emit() { printf '{"hookSpecificOutput":{"hookEventName":"PostToolUse","additiona
 
 if ! command -v python3 >/dev/null 2>&1; then emit "$generic (python3 missing: the merge was not recorded.)"; exit 0; fi
 
-# One line per finding: MERGED <repo#N> | OPEN <ref> <state> | ERROR <ref> | AUTO <ref> | UNPARSED
+# One line per finding: MERGED <repo#N> | OPEN <ref> <state> | ERROR <ref> | AUTO <ref> | CD <ref> | UNPARSED
 result="$(python3 -I - "${COORDINATOR_GH:-gh}" "${cwd:-$PWD}" "$cmd" "${COORDINATOR_GH_DEADLINE:-20}" <<'PY'
 import json, os, re, shlex, subprocess, sys, time
 gh, cwd = sys.argv[1], sys.argv[2]
@@ -113,13 +110,17 @@ def scan(cmd, depth=0):
         toks = list(lex)
     except ValueError:
         toks = cmd.split()
-    i, start, segstart = 0, True, 0
+    i, start, segstart, cdseen, envrepo = 0, True, 0, False, None
     while i < len(toks):
         t = toks[i]
         if is_sep(t):
-            start = True; i += 1; segstart = i; continue
+            start = True; i += 1; segstart = i; envrepo = None; continue
         if start and re.match(r"^[A-Za-z_][A-Za-z0-9_]*=", t):   # VAR=value prefix
+            if t.startswith("GH_REPO="):
+                envrepo = t.split("=", 1)[1]
             i += 1; continue
+        if start and t in ("cd", "pushd", "popd"):    # later commands run in another directory
+            cdseen = True
         # words after which a new command starts: shell keywords and command prefixes
         if start and t in ("then", "do", "else", "elif", "if", "while", "until", "{", "!", "time",
                            "sudo", "command", "exec", "env", "xargs", "nohup", "nice", "timeout"):
@@ -137,7 +138,7 @@ def scan(cmd, depth=0):
         if start and depth < 3 and t == "eval" and i + 1 < len(toks):
             scan(" ".join(toks[i+1:]), depth + 1)
             return
-        k, grepo = i + 1, None
+        k, grepo = i + 1, envrepo
         while start and t == "gh" and k < len(toks) and toks[k].startswith("-") and not is_sep(toks[k]):
             if toks[k] in ("-R", "--repo") and k + 1 < len(toks):
                 grepo = toks[k+1]; k += 2
@@ -160,7 +161,7 @@ def scan(cmd, depth=0):
                 elif not a.startswith("-") and pr is None:
                     pr = a
                 j += 1
-            merges.append((pr, repo, auto))
+            merges.append((pr, repo, auto, cdseen and repo is None))
             i = j; start = False; continue
         if t == "gh" and depth < 5:      # gh ... pr merge somewhere we did not read as a command
             k = i + 1
@@ -168,7 +169,7 @@ def scan(cmd, depth=0):
                 k += 2 if toks[k] in ("-R", "--repo") else 1
             seg = toks[segstart:i]
             if toks[k:k+2] == ["pr", "merge"] and not (seg and seg[0] in ("echo", "printf")):
-                merges.append((None, None, False))
+                merges.append((None, None, False, False))
         start = False; i += 1
     # $(...) and `...`, also inside double quotes (single-quoted text is literal)
     if depth < 3:
@@ -179,10 +180,10 @@ def scan(cmd, depth=0):
 try:
     scan(sys.argv[3])
 except Exception:
-    merges.append((None, None, False))
+    merges.append((None, None, False, False))
 merges[:] = list(dict.fromkeys(merges))
 # no merge at command position (heredoc body, string, comment, echo): nothing ran, say nothing
-for pr, repo, auto in merges:
+for pr, repo, auto, cd in merges:
     m = re.match(r"^#?(\d+)$", pr or "")
     u = re.match(r"^https?://[^/]+/([^/]+/[^/]+)/pull/(\d+)", pr or "")
     if u:
@@ -192,6 +193,8 @@ for pr, repo, auto in merges:
     else:
         print("UNPARSED"); continue
     ref = (repo + "#" + num) if repo else ("#" + num)
+    if cd:
+        print("CD", ref); continue
     left = deadline - time.monotonic()
     if left <= 0.2:
         print("ERROR", ref); continue
@@ -219,9 +222,10 @@ recorded=(); notes=""
 while read -r kind ref extra; do
   case "$kind" in
     MERGED) pending_add "$sid" "$ref" && recorded+=("$ref") ;;
-    AUTO) [[ $failed -eq 0 ]] && notes+=" ${ref}: --auto queued the merge (not merged yet), so it was NOT recorded; check it (gh pr view <N> --json state,autoMergeRequest) and send the Next message once it has merged (review-merge.md, step 9)." ;;
-    ERROR) [[ $failed -eq 0 ]] && notes+=" ${ref}: gh could not confirm the merge, so it was NOT recorded; if it merged, send its Next message anyway." ;;
-    UNPARSED) [[ $failed -eq 0 ]] && notes+=" A gh pr merge whose PR number could not be read (pass a literal number) was NOT recorded; if it merged, send its Next message anyway." ;;
+    AUTO) notes+=" ${ref}: --auto queued the merge (not merged yet), so it was NOT recorded; check it (gh pr view <N> --json state,autoMergeRequest) and send the Next message once it has merged (review-merge.md, step 9)." ;;
+    ERROR) notes+=" ${ref}: gh could not confirm the merge, so it was NOT recorded; if it merged, send its Next message anyway." ;;
+    UNPARSED) notes+=" A gh pr merge whose PR number could not be read (pass a literal number) was NOT recorded; if it merged, send its Next message anyway." ;;
+    CD) notes+=" ${ref}: the command changed directory first, so the PR was NOT looked up (it could be in another repo); if it merged, send its Next message anyway." ;;
     OPEN) ;;  # the merge did not happen: nothing to say
   esac
 done <<<"$result"

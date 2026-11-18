@@ -29,7 +29,15 @@ fi
 # Inbox results hold several messages (JSON): any one of them may qualify; a message starts at the
 # top, or at a <cross-session-message ...> wrapper tag (inline or alone on its line), and leading
 # blank lines are skipped. A user prompt that quotes a wrapper block with "PR ready" right after
-# the tag still fires: accepted.
+# the tag still fires: accepted. Markdown-wrapped first lines (`**PR ready:**`) do not count.
+# No python3, or a crash of the reader: the old rule applies (the phrase anywhere in the text).
+loose() {   # fail open: the old rule, the phrase anywhere in the text
+  shopt -s nocasematch
+  [[ "$text" =~ PR[[:space:]]+(is[[:space:]]+)?ready ]] && printf '%s' "$text"
+  shopt -u nocasematch
+  return 0
+}
+if command -v python3 >/dev/null 2>&1; then
 firsts="$(printf '%s' "$text" | python3 -I -c '
 import json, re, sys
 raw = sys.stdin.read()
@@ -58,7 +66,8 @@ for t in items:
         hit = hit or bool(head.match(l)); at_start = False
     if hit:
         print(t)
-' 2>/dev/null)"
+' 2>/dev/null)" || firsts="$(loose)"   # reader crashed: fail open
+else firsts="$(loose)"; fi   # no python3: fail open, as merge-reminder does
 [[ -n "$firsts" ]] || exit 0
 text="$firsts"
 
