@@ -29,6 +29,13 @@ Every claim merged as `UNVERIFIED`, with what would verify it. Cleared at releas
 |---|---|---|
 | <claim> | <PR or file> | <the check that would settle it; who can run it> |
 
+## Release notes draft
+
+Added to as PRs merge, so the release does not start from a blank page. Per unit, one line per
+user-visible change (PR link). Cleared at release.
+
+- <unit>: <change> (<owner/repo#N>)
+
 ## Ideas (no issue yet)
 
 - <idea>

@@ -16,6 +16,13 @@ Updated: {{DATE}}
 
 1. <What only the owner can do or decide, with what it unblocks.>
 
+## Pending starts
+
+Sessions to start on the owner's next desktop turn, because starts are refused while the owner is
+on Remote Control. One line each: <session name>, <unit>, <issue>, <brief location>.
+
+- none
+
 ## Active delegations
 
 - none <or: date, what the owner delegated, until when. Delete when it ends.>

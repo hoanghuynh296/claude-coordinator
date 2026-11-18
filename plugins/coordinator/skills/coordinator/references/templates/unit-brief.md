@@ -25,6 +25,13 @@ Read first: `AGENTS.md`<, `OWNERSHIP.md`, the contract files this unit produces 
 
 <Local set-up for this machine, if any.>
 
+## Cross-lane mini-exception (only when the issue names one)
+
+A small change in another lane's file is allowed only if the issue names that file and why. It
+stays in the same PR, the PR description lists it under "Cross-lane", and the Reviewer checks
+it (mandatory for that PR). Anything not named in the issue goes through an issue for the owning
+unit.
+
 ## Rules
 
 1. Work arrives as an issue with acceptance criteria. One issue = one branch from fresh

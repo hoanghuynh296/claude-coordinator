@@ -142,3 +142,14 @@ A profile is expected to change. Review it when: a unit's agent idles often (swi
 the integration limit), the ledger lint keeps failing (the state is in the wrong file), or the
 owner adds a rule. Change one thing, log it in `DECISIONS.md`, and tell the affected agents in
 their next batched message.
+
+### 9. Deploy
+
+Where prod runs, which checkout and branch is deployed, and who deploys (the coordinator never
+does). Deploy-only items no gate can check are merged as `UNVERIFIED` and kept as their own
+debt class "Deploy-only" in `ROADMAP.md`, cleared by whoever deploys. Omit if nothing is deployed.
+
+### 10. Files with no unit
+
+Root and tooling files that belong to no unit (`.claude/**`, `.vscode/**`, `README.md`,
+`OWNERSHIP.md`): name an owner for each, so a change has an issue and a unit to go to.
