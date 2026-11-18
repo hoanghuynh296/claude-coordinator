@@ -81,6 +81,11 @@ expect_lint "project:C-NNN reference is allowed" ok "$w/n" "0 error(s)"
 fresh n2; echo "Waits on C-099." >> "$w/n2/COORDINATION.md"
 expect_lint "bare unknown decision id is an error" fail "$w/n2" "C-099 is cited"
 
+fresh m3; printf '| prose that never closes the row %s\n' "$(printf 'x%.0s' $(seq 1 300))" >> "$w/m3/COORDINATION.md"
+expect_lint "long prose line starting with | still fails" fail "$w/m3" "budget 240"
+fresh n3; echo "See http://h:C-1 for it." >> "$w/n3/COORDINATION.md"
+expect_lint "url-like host:C-1 is not a cross-ledger reference" fail "$w/n3" "C-1 is cited"
+
 fresh o; echo "- C-002: use bullets" >> "$w/o/coordination/DECISIONS.md"
 expect_lint "decision as a bullet says how to write the row" fail "$w/o" "write a table row"
 
@@ -101,6 +106,20 @@ bash "$scripts/install-guards.sh" "$w/q" >/dev/null
 echo "Waits on C-777." >> "$w/q/COORDINATION.md"
 ( cd "$w/q" && git add -A && git -c user.name=t -c user.email=t@t commit -qm bad >/dev/null 2>&1 ) \
   && { failn=$((failn+1)); echo "FAIL broken ledger was committed"; } || { pass=$((pass+1)); echo "PASS broken ledger commit is refused"; }
+
+# foreign pre-commit hook: refused without --force, other steps still run; --force replaces; idempotent
+fresh r; ( cd "$w/r" && git init -q . ); printf '#!/bin/sh\nexit 0\n' > "$w/r/.git/hooks/pre-commit"; chmod +x "$w/r/.git/hooks/pre-commit"
+rc=0; bash "$scripts/install-guards.sh" --protect "main" "$w/r" >/dev/null 2>&1 || rc=$?
+grep -q 'exit 0' "$w/r/.git/hooks/pre-commit" && [[ $rc -ne 0 && -x "$w/r/.git/hooks/pre-push" && "$(git -C "$w/r" config coordinator.protectedBranches)" == main ]] \
+  && { pass=$((pass+1)); echo "PASS foreign pre-commit hook refused (rc!=0), pre-push and --protect still done"; } \
+  || { failn=$((failn+1)); echo "FAIL foreign pre-commit hook handling (rc=$rc)"; }
+bash "$scripts/install-guards.sh" --force "$w/r" >/dev/null 2>&1
+grep -q 'coordinator-kit ledger-lint pre-commit' "$w/r/.git/hooks/pre-commit" && [[ -f "$w/r/.git/hooks/pre-commit.before-coordinator" ]] \
+  && { pass=$((pass+1)); echo "PASS --force replaces the foreign pre-commit hook"; } || { failn=$((failn+1)); echo "FAIL --force pre-commit"; }
+h1="$(cat "$w/r/.git/hooks/pre-commit")"; rc=0
+bash "$scripts/install-guards.sh" "$w/r" >/dev/null 2>&1 || rc=$?
+[[ $rc -eq 0 && "$h1" == "$(cat "$w/r/.git/hooks/pre-commit")" ]] \
+  && { pass=$((pass+1)); echo "PASS re-install is idempotent"; } || { failn=$((failn+1)); echo "FAIL re-install (rc=$rc)"; }
 
 [[ -n "${KEEP:-}" ]] || rm -rf "${w:?}"
 echo "passed $pass, failed $failn"

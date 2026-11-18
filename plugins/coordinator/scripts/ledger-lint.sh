@@ -8,7 +8,7 @@
 #   - COORDINATION.md has no "Updated: YYYY-MM-DD" line
 #   - a ledger file holds a session id (local_xxxxxxxx) or a home path (/Users/x, /home/x, C:\Users\x)
 #   - a decision id (C-123) is cited in the ledger but has no row in DECISIONS.md, or a row id repeats
-#     (a reference written <project>:C-123 points at another ledger and is allowed)
+#     (a reference written <project>:C-123 with a lowercase project name points at another ledger and is allowed)
 #   - a decision in DECISIONS.md written as a bullet instead of a table row
 #   - a template placeholder ({{NAME}}) is left in a ledger file
 # Warnings (exit 0):
@@ -89,7 +89,7 @@ if ledger is not None:
         err(f"COORDINATION.md: {len(ledger)} lines, budget {cfg['MAX_LINES']} "
             "(delete finished items; rules go to PROFILE.md, next work to ROADMAP.md, reasons to DECISIONS.md)")
     for i, line in enumerate(ledger, 1):
-        if len(line) > cfg["MAX_LINE_LEN"] and not line.lstrip().startswith("|"):
+        if len(line) > cfg["MAX_LINE_LEN"] and not re.match(r"^\s*\|.*\|\s*$", line):
             err(f"COORDINATION.md:{i}: line of {len(line)} characters, budget {cfg['MAX_LINE_LEN']} (table rows are exempt; shorten the prose)")
     updated = None
     for line in ledger:
@@ -146,7 +146,9 @@ if decisions is not None:
         if rel == "coordination/DECISIONS.md":
             continue
         for i, line in enumerate(read(rel) or [], 1):
-            for d in re.findall(r"(?<![\w:-])C-\d+\b", line):
+            # <project>:C-NNN points at another ledger; strip those, then every bare id must exist here
+            bare = re.sub(r"(?<![\w.:/-])[a-z0-9][\w.-]*:C-\d+\b", " ", line)
+            for d in re.findall(r"(?<![\w-])C-\d+\b", bare):
                 cited.setdefault(d, f"{rel}:{i}")
     for d, where in sorted(cited.items()):
         if d not in seen:

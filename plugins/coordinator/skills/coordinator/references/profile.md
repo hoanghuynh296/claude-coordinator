@@ -83,8 +83,6 @@ None is mandatory. Add a role when its trigger is true; remove it when it stops 
 - **Cadence:** `milestone` (work is planned in milestones with exit criteria and closed with a
   demo) or `continuous` (an ordered backlog per unit; release when the gate and the owner say
   so). A project may use milestones for one unit and a continuous backlog for another.
-- **Contracts:** where units meet, what the artifact is, where its version is pinned, and what
-  checks it (see `packs/artifact-contracts.md`).
 
 ### 5. Contracts between units
 

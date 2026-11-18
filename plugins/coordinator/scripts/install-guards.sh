@@ -65,6 +65,7 @@ for repo in "${repos[@]}"; do
 
   top="$(git -C "$repo" rev-parse --show-toplevel 2>/dev/null || true)"
   if [[ -n "$top" && -f "$top/COORDINATION.md" ]]; then
+    skip_pc=0
     pc="$hooks/pre-commit"; pmarker="coordinator-kit ledger-lint pre-commit"
     if [[ -e "$pc" ]] && ! grep -q "$pmarker" "$pc"; then
       if [[ $force -eq 1 ]]; then
@@ -72,19 +73,22 @@ for repo in "${repos[@]}"; do
         echo "    existing pre-commit hook saved as pre-commit.before-coordinator"
       else
         echo "    FAILED: a different pre-commit hook exists ($pc); rerun with --force to replace it" >&2
-        rc=1; continue
+        rc=1; skip_pc=1
       fi
     fi
+  fi
+  if [[ -n "$top" && -f "$top/COORDINATION.md" && ${skip_pc:-0} -eq 0 ]]; then
     cp "$(dirname "$src")/ledger-lint.sh" "$hooks/coordinator-ledger-lint.sh"
     cat >"$pc" <<'HOOK'
 #!/usr/bin/env bash
 # coordinator-kit ledger-lint pre-commit: refuse a commit that breaks the ledger rules.
+command -v python3 >/dev/null 2>&1 || { echo "ledger-lint skipped: python3 not found" >&2; exit 0; }
 top="$(git rev-parse --show-toplevel)"
 [[ -f "$top/COORDINATION.md" ]] || exit 0
 exec bash "$(dirname "$0")/coordinator-ledger-lint.sh" "$top"
 HOOK
     chmod +x "$pc"
-    echo "    ledger-lint pre-commit installed ($pc)"
+    echo "    ledger-lint pre-commit installed ($pc); it holds a copy of the lint: re-run install-guards.sh after upgrading the plugin"
   fi
 
   if [[ -n "$protect" ]]; then
