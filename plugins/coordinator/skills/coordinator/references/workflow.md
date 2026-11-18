@@ -33,7 +33,11 @@ the issues on either side of it start.
 Hand out ONE issue per agent, never a queue of two or three. The agent takes that issue
 through its full lifecycle (section 4) and waits; the next issue goes out in the coordinator's
 message after the merge (`PR #<n> merged. Next: <issue>`). Units in `per-issue` mode get a
-fresh session per issue instead (brief: `templates/unit-brief.md` plus the issue link).
+fresh session per issue instead (brief: `templates/unit-brief.md` plus the issue link), unless
+the coordinator sends the strict same-session form `PR #<n> merged. Next: #<m> (same session)`
+(`review-merge.md` step 9: same unit, context under 50% of soft measured with the session tools,
+no mandatory-Reviewer risk area, fewer than 3 issues in a row in that session). After the 3rd
+issue, or when any condition fails, the next issue goes to a fresh session.
 
 Sessions can only be started in a turn the owner started from the desktop app. Start every
 session the stretch needs in that one turn. If sessions cannot be started (the owner is on
@@ -86,7 +90,8 @@ until it has.
    on: check `mcp__ccd_pr__get_status` and unbind (`mcp__ccd_pr__unbind_pr`) any PR bound to you.
    Update the ledger (remove the item; adjust "ahead by"). In the same turn, read the author's
    context (`mcp__ccd_session_mgmt__get_usage`) and send it `PR #<n> merged. Next: <issue |
-   handover | stand by | done>` (`review-merge.md`, step 9).
+   handover | stand by | done>` (`review-merge.md`, step 9). Without `(same session)` a
+   `per-issue` agent gets `Next: done` and is archived.
 7. Check the unit's integration limit. At the limit: stop handing out feature issues for that
    unit and go to step 6 of this workflow.
 

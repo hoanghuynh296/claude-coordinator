@@ -32,6 +32,13 @@ verification gate, who may release it, and its integration limit.
 | `standing` | one long-lived session "Agent: <unit>", rotated past the soft context threshold (after its current issue) with a handover note | the unit has a steady queue and work in flight carries context (a long build, a multi-PR feature) |
 | `per-issue` | a fresh session for each issue, archived by the coordinator after its PR merges; no handover notes | work is intermittent or each task is self-contained; the unit's docs are good enough to start cold |
 
+A `per-issue` session may take the next issue of its unit in the same session only when the
+coordinator sends `PR #<n> merged. Next: #<m> (same session)`, which it does only if `#m` is in
+the same unit, the agent's context (measured, not self-reported) is under 50% of the unit's soft
+threshold, `#m` is not in a Reviewer-mandatory risk area, and the session has done fewer than 3
+issues in a row. Otherwise it gets `Next: done` and the next issue starts fresh. The session
+stays `per-issue`: it never becomes `standing` by repetition.
+
 `per-issue` only works if the unit's `AGENTS.md` and docs carry everything a cold start needs.
 If a per-issue agent keeps asking the same questions, fix the docs, not the mode.
 

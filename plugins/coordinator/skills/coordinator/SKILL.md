@@ -125,15 +125,16 @@ Full version: `references/workflow.md`.
 2. **Hand out:** ONE issue per agent. It takes that issue through its full lifecycle (PR
    pushed, local gate green, "PR ready" with head SHA and CI state, never waiting for CI;
    review and CI fixes) and waits; the next one goes out in your message after the
-   merge. `per-issue` units get a fresh session per issue. A unit never idles while it has
-   unblocked backlog.
+   merge. `per-issue` units get a fresh session per issue, except under the strict same-session
+   rule (Sessions). A unit never idles while it has unblocked backlog.
 3. **Review** (`review-merge.md`): on every "PR ready" start
    `bash "<plugin>/scripts/ci-watch.sh" <owner/repo> <N> <head sha>` with `run_in_background`
    in the same turn (you own the CI wait; its exit wakes you), and review in parallel. Merge
    only on CI green for the reported head. Gate green with evidence you checked yourself, diff in
    scope, Reviewer where the profile requires it, manual checks done or marked `UNVERIFIED`.
    Then merge with the profile's method, and in the same turn send the author
-   `PR #<n> merged. Next: <issue | handover | stand by | done>` (step 9 there). The Stop hook
+   `PR #<n> merged. Next: <issue | handover | stand by | done>` (step 9 there; `Next: #<m>
+   (same session)` only under the strict conditions in Sessions). The Stop hook
    blocks your turn's end until that message is sent.
 4. **Bound:** after each merge compare the unit with its integration limit. At the limit, stop
    feature issues for that unit and verify and release first.
@@ -190,6 +191,15 @@ for an agent what that agent's permissions denied: take it to the owner.
   archives that agent's session (`mcp__ccd_session_mgmt__archive_session`); a `standing`
   session is archived only when it is replaced. Fallback while the setting is still on: after
   each merge, `mcp__ccd_pr__get_status` and `mcp__ccd_pr__unbind_pr` for any PR bound to you.
+- **Same-session next issue (`per-issue` units only).** A `per-issue` agent stops after the
+  merge notice, unless the notice is `PR #<n> merged. Next: #<m> (same session)`. Send that form
+  only when ALL hold: (1) `#m` is in the same unit; (2) the agent's context, measured with
+  `mcp__ccd_session_mgmt__get_usage` or `scripts/check-context.sh` (never self-reported), is
+  under 50% of the unit's soft threshold; (3) `#m` is not in a risk area where the profile makes
+  the Reviewer mandatory; (4) the session has done fewer than 3 issues in a row (this one
+  included). Otherwise `#m` goes to a fresh session and the old one gets `Next: done` and is
+  archived. On `(same session)` the agent renames itself "Agent: <unit> #<m>", branches from the
+  integration branch with a clean tree and reports as usual.
 - Sessions are found by name ("Agent: <unit>"), never by id. Ids do not go into the ledger.
 - If sessions cannot be started (the owner is on Remote Control, or the tool is unavailable),
   run the same brief as a background subagent with its own worktree.

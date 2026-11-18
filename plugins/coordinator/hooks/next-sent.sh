@@ -4,7 +4,7 @@
 # sends a message whose text holds "PR #N merged" (or "PR owner/repo#N merged") and a "Next:"
 # with content, that pending PR is cleared (see merge-reminder.sh). Whoever the recipient is:
 # the hook cannot tell the author's session from another, so the coordinator sends the notice
-# to the author only. A bare #N that is pending in two repos is not cleared; the reply says so.
+# to the author only. "Next: #M (same session)" is a valid Next like any other. A bare #N that is pending in two repos is not cleared; the reply says so.
 set -u
 
 # shellcheck source=lib.sh

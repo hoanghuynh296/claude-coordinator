@@ -246,7 +246,14 @@ assert any("ci-watch-reminder.sh" in x["command"] for e in h["UserPromptSubmit"]
 m = [e["matcher"] for e in h["PostToolUse"] if any("ci-watch-reminder.sh" in x["command"] for x in e["hooks"])]
 assert m and "ReadNotifications" in m[0] and "FetchInboxMessage" in m[0]
 PY3
-grep -q '^- \*\*0\.8\.0\*\*' "$root/README.md" && grep -q '"version": "0.8.0"' "$plugin/.claude-plugin/plugin.json" \
-  && ok "README changelog and plugin.json at 0.8.0" || bad "0.8.0 missing from README or plugin.json"
+grep -q '^- \*\*0\.9\.0\*\*' "$root/README.md" && grep -q '"version": "0.9.0"' "$plugin/.claude-plugin/plugin.json" \
+  && ok "README changelog and plugin.json at 0.9.0" || bad "0.9.0 missing from README or plugin.json"
+# Same-session next issue (0.9.0): the strict conditions are stated where the coordinator and the agent read them.
+for f in SKILL.md references/workflow.md references/profile.md references/pitfalls.md references/procedures/review-merge.md references/templates/PROFILE.md references/templates/unit-brief.md; do
+  has "$f" '(same session)' && ok "$f gives the same-session Next" || bad "$f lacks the same-session Next"
+done
+for f in references/procedures/review-merge.md SKILL.md references/profile.md; do
+  has "$f" '50%' && has "$f" 'fewer than 3' && ok "$f states the 50% and fewer-than-3 conditions" || bad "$f lacks the 50% / 3-issue conditions"
+done
 echo "passed $pass, failed $failn"
 [[ $failn -eq 0 ]]

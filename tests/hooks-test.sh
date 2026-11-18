@@ -200,6 +200,10 @@ for mode in jq python3; do
   expect_out "continued: 4th stop allowed, warning"    'systemMessage' "$out"
   [[ "$out" != *'"decision":"block"'* ]] && { pass=$((pass+1)); echo "PASS 4th stop is not blocked"; } || { failn=$((failn+1)); echo "FAIL 4th stop blocked"; }
   expect_out "next turn blocks again"                  '"decision":"block"' "$(stop coord-1 false)"
+  merged 'o/r8#60'; mr coord-1 'gh pr merge 60 -R o/r8' >/dev/null
+  expect_out "Stop reason names the same-session form" '(same session)' "$(stop coord-1 false)"
+  expect_out "same-session Next clears the guard"      "Next sent for o/r8#60" "$(sm coord-1 SendMessage 'PR o/r8#60 merged. Next: #51 (same session)')"
+  expect_eq  "only o/r#7 left after same-session Next" "o/r#7 " "$(pend coord-1)"
   expect_eq  "unregistered Stop: silent"               "" "$(stop lane-7 false)"
   expect_eq  "registered, nothing pending: silent"     "" "$(stop coord-2 false)"
 done

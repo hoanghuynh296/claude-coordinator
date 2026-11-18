@@ -132,3 +132,11 @@ Read before starting a stretch of work. Each entry: what went wrong, then the fi
     `bash <path>`; `tests/exec-bits-test.sh` checks the mode in git.
 36. **Template placeholders left behind** in CI files matched nothing. → The bootstrap script
     fails while any placeholder remains.
+33. **Per-issue sessions drifting into standing ones, or never reused.** `archive_session` was
+    refused in all six projects and session starts are refused while the owner is on Remote
+    Control; one project let finished agents take the next issue by a vague rule and sessions
+    silently became `standing`. A fresh session also re-reads every doc for a small issue. →
+    One strict form: `PR #<n> merged. Next: #<m> (same session)`, sent only when `#m` is in the
+    same unit, measured context is under 50% of soft, `#m` is not in a Reviewer-mandatory risk
+    area, and the session has done fewer than 3 issues in a row. After the 3rd issue the next one
+    goes to a fresh session. The agent renames itself "Agent: <unit> #<m>" and branches fresh.
