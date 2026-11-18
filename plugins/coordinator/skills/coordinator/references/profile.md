@@ -64,7 +64,7 @@ users see; the coordinator releases libraries, data and internal tools.
 feature work stops (principle 6). For example "15 PRs or 5 days". Set it from how much the
 releaser can verify in one sitting.
 
-### 3. Optional roles
+### 3. Roles (optional ones)
 
 None is mandatory. Add a role when its trigger is true; remove it when it stops paying.
 
@@ -83,23 +83,26 @@ None is mandatory. Add a role when its trigger is true; remove it when it stops 
 - **Cadence:** `milestone` (work is planned in milestones with exit criteria and closed with a
   demo) or `continuous` (an ordered backlog per unit; release when the gate and the owner say
   so). A project may use milestones for one unit and a continuous backlog for another.
-- **Contracts:** where units meet, what the artifact is, where its version is pinned, and what
-  checks it (see `packs/artifact-contracts.md`).
 
-### 5. Review rules
+### 5. Contracts between units
+
+Where units meet: the artifact (schema, package, data release), where its version is pinned, and
+the test or CI job that checks it (see `packs/artifact-contracts.md`). Omit with one unit.
+
+### 6. Review rules
 
 - Risk areas where the Reviewer is mandatory. Typical: auth, permissions, money, data
   deletion, tenancy, secrets, contract changes, anything that controls hardware.
 - Size limits above which the Reviewer is mandatory.
 - Which checklists apply: always `review-checklist.md`, plus the packs the project uses.
 
-### 6. Coordinator edit policy
+### 7. Coordinator edit policy
 
 What the coordinator session may edit outside the ledger (the guard hook enforces it). The
 default is planning files only. In a very small project the owner may let the coordinator
 write code; then say so in the profile and register without the guard.
 
-### 7. Budgets
+### 8. Budgets
 
 Context thresholds for rotation, report length, model per role, ledger size budget. Defaults:
 soft 250k, hard 400k (or 75% of the model's context window, whichever is lower), reports in 6
@@ -117,7 +120,18 @@ window, soft is capped at 50% and hard at 75% of it (a 200k window: soft 100k, h
 `check-context.sh --soft <n> --hard <n> [--window <n>]` reports `ok`, `SOFT` or `HARD`. One
 run applies one set of thresholds: run it once per model group when they differ.
 
-### 8. Owner rules
+### 9. Deploy
+
+Where prod runs, which checkout and branch is deployed, and who deploys (the coordinator never
+does). Deploy-only items no gate can check are merged as `UNVERIFIED` and kept as their own
+debt class "Deploy-only" in `ROADMAP.md`, cleared by whoever deploys. Omit if nothing is deployed.
+
+### 10. Files with no unit
+
+Root and tooling files that belong to no unit (`.claude/**`, `.vscode/**`, `README.md`,
+`OWNERSHIP.md`): name an owner for each, so a change has an issue and a unit to go to.
+
+### 11. Owner rules
 
 The owner's standing rules, each written once: language, spending approval, what only the
 owner decides, how the owner wants to be asked. Machine-specific rules (a work window on one
@@ -142,14 +156,3 @@ A profile is expected to change. Review it when: a unit's agent idles often (swi
 the integration limit), the ledger lint keeps failing (the state is in the wrong file), or the
 owner adds a rule. Change one thing, log it in `DECISIONS.md`, and tell the affected agents in
 their next batched message.
-
-### 9. Deploy
-
-Where prod runs, which checkout and branch is deployed, and who deploys (the coordinator never
-does). Deploy-only items no gate can check are merged as `UNVERIFIED` and kept as their own
-debt class "Deploy-only" in `ROADMAP.md`, cleared by whoever deploys. Omit if nothing is deployed.
-
-### 10. Files with no unit
-
-Root and tooling files that belong to no unit (`.claude/**`, `.vscode/**`, `README.md`,
-`OWNERSHIP.md`): name an owner for each, so a change has an issue and a unit to go to.

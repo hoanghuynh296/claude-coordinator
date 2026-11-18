@@ -82,5 +82,9 @@ copied from somewhere else. Units in `per-issue` mode have no handover file.
 
 `scripts/ledger-lint.sh <ledger-dir>` checks what a machine can check: required files, size
 and line-length budgets, session ids and home paths, decision ids that are cited but not
-defined, a missing or old `Updated:` date. Run it before every ledger commit; procedure `audit.md`
+defined (`<project>:C-NNN` points at another ledger and is allowed), decisions written as bullets,
+a missing or old `Updated:` date, or one a day behind the last commit. Table rows are exempt from
+the line-length budget. It exits nonzero on errors, and `install-guards.sh <ledger-repo>` installs a
+pre-commit hook that runs a copy of it, so a broken ledger is not committed (re-run
+`install-guards.sh` after upgrading the plugin; without python3 the hook warns and lets the commit through). Run it before every ledger commit; procedure `audit.md`
 runs it together with the checks that need judgement.
