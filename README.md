@@ -187,6 +187,13 @@ bash tests/check-context-test.sh   # ok / SOFT / HARD levels, thresholds from en
 
 ## Changes
 
+- **Unreleased**: hooks fire on events, not text (#11). merge-reminder reads the command as the
+  shell would (heredoc bodies, comments and quoted text are ignored; `bash -c` and `eval` are
+  read; a reported non-zero exit code records nothing) and records a merge only when `gh pr view`
+  shows MERGED. The PR-ready reminder fires only when a message's FIRST line starts with
+  `PR ready` (case-insensitive); the unit brief now tells agents to open their PR report with
+  `PR ready:` and to use the phrase nowhere else. Tests cover heredoc, quoted and progress-note
+  false positives.
 - **Unreleased**: template gaps (#15). PROFILE gains "Deploy" (with a Deploy-only debt class) and
   "Files with no unit"; ROADMAP a "Release notes draft"; COORDINATION "Pending starts"; new
   `ops-brief.md` and a cross-lane mini-exception in `unit-brief.md`; review-merge and workflow

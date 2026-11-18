@@ -156,7 +156,16 @@ for mode in jq python3; do
   expect_eq  "quoted subject: PR is 7, not a word of it" "o/r#12 o/r#13 o/r2#13 o/r3#14 o/r#7 " "$(pend coord-1)"
   out="$(mr coord-1 'echo gh pr merge 21; echo \"gh pr merge 22\"')"
   expect_eq  "echo gh pr merge: not a merge"           "o/r#12 o/r#13 o/r2#13 o/r3#14 o/r#7 " "$(pend coord-1)"
-  expect_out "echo gh pr merge: fail-open reminder"    "could not be read" "$out"
+  expect_eq  "echo gh pr merge: silent (nothing ran)"  "" "$out"
+  expect_out "heredoc body with gh pr merge: silent"   EMPTY "$(mr coord-1 'cat <<EOF > n.md\ngh pr merge 12 --merge\nEOF\ngit add n.md')"
+  expect_out "quoted heredoc + <<- tabs: silent"       EMPTY "$(mr coord-1 'cat <<-\"EOF\"\n\tgh pr merge 12\n\tEOF')"
+  expect_out "double-quoted string: silent"            EMPTY "$(mr coord-1 'git commit -m \"docs: gh pr merge 12\"')"
+  expect_out "comment line: silent"                    EMPTY "$(mr coord-1 'ls # then gh pr merge 12\n# gh pr merge 13')"
+  expect_out "heredoc then a real merge: recorded"     "merged o/r#31" "$(mr coord-1 'cat <<EOF\ngh pr merge 12\nEOF\ngh pr merge 31')"
+  expect_out "bash -c merge: recorded"                 "merged o/r#32" "$(mr coord-1 'bash -c \"gh pr merge 32 --squash\"')"
+  expect_out "non-zero exit_code: silent"              EMPTY "$(printf '{"session_id":"coord-1","cwd":"%s","tool_name":"Bash","tool_input":{"command":"gh pr merge 34"},"tool_response":{"exit_code":1}}' "$tmp" | bash "$hooks/merge-reminder.sh")"
+  for k in o/r#31 o/r#32; do bash "$root/plugins/coordinator/scripts/next-clear.sh" coord-1 "$k" "test" >/dev/null 2>&1; done
+  expect_eq  "false positives recorded nothing"        "o/r#12 o/r#13 o/r2#13 o/r3#14 o/r#7 " "$(pend coord-1)"
   expect_out "failed merge then '; echo ok': silent"   EMPTY "$(mr coord-1 'gh pr merge 16; echo ok')"
   mr coord-1 'gh pr merge 16 || true' >/dev/null
   expect_eq  "failed merge (still OPEN) not recorded"  "o/r#12 o/r#13 o/r2#13 o/r3#14 o/r#7 " "$(pend coord-1)"
@@ -245,12 +254,18 @@ up() { python3 -I -c 'import json,sys; print(json.dumps({"session_id":sys.argv[1
 rn() { python3 -I -c 'import json,sys; print(json.dumps({"session_id":sys.argv[1],"hook_event_name":"PostToolUse","tool_name":"ReadNotifications","tool_input":{},"tool_response":{"notifications":[{"body":sys.argv[2]}]}}))' "$1" "$2" | bash "$hooks/ci-watch-reminder.sh"; }
 for mode in jq python3; do
   if [[ $mode == python3 ]]; then export COORDINATOR_NO_JQ=1; fi
-  r="$(up coord-6 'Agent: api. #12 PR ready https://github.com/o/r/pull/12 head abc1234, CI pending. Context: 80k')"
+  r="$(up coord-6 'PR ready: #12 https://github.com/o/r/pull/12 head abc1234, CI pending. Context: 80k')"
   expect_out "$mode: PR ready prompt -> start the watch"   'run_in_background' "$r"
   expect_out "$mode: names the event"                       '"hookEventName":"UserPromptSubmit"' "$r"
   expect_out "$mode: ready-to-run command for the PR link"  ' o/r 12 <head sha>' "$r"
   expect_out "$mode: case-insensitive"                      'ci-watch.sh' "$(up coord-6 'pr ready: #3')"
   expect_out "$mode: inbox tool result -> reminder"         '"hookEventName":"PostToolUse"' "$(rn coord-6 'PR ready https://github.com/a/b/pull/4')"
+  expect_out "$mode: quoted on a later line -> silent"      EMPTY "$(up coord-6 $'Progress on #12.\nAgent said: PR ready https://github.com/o/r/pull/12')"
+  expect_out "$mode: progress note mentioning it -> silent" EMPTY "$(up coord-6 'Still working; will send PR ready once the gate is green')"
+  expect_out "$mode: quote at the start of a line 2 -> silent" EMPTY "$(up coord-6 $'> forwarded:\n> PR ready #3')"
+  expect_out "$mode: first line starts with PR ready"       'run_in_background' "$(up coord-6 $'PR ready: o/r#12 abc\nmore')"
+  expect_out "$mode: inbox, wrapped message"                'run_in_background' "$(rn coord-6 $'<cross-session-message from=\"Agent: x\">\nPR ready: o/r#4 abc')"
+  expect_out "$mode: inbox, phrase only in a later line"    EMPTY "$(rn coord-6 $'Status\nPR ready #4')"
   expect_out "$mode: other prompt -> silent"                EMPTY "$(up coord-6 'what is the status?')"
   expect_out "$mode: unregistered session -> silent"        EMPTY "$(up lane-7 'PR ready #3')"
 done

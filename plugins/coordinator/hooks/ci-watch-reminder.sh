@@ -24,9 +24,33 @@ else
   event="PostToolUse"
   text="$(json_get "$input" tool_response)"
 fi
-shopt -s nocasematch
-[[ "$text" =~ PR[[:space:]]+(is[[:space:]]+)?ready ]] || exit 0
-shopt -u nocasematch
+# Only a report counts: a message whose FIRST line starts with "PR ready" (any case). The phrase
+# later in the text, in a quote or in a progress note does not (agents' format: unit-brief.md).
+# Inbox results hold several messages (JSON): any one of them may qualify.
+firsts="$(printf '%s' "$text" | python3 -I -c '
+import json, re, sys
+raw = sys.stdin.read()
+def strings(v):
+    if isinstance(v, str):
+        yield v
+    elif isinstance(v, dict):
+        for x in v.values(): yield from strings(x)
+    elif isinstance(v, list):
+        for x in v: yield from strings(x)
+try:
+    items = list(strings(json.loads(raw)))
+except ValueError:
+    items = [raw]
+head = re.compile(r"\s*PR\s+(is\s+)?ready\b", re.I)
+for t in items:
+    lines = t.split("\n")
+    # a message starts at the top, or right after a <cross-session-message ...> wrapper line
+    starts = [0] + [k + 1 for k, l in enumerate(lines[:-1]) if l.lstrip().startswith("<cross-session-message")]
+    if any(head.match(lines[k]) for k in starts):
+        print(t)
+' 2>/dev/null)"
+[[ -n "$firsts" ]] || exit 0
+text="$firsts"
 
 cmds=(); rest="$text"
 re='github\.com/([A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+)/pull/([0-9]+)(.*)'
