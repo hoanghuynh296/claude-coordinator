@@ -281,5 +281,10 @@ for f in references/procedures/review-merge.md references/workflow.md; do
 done
 has references/workflow.md 'waits on <project>#N' && has references/workflow.md 'self-report' \
   && ok "workflow: cross-project items and measured context" || bad "workflow lacks cross-project / measured-context rules"
+for f in references/procedures/milestone-close.md references/workflow.md references/templates/PROFILE.md references/procedures/kickoff.md references/pitfalls.md; do
+  has "$f" 'release/vX.Y.Z' && has "$f" 'back-merge' && ok "$f: release standard (release/vX.Y.Z, back-merge)" || bad "$f lacks the release standard"
+done
+has references/templates/PROFILE.md 'Tag-only repo' && ok "PROFILE template: tag-only note" || bad "PROFILE template lacks the tag-only note"
+has references/procedures/review-merge.md 'gh issue close' && ok "review-merge: coordinator closes the linked issue" || bad "review-merge lacks gh issue close"
 echo "passed $pass, failed $failn"
 [[ $failn -eq 0 ]]

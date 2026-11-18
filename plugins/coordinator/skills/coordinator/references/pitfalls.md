@@ -36,7 +36,11 @@ Read before starting a stretch of work. Each entry: what went wrong, then the fi
    three at once.
 10. **Pushes onto a merged PR's branch.** Three times an agent added commits to a branch whose
     PR had already merged; the commits went nowhere. → Delete branches on merge (repo
-    setting) and install the pre-push guard (`install-guards.sh`).
+    setting) and install the pre-push guard (`install-guards.sh`). That setting deleted `develop`
+    itself in three projects when a develop→main release PR merged. → `develop` is never a PR
+    head: release from `release/vX.Y.Z`, tag, then back-merge `main` into `develop`
+    (`milestone-close.md`). "Closes #N" fires only on the default branch, so the coordinator
+    closes the issue by hand after merging into `develop` (`review-merge.md`).
 11. **Stacked PRs merged into their base lose work.** → Retarget a stacked PR to the
     integration branch before merging its base.
 12. **Stacked PRs got no CI.** The workflow ran only for PRs into the integration branch, so a
