@@ -30,7 +30,7 @@ verification gate, who may release it, and its integration limit.
 | Mode | What it means | Use when |
 |---|---|---|
 | `standing` | one long-lived session "Agent: <unit>", rotated past the soft context threshold (after its current issue) with a handover note | the unit has a steady queue and work in flight carries context (a long build, a multi-PR feature) |
-| `per-issue` | a fresh session for each issue, archived by the coordinator after its PR merges; no handover notes | work is intermittent or each task is self-contained; the unit's docs are good enough to start cold |
+| `per-issue` | a fresh session for each issue, archived by the coordinator after its PR merges (unless the coordinator sends a same-session Next, below); no handover notes | work is intermittent or each task is self-contained; the unit's docs are good enough to start cold |
 
 A `per-issue` session may take the next issue of its unit in the same session only when the
 coordinator sends `PR #<n> merged. Next: #<m> (same session)`, which it does only if `#m` is in

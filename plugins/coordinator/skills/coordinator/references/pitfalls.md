@@ -132,7 +132,7 @@ Read before starting a stretch of work. Each entry: what went wrong, then the fi
     `bash <path>`; `tests/exec-bits-test.sh` checks the mode in git.
 36. **Template placeholders left behind** in CI files matched nothing. → The bootstrap script
     fails while any placeholder remains.
-33. **Per-issue sessions drifting into standing ones, or never reused.** `archive_session` was
+37. **Per-issue sessions drifting into standing ones, or never reused.** `archive_session` was
     refused in all six projects and session starts are refused while the owner is on Remote
     Control; one project let finished agents take the next issue by a vague rule and sessions
     silently became `standing`. A fresh session also re-reads every doc for a small issue. →

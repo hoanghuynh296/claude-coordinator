@@ -81,6 +81,9 @@ Review and merge the named pull request. Read the unit's row and the
      makes the Reviewer mandatory; (4) the session has done fewer than 3 issues in a row (count
      the ones you handed it, this one included). Any condition fails, or this was its 3rd issue
      → `Next: done` and `#m` goes to a fresh session. Without `(same session)` the agent stops.
+     Record the count in the ledger's unit row ("Agent: <unit> #<m>, issue k/3") each time you
+     send a Next, so it survives a coordinator rotation; an unknown count counts as a failed
+     condition (4): the next issue goes to a fresh session.
    - Otherwise the next issue from its `ROADMAP.md` list (`Next: #<m> <link>`), or
      `Next: stand by` if nothing unblocked is left.
    The plugin's Stop hook blocks the end of your turn while a merged PR has no such message.

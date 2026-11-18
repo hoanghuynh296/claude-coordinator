@@ -197,7 +197,7 @@ for an agent what that agent's permissions denied: take it to the owner.
   `mcp__ccd_session_mgmt__get_usage` or `scripts/check-context.sh` (never self-reported), is
   under 50% of the unit's soft threshold; (3) `#m` is not in a risk area where the profile makes
   the Reviewer mandatory; (4) the session has done fewer than 3 issues in a row (this one
-  included). Otherwise `#m` goes to a fresh session and the old one gets `Next: done` and is
+  included; kept in the ledger unit row "issue k/3", an unknown count fails it). Otherwise `#m` goes to a fresh session and the old one gets `Next: done` and is
   archived. On `(same session)` the agent renames itself "Agent: <unit> #<m>", branches from the
   integration branch with a clean tree and reports as usual.
 - Sessions are found by name ("Agent: <unit>"), never by id. Ids do not go into the ledger.

@@ -54,7 +54,7 @@ Read first: `AGENTS.md`<, `OWNERSHIP.md`, the contract files this unit produces 
 11. One issue at a time, one full lifecycle. After "PR ready" you wait: fix review findings
     when told, and start nothing new until the coordinator's message `PR #<n> merged. Next:
     <issue | handover | stand by | done>`. Then do exactly that (`done`: a `per-issue` session
-    is archived; stop). `per-issue` only: if it reads `Next: #<m> (same session)`, take #<m> in
+    is archived, unless the coordinator sends a same-session Next; stop). `per-issue` only: if it reads `Next: #<m> (same session)`, take #<m> in
     this session: rename yourself "Agent: <unit> #<m>", check out the integration branch (up to
     date, clean tree), branch from it, and run the full lifecycle again; report as usual. If
     the tree is not clean or the branch cannot be made, report "blocked: <what>". Without
