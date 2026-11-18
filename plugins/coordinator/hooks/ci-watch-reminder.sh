@@ -26,7 +26,10 @@ else
 fi
 # Only a report counts: a message whose FIRST line starts with "PR ready" (any case). The phrase
 # later in the text, in a quote or in a progress note does not (agents' format: unit-brief.md).
-# Inbox results hold several messages (JSON): any one of them may qualify.
+# Inbox results hold several messages (JSON): any one of them may qualify; a message starts at the
+# top, or at a <cross-session-message ...> wrapper tag (inline or alone on its line), and leading
+# blank lines are skipped. A user prompt that quotes a wrapper block with "PR ready" right after
+# the tag still fires: accepted.
 firsts="$(printf '%s' "$text" | python3 -I -c '
 import json, re, sys
 raw = sys.stdin.read()
@@ -41,12 +44,19 @@ try:
     items = list(strings(json.loads(raw)))
 except ValueError:
     items = [raw]
-head = re.compile(r"\s*PR\s+(is\s+)?ready\b", re.I)
+head = re.compile(r"PR\s+(is\s+)?ready\b", re.I)
+wrap = re.compile(r"<\\?cross-session-message[^>]*>")
 for t in items:
-    lines = t.split("\n")
-    # a message starts at the top, or right after a <cross-session-message ...> wrapper line
-    starts = [0] + [k + 1 for k, l in enumerate(lines[:-1]) if l.lstrip().startswith("<cross-session-message")]
-    if any(head.match(lines[k]) for k in starts):
+    at_start, hit = True, False
+    for line in t.split("\n"):
+        l = line.strip()
+        m = wrap.match(l)
+        if m:                       # a wrapper tag opens a new message, inline or on its own line
+            l, at_start = l[m.end():].strip(), True
+        if not at_start or not l:
+            continue
+        hit = hit or bool(head.match(l)); at_start = False
+    if hit:
         print(t)
 ' 2>/dev/null)"
 [[ -n "$firsts" ]] || exit 0

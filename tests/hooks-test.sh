@@ -163,7 +163,18 @@ for mode in jq python3; do
   expect_out "comment line: silent"                    EMPTY "$(mr coord-1 'ls # then gh pr merge 12\n# gh pr merge 13')"
   expect_out "heredoc then a real merge: recorded"     "merged o/r#31" "$(mr coord-1 'cat <<EOF\ngh pr merge 12\nEOF\ngh pr merge 31')"
   expect_out "bash -c merge: recorded"                 "merged o/r#32" "$(mr coord-1 'bash -c \"gh pr merge 32 --squash\"')"
-  expect_out "non-zero exit_code: silent"              EMPTY "$(printf '{"session_id":"coord-1","cwd":"%s","tool_name":"Bash","tool_input":{"command":"gh pr merge 34"},"tool_response":{"exit_code":1}}' "$tmp" | bash "$hooks/merge-reminder.sh")"
+  merged 'o/r#70' 'a/b#71' 'o/r#72' 'o/r#73' 'o/r#74' 'o/r#75' 'o/r#76' 'o/r#77'
+  expect_out "bash -lc: recorded"                      "merged o/r#70" "$(mr coord-1 'bash -lc \"gh pr merge 70\"')"
+  expect_out "gh -R x pr merge: recorded"              "merged a/b#71" "$(mr coord-1 'gh -R a/b pr merge 71 --squash')"
+  expect_out "sudo -u me gh pr merge: recorded"        "merged o/r#72" "$(mr coord-1 'sudo -u me gh pr merge 72')"
+  expect_out "echo \"\$(gh pr merge N)\": recorded"     "merged o/r#73" "$(mr coord-1 'echo \"$(gh pr merge 73)\"')"
+  expect_out "backticks: recorded"                     "merged o/r#74" "$(mr coord-1 'echo `gh pr merge 74`')"
+  expect_out "\$((1<<2)) is not a heredoc: recorded"   "merged o/r#75" "$(mr coord-1 'echo $((1<<2)); gh pr merge 75')"
+  expect_out "unreadable merge inside \$(): reminder"  "could not be read" "$(mr coord-1 'x=$(gh pr merge $P)')"
+  expect_out "quoted <<'EOF' heredoc: silent"          EMPTY "$(mr coord-1 'cat <<\x27EOF\x27\ngh pr merge 12\nEOF')"
+  expect_out "non-zero exit but MERGED: recorded"      "merged o/r#76" "$(printf '{"session_id":"coord-1","cwd":"%s","tool_name":"Bash","tool_input":{"command":"gh pr merge 76 && git pull"},"tool_response":{"exit_code":1}}' "$tmp" | bash "$hooks/merge-reminder.sh")"
+  expect_out "non-zero exit, PR still OPEN: silent"    EMPTY "$(printf '{"session_id":"coord-1","cwd":"%s","tool_name":"Bash","tool_input":{"command":"gh pr merge 16"},"tool_response":{"exit_code":1}}' "$tmp" | bash "$hooks/merge-reminder.sh")"
+  for k in o/r#70 a/b#71 o/r#72 o/r#73 o/r#74 o/r#75 o/r#76 o/r#77; do bash "$root/plugins/coordinator/scripts/next-clear.sh" coord-1 "$k" "test" >/dev/null 2>&1; done
   for k in o/r#31 o/r#32; do bash "$root/plugins/coordinator/scripts/next-clear.sh" coord-1 "$k" "test" >/dev/null 2>&1; done
   expect_eq  "false positives recorded nothing"        "o/r#12 o/r#13 o/r2#13 o/r3#14 o/r#7 " "$(pend coord-1)"
   expect_out "failed merge then '; echo ok': silent"   EMPTY "$(mr coord-1 'gh pr merge 16; echo ok')"
@@ -266,6 +277,8 @@ for mode in jq python3; do
   expect_out "$mode: first line starts with PR ready"       'run_in_background' "$(up coord-6 $'PR ready: o/r#12 abc\nmore')"
   expect_out "$mode: inbox, wrapped message"                'run_in_background' "$(rn coord-6 $'<cross-session-message from=\"Agent: x\">\nPR ready: o/r#4 abc')"
   expect_out "$mode: inbox, phrase only in a later line"    EMPTY "$(rn coord-6 $'Status\nPR ready #4')"
+  expect_out "$mode: inline wrapper"                        'run_in_background' "$(rn coord-6 '<cross-session-message from="x">PR ready: #3')"
+  expect_out "$mode: blank line before the first line"      'run_in_background' "$(up coord-6 $'\n\nPR ready: #3')"
   expect_out "$mode: other prompt -> silent"                EMPTY "$(up coord-6 'what is the status?')"
   expect_out "$mode: unregistered session -> silent"        EMPTY "$(up lane-7 'PR ready #3')"
 done

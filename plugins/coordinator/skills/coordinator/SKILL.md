@@ -123,7 +123,7 @@ Full version: `references/workflow.md`.
 1. **Plan:** keep each unit's backlog in `ROADMAP.md` ordered, the next items as issues
    (`ticket.md`, body per `references/templates/task-issue.md`). Contract changes first.
 2. **Hand out:** ONE issue per agent. It takes that issue through its full lifecycle (PR
-   pushed, local gate green, "PR ready" with head SHA and CI state, never waiting for CI;
+   pushed, local gate green, "PR ready" (the FIRST line of the report starts with `PR ready:`) with head SHA and CI state, never waiting for CI;
    review and CI fixes) and waits; the next one goes out in your message after the
    merge. `per-issue` units get a fresh session per issue, except under the strict same-session
    rule (Sessions). A unit never idles while it has unblocked backlog.
