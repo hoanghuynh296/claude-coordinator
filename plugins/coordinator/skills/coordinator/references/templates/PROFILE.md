@@ -49,8 +49,9 @@ merge, sends the author `PR #<n> merged. Next: <issue | handover | stand by | do
   After merging a `per-issue` agent's PR, the coordinator archives that agent's session; a
   `standing` session is archived only on rotation.
 - Same-session next issue (`per-issue` units): `PR #<n> merged. Next: #<m> (same session)`, only
-  if `#m` is in the same unit, the agent's measured context is under 50% of the unit's soft
-  threshold, `#m` is not in a Reviewer-mandatory risk area, and the session has done fewer than 3
+  if `#m` is in the same unit, the agent's measured context is under the same-session cap
+  (section 8), no session can be started this turn (Remote Control, an automated turn, a refused
+  start), `#m` is not in a Reviewer-mandatory risk area, and the session has done fewer than 3
   issues in a row; otherwise a fresh session.
 - App setting `auto_archive_on_pr_close`: off (checked <date>). With it on, the app archives
   every session bound to a PR when that PR closes, the coordinator included.
@@ -89,6 +90,7 @@ Everything else goes through an issue for the owning unit.
   stops at the next safe point (commit, push), writes a full handover, reports "blocked: rotate".
 - <Per model, if they differ: e.g. Opus 1M: soft 400k, hard 700k. A small window caps soft at
   50% and hard at 75% of it: a 200k window gives soft 100k, hard 150k.>
+- Same-session cap (`per-issue` units): <175k>. A same-session next issue only under it.
 - Reports: at most <6> lines. Reviewer: at most 15 lines.
 - `COORDINATION.md`: at most <80> lines.
 - No ack-only or status-ping messages. One batched message per agent per round. The merge

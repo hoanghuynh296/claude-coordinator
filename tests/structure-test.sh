@@ -253,7 +253,13 @@ for f in SKILL.md references/workflow.md references/profile.md references/pitfal
   has "$f" '(same session)' && ok "$f gives the same-session Next" || bad "$f lacks the same-session Next"
 done
 for f in references/procedures/review-merge.md SKILL.md references/profile.md; do
-  has "$f" '50%' && has "$f" 'fewer than 3' && ok "$f states the 50% and fewer-than-3 conditions" || bad "$f lacks the 50% / 3-issue conditions"
+  has "$f" '175k' && has "$f" 'cannot start a session' && has "$f" 'fewer than 3' && ok "$f states the 175k, no-start and fewer-than-3 conditions" || bad "$f lacks the 175k / no-start / 3-issue conditions"
+done
+# C-016 (#23): the same-session cap is a Budgets line, default 175k; no "50% of soft" rule is left.
+has references/profile.md 'Same-session cap: 175k' && has references/templates/PROFILE.md 'Same-session cap' \
+  && ok "same-session cap in profile Budgets" || bad "same-session cap missing from profile Budgets"
+for f in SKILL.md references/workflow.md references/profile.md references/pitfalls.md references/procedures/review-merge.md references/templates/PROFILE.md; do
+  ! grep -q '50% of \(the unit.s \)\?soft' "$f" && ok "$f has no 50%-of-soft rule" || bad "$f still has the 50%-of-soft rule"
 done
 # Archive fallback: two calls, then rename "(old)" and one batched owner line.
 for f in SKILL.md references/procedures/review-merge.md references/workflow.md references/procedures/handover.md; do

@@ -142,8 +142,10 @@ Read before starting a stretch of work. Each entry: what went wrong, then the fi
     Control; one project let finished agents take the next issue by a vague rule and sessions
     silently became `standing`. A fresh session also re-reads every doc for a small issue. →
     One strict form: `PR #<n> merged. Next: #<m> (same session)`, sent only when `#m` is in the
-    same unit, measured context is under 50% of soft, `#m` is not in a Reviewer-mandatory risk
-    area, and the session has done fewer than 3 issues in a row. After the 3rd issue the next one
+    same unit, measured context is under 175k (the profile may set another cap), no session can
+    be started this turn (Remote Control, an automated turn, a refused start), `#m` is not in a
+    Reviewer-mandatory risk area, and the session has done fewer than 3 issues in a row. Reuse
+    costs 5-8x a fresh start over an issue (C-016), so it is only for a stalled start. After the 3rd issue the next one
     goes to a fresh session. The agent renames itself "Agent: <unit> #<m>" and branches fresh.
 38. **Finished sessions piled up in the owner queue.** In all six projects the app's hook rewrites
     the `archive_session` input, auto mode refuses the first call, a second call with the hook's

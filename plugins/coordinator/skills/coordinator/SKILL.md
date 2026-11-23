@@ -202,10 +202,14 @@ for an agent what that agent's permissions denied: take it to the owner.
   merge notice, unless the notice is `PR #<n> merged. Next: #<m> (same session)`. Send that form
   only when ALL hold: (1) `#m` is in the same unit; (2) the agent's context, measured with
   `mcp__ccd_session_mgmt__get_usage` or `scripts/check-context.sh` (never self-reported), is
-  under 50% of the unit's soft threshold; (3) `#m` is not in a risk area where the profile makes
-  the Reviewer mandatory; (4) the session has done fewer than 3 issues in a row (this one
+  under the same-session cap (default 175k; the profile's Budgets may override it); (3) the
+  coordinator cannot start a session in this turn (the owner is on Remote Control, an automated
+  turn, or a start was refused); (4) `#m` is not in a risk area where the profile makes
+  the Reviewer mandatory; (5) the session has done fewer than 3 issues in a row (this one
   included; kept in the ledger unit row "issue k/3", an unknown count fails it). Otherwise `#m` goes to a fresh session and the old one gets `Next: done` and is
-  archived. On `(same session)` the agent renames itself "Agent: <unit> #<m>", branches from the
+  archived. Why (C-016): a fresh session costs one start (~78k plus ~40k of doc reads); reuse
+  adds 60-120k to each of the ~70 calls of an issue, 5-8x dearer. Reuse only pays when it
+  avoids a stalled start. On `(same session)` the agent renames itself "Agent: <unit> #<m>", branches from the
   integration branch with a clean tree and reports as usual.
 - Sessions are found by name ("Agent: <unit>"), never by id. Ids do not go into the ledger.
 - If sessions cannot be started (the owner is on Remote Control, or the tool is unavailable),
