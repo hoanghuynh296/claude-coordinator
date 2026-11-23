@@ -39,6 +39,8 @@ the same unit, the agent's context (measured, not self-reported) is under the sa
 automated turn, a refused start), `#m` is not in a Reviewer-mandatory risk area, and the session
 has done fewer than 3 issues in a row. Otherwise it gets `Next: done` and the next issue starts fresh. The session
 stays `per-issue`: it never becomes `standing` by repetition.
+`Next: build #<n> (same session)` after an owner-approved UI draft (`packs/ui-product.md`) is
+the same issue's build phase, not a next issue: these conditions do not apply to it.
 
 `per-issue` only works if the unit's `AGENTS.md` and docs carry everything a cold start needs.
 If a per-issue agent keeps asking the same questions, fix the docs, not the mode.

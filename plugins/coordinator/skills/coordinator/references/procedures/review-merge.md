@@ -47,7 +47,11 @@ Review and merge the named pull request. Read the unit's row and the
    - A cross-lane mini-exception (a small change in another lane's file) is allowed only if the
      issue names it; the Reviewer checks it.
    - Non-blocking → a new issue, or a line under "Ideas" in `ROADMAP.md`.
-5. **Manual checks** the profile lists for this unit (for example a browser pass). Done → say
+5. **Manual checks** the profile lists for this unit (for example a browser pass). The issue
+   says `Draft: required` → the PR links the issue's `Draft approved: <date>` and has no
+   `_draft` route or draft fixtures left; otherwise send it back (`packs/ui-product.md`). A
+   "Draft ready" report is not a PR: no CI watch; the owner approves, then you send
+   `Next: build #<n> (same session)`. Done → say
    what you checked. Not done → the merge is allowed only if the profile defers that check to
    release time; then add a row to "Verification debt" in `ROADMAP.md`.
 6. **Merge** only when CI is green on the reported head (step 2) and the review passed
