@@ -95,6 +95,12 @@ expect_line "--min-age-hours 0 -> young REMOVE" "REMOVE" young
 expect_line "--no-session-check still keeps dirty" "KEEP" dirty
 [[ -d "$W/live" ]] && bad "live removed with --no-session-check" || ok "--no-session-check skips the session check"
 
+# A root that is one worktree checks only that worktree.
+mk one; mk two
+run "$W/one" --no-session-check --apply --min-age-hours 0
+expect_line "root = one worktree -> only it REMOVE" "REMOVE" one
+[[ -d "$W/two" && "$out" != *"$W/two"* ]] && ok "root = one worktree leaves the others alone" || bad "two touched: $out"
+
 # Running from inside a worktree keeps it.
 mk inside; age "$W/inside"
 out="$(cd "$W/inside" && bash "$script" "$tmp/dev" --no-session-check --apply 2>&1)"

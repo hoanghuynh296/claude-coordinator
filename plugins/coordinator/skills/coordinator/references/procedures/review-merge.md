@@ -70,6 +70,11 @@ Review and merge the named pull request. Read the unit's row and the
      rewritten input, then rename "<name> (old)" and add it to the one owner line "Archive finished
      sessions: <names>"). Its
      work is in the PR; anything left for a next session is in the PR or the issue.
+     Then check that its worktree is gone (`git -C <repo> worktree list`: the PR's head branch,
+     under `<repo>/.claude/worktrees/`). If the app kept it, remove that one worktree, never the
+     whole repo with age 0 (another live agent's clean, pushed worktree would go too):
+     `bash "<plugin>/scripts/prune-worktrees.sh" <worktree path> --no-session-check --min-age-hours 0 --apply`
+     (it still keeps it when dirty or unpushed: a `KEEP` line goes back to the agent's issue).
    - The author is a `standing` session: leave it running; it is archived only on rotation.
    - Fallback, only while the app setting `auto_archive_on_pr_close` is still on: the app has
      bound this PR to your session (any `gh` touch binds it) and archives you when it closes.

@@ -40,6 +40,14 @@ working day, before every handover, and whenever the ledger feels wrong.
     The owner queue holds at most ONE line "Archive finished sessions: <names>" (merge several
     into one; never one item each), and no session named "(old)" is still working: one that is
     working was renamed by mistake, so rename it back or stop it.
+12. **Worktrees** (once per working day): save `mcp__ccd_session_mgmt__list_sessions`
+    (`include_archived: false`, `limit: 200`) as JSON to a scratch file, then
+    `bash "<plugin>/scripts/prune-worktrees.sh" <each unit repo> --sessions <file> --apply`
+    (a group coordinator: over the group's root folder). It removes only finished worktrees:
+    unchanged for 6 hours, clean, pushed and with no live session. Report the space freed;
+    a `KEEP` that is a finished session's unpushed or dirty work goes to its unit (an issue or a
+    message), a `STRAY` folder to the owner. Generated files a unit's tools write into a
+    worktree (for example `apps/*/AGENTS.md`) go in the profile and are passed as `--discard`.
 
 Commit and push the ledger. Report in at most 8 lines: what was wrong, what you fixed, what
 needs the owner.

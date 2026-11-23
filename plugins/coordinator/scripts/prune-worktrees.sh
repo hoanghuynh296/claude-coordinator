@@ -5,8 +5,8 @@
 #   prune-worktrees.sh <root>... (--sessions <file> | --no-session-check)
 #                      [--dry-run | --apply] [--min-age-hours N] [--discard <glob>]...
 #
-# Lists every directory directly under a `.claude/worktrees/` folder below each root and
-# removes it only when ALL of these hold:
+# Lists every directory directly under a `.claude/worktrees/` folder below each root (a root
+# that is itself such a directory is checked alone) and removes it only when ALL of these hold:
 #   1. it is a registered, unlocked git worktree (a stray folder is reported, never deleted);
 #   2. nothing in it was modified for N hours (default 6): files in the worktree (skipping
 #      .git, node_modules) and its HEAD, index and reflog in the git dir;
@@ -77,6 +77,7 @@ keep() { kept=$((kept+1)); echo "KEEP $1: $2"; }
 # Prints the first path modified in the last N minutes, empty if none.
 recent_change() { # dir gitdir minutes
   local d="$1" g="$2" m="$3" f
+  [[ "$m" -gt 0 ]] || return 0   # --min-age-hours 0: no age check
   f="$(find "$d" \( -name .git -o -name node_modules \) -prune -o -mmin "-$m" -print 2>/dev/null | head -1)"
   if [[ -z "$f" && -n "$g" ]]; then
     f="$(find "$g/HEAD" "$g/index" "$g/logs/HEAD" -mmin "-$m" -print 2>/dev/null | head -1)"
@@ -171,6 +172,9 @@ check_one() { # worktree dir (resolved)
 
 for root in "${roots[@]}"; do
   [[ -d "$root" ]] || die "not a directory: $root"
+  root="$(cd "$root" && pwd -P)"
+  # A root that is itself one worktree (`.../.claude/worktrees/<name>`): check only it.
+  if [[ "$(dirname "$root")" == */.claude/worktrees ]]; then check_one "$root"; continue; fi
   while IFS= read -r -d '' wtdir; do
     while IFS= read -r -d '' d; do
       check_one "$(cd "$d" && pwd -P)"
