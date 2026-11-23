@@ -1,5 +1,5 @@
 ---
-description: Concise status from the ledger and GitHub (per unit - released, ahead by, in progress, blocked; owner decisions first)
+description: Concise status from the ledger and GitHub (per unit - released, ahead by and open group, in progress, blocked; owner decisions first)
 ---
 
 Load the `coordinator` skill, then follow its procedure `references/procedures/status.md`.

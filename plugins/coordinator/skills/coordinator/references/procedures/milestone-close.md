@@ -2,20 +2,24 @@
 
 `<plugin>` and `<session>` are given in the skill's SKILL.md ("Paths").
 
-Close the named milestone, or release the named unit. The profile says what a release
+Close the named milestone, or release the named unit. A release is one release group
+(or a patch batch, or an urgent patch). The profile says what a release
 is for each unit, who performs it, and which checks come first.
 
 1. **Nothing open.** Every issue of the milestone (or every item ahead of the release point in
-   the unit's backlog) is merged or explicitly moved. Open ones → list them and stop.
+   the unit's backlog) is merged or explicitly moved. For a group: every issue of
+   `Group <name>` is merged; a large group is never released half done, and a group cut
+   by the safety ceiling is split so that the released part is complete on its own. Open ones → list them and stop.
 2. **Gate on the integration branch** green for the commit you will release, evidence checked
    by you.
 3. **Verification debt.** Go through the unit's rows in "Verification debt" in `ROADMAP.md`.
    Run each check that can be run now (manual browser pass, a run on the real stack, QA's
    verdict per exit criterion when QA is on). Failures → fix issues, stop. What still cannot
    be verified stays on the list and goes into the release notes as `UNVERIFIED`.
-4. **Release notes** (one message, or the release PR body): what changed in plain words; what
-   was verified and how; what is still `UNVERIFIED` and why; three to six steps to try per
-   flow; anything the owner must do on deploy.
+4. **Release notes per group** (one message, or the release PR body; one section per group
+   in the release): what changed in plain words; what apps must do (migration, new config;
+   "nothing" for a small group); what was verified and how; what is still `UNVERIFIED` and
+   why; three to six steps to try per flow; anything the owner must do on deploy.
 5. **Release** per the profile:
    - coordinator-released unit: do it, then check the result. One release standard for
      repos with a `develop`: branch `release/vX.Y.Z` from `develop`, PR into `main` (head
@@ -35,6 +39,6 @@ is for each unit, who performs it, and which checks come first.
    `coordinator/<topic>` heads; the Next guard exempts exactly these (header of
    `hooks/merge-reminder.sh`; `$COORDINATOR_GH_LOGIN` also exempts by author, never set it to an account agents share).
 7. **Ledger.** Update the unit's row (released = the new version, ahead by 0), remove the
-   cleared debt rows, close the milestone in `ROADMAP.md` and on GitHub. Lint, commit, push.
+   released group and its cleared debt rows, close the milestone in `ROADMAP.md` and on GitHub. Lint, commit, push.
 8. Measure contexts; replace `SOFT` and `HARD` sessions before the next stretch. If the unit
-   was in a feature freeze because of its integration limit, the freeze ends here.
+   was in a feature freeze because of its safety ceiling, the freeze ends here.

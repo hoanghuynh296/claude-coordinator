@@ -10,7 +10,7 @@ Updated: {{DATE}}
 
 | Unit | Released | Integration ahead by | In progress | Blocked on |
 |---|---|---|---|---|
-| <unit> | <version / PR / tag> | <n PRs, since date; limit from the profile> | <issue #N, who> | <nothing, or what> |
+| <unit> | <version / PR / tag> | <n PRs, since YYYY-MM-DD; open group <name>; ceiling from the profile> | <issue #N, who> | <nothing, or what> |
 
 ## Owner queue (in order)
 

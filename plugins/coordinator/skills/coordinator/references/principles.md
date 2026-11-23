@@ -57,14 +57,19 @@ labelled `UNVERIFIED` and tracked until someone verifies it.
 *Prevents:* "tests pass" standing in for "it works", and unverified claims quietly becoming
 facts.
 
-## 6. Integration is bounded
+## 6. Releases go by feature group; the ceiling is a safety net
 
-The profile sets a limit on how far the integration branch may run ahead of the last release
-(a number of PRs, or days). At the limit, feature work in that unit stops and verification and
-release come first.
+The backlog is kept as named release groups (one theme each, with a target version). A group is
+released when it is complete and verified, whole, with its migration notes: a count of PRs says
+nothing about risk. A large feature (UI or API change, a breaking or visible change, or apps
+must act) is its own group; small items (fixes, docs, additive) ride with the open group or a
+patch batch; an urgent fix is a patch at once. The profile also sets a safety ceiling per unit
+(default 2 weeks or 15 PRs ahead of the last release). At the ceiling, no new feature work in
+that unit: split the open group and release what is complete and verified, or finish the group.
+The ceiling never triggers a release by itself; it forces the decision.
 
-*Prevents:* agents producing changes faster than anyone can verify them, until a release needs
-a review of thirty PRs at once.
+*Prevents:* agents producing changes faster than anyone can verify them, and a count forcing a
+release in the middle of a feature (or apps getting half a feature).
 
 ## 7. A rule that matters is enforced by a machine
 

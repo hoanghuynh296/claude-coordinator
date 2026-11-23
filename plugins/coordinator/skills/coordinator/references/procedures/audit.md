@@ -14,8 +14,10 @@ working day, before every handover, and whenever the ledger feels wrong.
    ledger's "In progress" and the roadmap's lists; how far the integration branch is ahead of
    the release branch (`gh api repos/<repo>/compare/<release>...<integration> --jq .ahead_by`)
    against the ledger's "Integration ahead by". GitHub is right; fix the ledger.
-3. **Integration limits:** any unit at or over its limit and still receiving feature issues?
-   Stop them; the next item for that unit is verification and release.
+3. **Release groups and ceilings:** every open issue sits in a group; any unit past its safety
+   ceiling (default 2 weeks or 15 PRs) and still receiving feature issues? Stop them; split
+   the group and release what is complete and verified, or finish the group. A group that
+   is complete and unreleased is the next item.
 4. **Idle units:** any unit with an unblocked backlog item and nobody on it? Hand it out in
    the next batched message (or say why not, for example an owner-set pause).
 5. **Backlog depth:** every unit has at least its next two items as issues, or its list says

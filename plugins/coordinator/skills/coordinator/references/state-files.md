@@ -40,7 +40,7 @@ Where the ledger repo sits:
 ## `COORDINATION.md` shape
 
 Template: `templates/COORDINATION.md`. Sections, in order: header with `Updated:` date; one
-table of units (released, integration ahead by, in progress, blocked on); owner queue (what
+table of units (released, integration ahead by with the open release group, in progress, blocked on); owner queue (what
 only the owner can do, in order); active delegations with their expiry; open review points.
 
 Rules:
@@ -55,11 +55,12 @@ Rules:
 ## `ROADMAP.md` shape
 
 Template: `templates/ROADMAP.md`. The goal in two lines; milestones with exit criteria if the
-cadence uses them; then, per unit, an ordered list of the next issues (`#N title`), with
-"blocked on" where needed; then the verification debt list: every `UNVERIFIED` claim, with
+cadence uses them; then, per unit, the ordered release groups, each headed
+`Group <name> → vX.Y.Z (large|small)` and holding its issues (`#N title`, "blocked on" where
+needed) and the verification debt that blocks it; then the verification debt list: every `UNVERIFIED` claim, with
 what would verify it.
 
-An item without an issue is an idea, not backlog. Either create the issue or leave it under
+An issue sits in exactly one group. An item without an issue is an idea, not backlog. Either create the issue or leave it under
 "Ideas".
 
 ## `DECISIONS.md` shape

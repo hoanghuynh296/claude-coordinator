@@ -1,7 +1,7 @@
 # {{PROJECT_NAME}}: roadmap
 
 What comes next, in order. An item is backlog only when it has an issue; everything else is
-under "Ideas". The coordinator keeps at least the next two items per unit as issues.
+under "Ideas". The coordinator keeps at least the next two items per unit as issues, each placed in a group.
 
 ## Goal
 
@@ -15,11 +15,21 @@ under "Ideas". The coordinator keeps at least the next two items per unit as iss
 |---|---|---|---|
 | <M1> | <what> | <observable outcome> | <planned, running, closed> |
 
-## Backlog per unit (ordered)
+## Backlog per unit: release groups (ordered)
+
+Each group is one theme with a target version; a group is released when all its issues are
+merged and its verification debt is cleared. Large = own group; small rides with an open
+group or a patch batch group.
 
 ### <unit>
+
+#### Group <name> → v<X.Y.Z> (large|small)
+Blocked by debt: <verification debt rows that must clear first, or nothing>
 1. <owner/repo#N title> <(blocked on: ...)>
 2. <owner/repo#N title>
+
+#### Group <next name> → v<X.Y.Z> (large|small)
+1. <owner/repo#N title>
 
 ## Verification debt
 

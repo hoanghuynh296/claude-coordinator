@@ -75,8 +75,12 @@ Review and merge the named pull request. Read the unit's row and the
 7. **Ledger.** Update the unit's row in `COORDINATION.md` (in progress, "integration ahead
    by"); remove the issue from `ROADMAP.md`. Do not add a line about the merged PR. Lint,
    commit and push.
-8. **Limit.** If the unit is now at its integration limit, the next thing you hand out for it
-   is verification and release, not a feature.
+8. **Group and ceiling.** Check the unit's open release group in `ROADMAP.md`: all its issues
+   merged and its debt rows verifiable → the next thing for that unit is `milestone-close`
+   for the group (urgent patches go at once). Then check the safety ceiling (profile "Release"
+   column; default 2 weeks or 15 PRs ahead of the last release): reached → no new feature
+   issue for that unit; split the group and release what is complete and verified, or finish
+   the group. The ceiling alone never releases; a half-done large group is not shipped.
 9. **Tell the author what is next, in the same turn as the merge.** The agent waits after
    "PR ready" and runs only when a message arrives, so silence here stalls it for good.
    First check any merge you queued with `--auto`:

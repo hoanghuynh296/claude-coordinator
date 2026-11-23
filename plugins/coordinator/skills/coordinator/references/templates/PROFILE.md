@@ -12,9 +12,13 @@ Last reviewed: {{DATE}}
 
 ## 2. Units
 
-| Unit | Repo / path | Owns | Model, effort | Session | Gate (must be green to merge) | Released by | Integration limit |
+| Unit | Repo / path | Owns | Model, effort | Session | Gate (must be green to merge) | Released by | Release |
 |---|---|---|---|---|---|---|---|
-| <name> | <owner/repo or dir/**> | <what> | <model>, <effort> | <standing or per-issue> | <exact command or CI job; manual check if any> | <owner or coordinator> | <e.g. 15 PRs or 5 days> |
+| <name> | <owner/repo or dir/**> | <what> | <model>, <effort> | <standing or per-issue> | <exact command or CI job; manual check if any> | <owner or coordinator> | <by feature group; ceiling 2 weeks or 15 PRs> |
+
+Release: by feature group (large = its own group, released whole with migration notes; small
+= rides with the open group or a patch batch; urgent fix = patch at once). The ceiling is a
+safety net only: past it, no new feature work in that unit until the group is split or done.
 
 Agent session names: "Agent: <unit>" (per-issue: "Agent: <unit> #<issue>").
 Every session sits at the top level of the sidebar, each agent in its own worktree: whoever

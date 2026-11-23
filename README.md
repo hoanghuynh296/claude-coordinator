@@ -7,7 +7,7 @@ It has two layers:
 
 - **Core principles**, the same for every project: one owner and one coordinator; state in
   files, not in sessions; work as issues with acceptance criteria; units that own their ground
-  and meet at versioned contracts; independent review with evidence; bounded integration;
+  and meet at versioned contracts; independent review with evidence; releases by feature group with a safety ceiling;
   machine-enforced rules; lean messaging.
 - **A project profile** (`coordination/PROFILE.md` in the project's ledger repo): how this
   project applies them. Nothing about the shape is assumed by the commands.
@@ -18,7 +18,7 @@ It has two layers:
 | Units and how they are staffed | a standing session per unit · a fresh session per issue |
 | Optional roles | Platform (shared files), QA (acceptance per milestone), Reviewer, one-off builder |
 | Flow | integration and release branches, merge method, what a release is, milestones or a continuous backlog |
-| Gates and limits | the exact command that must be green; how far integration may run ahead of a release |
+| Gates and limits | the exact command that must be green; how releases are grouped, and the safety ceiling on how far integration may run ahead |
 | Authority | who releases each unit; what only the owner decides |
 | Packs | `saas-multitenant`, `artifact-contracts`, `ui-product` |
 
@@ -118,7 +118,7 @@ Each command runs the same procedure the skill picks from plain language
 | `/coordinator:milestone-close <name>` | verify, clear verification debt, release notes, release by whoever the profile names |
 | `/coordinator:handover [unit]` | handover note in the ledger, replacement proposal |
 | `/coordinator:status` | concise status from the ledger and GitHub |
-| `/coordinator:audit` | ledger lint, drift against GitHub, integration limits, idle units, stale delegations |
+| `/coordinator:audit` | ledger lint, drift against GitHub, release groups and ceilings, idle units, stale delegations |
 
 Also included: the `coordinator` skill (principles, profile guide, workflow, roles, state
 files, review checklist, pitfalls, packs, templates) and two agents: `coordinator:reviewer`
@@ -187,7 +187,25 @@ bash tests/check-context-test.sh   # ok / SOFT / HARD levels, thresholds from en
 
 ## Changes
 
-- **Unreleased**: (nothing yet)
+- **Unreleased**:
+  - Release groups (#30, owner decision C-039). Releases go by feature group, not by a PR count:
+    the backlog in `ROADMAP.md` is ordered groups `Group <name> → vX.Y.Z (large|small)`; large
+    (UI/API/visible/breaking or apps must act) is its own group released whole with migration
+    notes, small rides with the open group or a patch batch, an urgent fix is a patch at once.
+    The "Integration limit" becomes a safety ceiling (default 2 weeks or 15 PRs) that only stops
+    new feature work. Changed: principle 6, profile reference and template ("Release" column),
+    ROADMAP and COORDINATION templates, state-files, ticket (group and size every issue),
+    review-merge step 8, workflow "Bound", milestone-close (notes per group), audit, status.
+    ledger-lint accepts old and new profiles and warns when a unit row dated "since YYYY-MM-DD"
+    is past the ceiling days (`CEILING_DAYS`, default 14) or a `Group` heading lacks
+    `(large|small)`.
+  - Migration (existing projects keep working until they migrate): in `PROFILE.md` rename the
+    "Integration limit" column to "Release" and write `by feature group; ceiling <N weeks or M
+    PRs>` (keep your old number as the ceiling); in `ROADMAP.md` regroup each unit's ordered
+    list under `#### Group <name> → vX.Y.Z (large|small)` headings (one theme each, large items
+    alone, small ones with an open group or a patch group) and put the debt that blocks a group
+    under it; in `COORDINATION.md` write the open group in "Integration ahead by" (`n PRs,
+    since YYYY-MM-DD; group <name>`). Log it in `DECISIONS.md` (C-039) and tell the agents.
 - **0.10.0** (2026-11-18): one release standard, event-driven hooks, ledger-lint pre-commit,
   template gaps and an archive fallback.
   - Existing ledgers: re-run `install-guards.sh` (new pre-commit lint hook).

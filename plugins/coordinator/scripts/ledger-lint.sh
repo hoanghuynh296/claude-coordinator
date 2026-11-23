@@ -17,20 +17,27 @@
 #   - COORDINATION.md looks like a log (more than HISTORY_MAX lines that describe finished work)
 #   - a "delegat..." line in COORDINATION.md carries no date
 #   - PROFILE.md still has unfilled <...> fields
+#   - a COORDINATION.md table row that mentions PRs/ahead says "since YYYY-MM-DD" and that date is more than CEILING_DAYS
+#     (default 14, the group standard's safety ceiling) ago: the ceiling is passed, so no new
+#     feature work in that unit until the open release group is split or finished
+#   - a release group heading ("Group <name> → vX.Y.Z") in ROADMAP.md has no "(large)" or "(small)" size;
+#     other headings that start with "Group" are ignored
+# Release groups are optional: a profile with the old "Integration limit" column and a ROADMAP
+# without group headings stay valid (no error, no warning).
 #
 # Budgets can be set in the environment or in <ledger-dir>/.ledger-lint (KEY=VALUE lines):
-#   MAX_LINES, MAX_LINE_LEN, STALE_DAYS, HISTORY_MAX
+#   MAX_LINES, MAX_LINE_LEN, STALE_DAYS, HISTORY_MAX, CEILING_DAYS
 set -euo pipefail
 
 dir="${1:-.}"
 [[ -d "$dir" ]] || { echo "ledger dir not found: $dir" >&2; exit 2; }
 command -v python3 >/dev/null 2>&1 || { echo "ledger-lint.sh needs python3" >&2; exit 2; }
 
-python3 -I - "$dir" "${MAX_LINES:-}" "${MAX_LINE_LEN:-}" "${STALE_DAYS:-}" "${HISTORY_MAX:-}" <<'PY'
+python3 -I - "$dir" "${MAX_LINES:-}" "${MAX_LINE_LEN:-}" "${STALE_DAYS:-}" "${HISTORY_MAX:-}" "${CEILING_DAYS:-}" <<'PY'
 import datetime, os, re, subprocess, sys
 
 root = os.path.abspath(sys.argv[1])
-cfg = {"MAX_LINES": 80, "MAX_LINE_LEN": 240, "STALE_DAYS": 7, "HISTORY_MAX": 5}
+cfg = {"MAX_LINES": 80, "MAX_LINE_LEN": 240, "STALE_DAYS": 7, "HISTORY_MAX": 5, "CEILING_DAYS": 14}
 rc_file = os.path.join(root, ".ledger-lint")
 if os.path.isfile(rc_file):
     with open(rc_file, encoding="utf-8") as fh:
@@ -40,7 +47,7 @@ if os.path.isfile(rc_file):
                 k, v = line.split("=", 1)
                 if k.strip() in cfg and v.strip().isdigit():
                     cfg[k.strip()] = int(v.strip())
-for key, arg in zip(("MAX_LINES", "MAX_LINE_LEN", "STALE_DAYS", "HISTORY_MAX"), sys.argv[2:6]):
+for key, arg in zip(("MAX_LINES", "MAX_LINE_LEN", "STALE_DAYS", "HISTORY_MAX", "CEILING_DAYS"), sys.argv[2:7]):
     if arg.isdigit():
         cfg[key] = int(arg)
 
@@ -120,6 +127,18 @@ if ledger is not None:
     if len(hits) > cfg["HISTORY_MAX"]:
         warn(f"COORDINATION.md: {len(hits)} lines describe finished work (lines {', '.join(map(str, hits[:8]))}...); "
              "the ledger holds live state only")
+    today = datetime.date.today()
+    for i, line in enumerate(ledger, 1):
+        m = re.match(r"\s*\|", line)
+        s = re.search(r"since\s+(\d{4}-\d{2}-\d{2})", line) if m and re.search(r"ahead|PRs?\b", line) else None
+        if s:
+            try:
+                age = (today - datetime.date.fromisoformat(s.group(1))).days
+                if age > cfg["CEILING_DAYS"]:
+                    warn(f"COORDINATION.md:{i}: unit ahead of its release since {s.group(1)} ({age} days, "
+                         f"safety ceiling {cfg['CEILING_DAYS']}); split the open group or finish it, then release")
+            except ValueError:
+                pass
     for i, line in enumerate(ledger, 1):
         if re.search(r"delegat", line, re.I) and not line.lstrip().startswith("#") \
            and not re.search(r"\d{4}-\d{2}-\d{2}", line) and not re.search(r"\bnone\b", line, re.I):
@@ -159,6 +178,13 @@ if profile is not None:
     unfilled = [i for i, line in enumerate(profile, 1) if re.search(r"<[a-z][^<>|]*>", line)]
     if unfilled:
         warn(f"coordination/PROFILE.md: {len(unfilled)} lines still have <...> fields to fill")
+
+roadmap = read("coordination/ROADMAP.md")
+if roadmap is not None:
+    for i, line in enumerate(roadmap, 1):
+        if re.match(r"\s*#+\s*Group\s+\S.*(→|->)\s*v?\d", line) and not re.search(r"\((large|small)\)", line):
+            warn(f"coordination/ROADMAP.md:{i}: a release group heading needs its size: "
+                 "Group <name> → vX.Y.Z (large|small)")
 
 for w in warnings:
     print(f"warning: {w}")

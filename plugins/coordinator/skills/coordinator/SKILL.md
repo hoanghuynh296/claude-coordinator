@@ -99,7 +99,8 @@ Batch questions into one message, decisions first. Never send status pings.
 3. Work is an issue with acceptance criteria. One issue, one branch, one PR.
 4. Units own their ground and meet at a versioned contract.
 5. The author never approves their own work. Evidence beats claims. Unverified is labelled.
-6. Integration is bounded: at the limit, verify and release before new features.
+6. Release by feature group (large = own group, small rides along, urgent = patch at once); the
+   2 weeks / 15 PRs ceiling only stops new feature work until a group is split or finished.
 7. A rule that matters is enforced by a machine.
 8. Lean messaging. Knowledge goes into the unit's docs, not into a handover.
 
@@ -136,11 +137,12 @@ Full version: `references/workflow.md`.
    `PR #<n> merged. Next: <issue | handover | stand by | done>` (step 9 there; `Next: #<m>
    (same session)` only under the strict conditions in Sessions). The Stop hook
    blocks your turn's end until that message is sent.
-4. **Bound:** after each merge compare the unit with its integration limit. At the limit, stop
-   feature issues for that unit and verify and release first.
+4. **Group and ceiling:** after each merge check whether the unit's open release group is
+   complete (then `milestone-close`) and whether the safety ceiling is reached (then no new
+   feature issues for that unit: split the group or finish it, verify, release).
 5. **Release** (`milestone-close.md`): the profile says who releases each unit. For
-   owner-released units prepare the notes: what changed, what was verified and how, what is
-   still `UNVERIFIED`, steps to try.
+   owner-released units prepare the notes per group: what changed, what apps must do, what was
+   verified and how, what is still `UNVERIFIED`, steps to try.
 6. **Keep state:** ledger updated, linted, committed and pushed after every merge, decision,
    release, session change and owner answer. `audit.md` once per working day.
 

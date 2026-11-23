@@ -29,8 +29,9 @@ Read before starting a stretch of work. Each entry: what went wrong, then the fi
 ## Flow
 
 8. **Agents faster than verification.** About 130 PRs merged in four days with one reviewer;
-   the integration branch ran 35 commits ahead of the release without a browser check. → An
-   integration limit per unit; at the limit, verify and release before new features.
+   the integration branch ran 35 commits ahead of the release without a browser check. → Release by
+   feature group, with a safety ceiling per unit; past it, no new features until the group is split
+   or finished and verified.
 9. **No ordered backlog.** The next task lived in the coordinator's head, so agents idled and
    the owner had to ask why. → `ROADMAP.md` lists the next issues per unit; hand out two or
    three at once.
