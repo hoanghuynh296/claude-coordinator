@@ -195,7 +195,8 @@ template path when a change touches `bootstrap.sh`.
 
 - **Unreleased**:
   - CI for the kit (#26): workflow `tests` runs every `tests/*-test.sh` on each PR and push to
-    `main`; the kit's gate is now "CI `tests` green", not pasted output.
+    `main`; the kit's gate is now "CI `tests` green", not pasted output. Fixed on the way:
+    `merge-reminder.sh` failed to parse under macOS `/bin/bash` 3.2 (heredoc inside `$(...)`).
   - Release groups (#30, owner decision C-039). Releases go by feature group, not by a PR count:
     the backlog in `ROADMAP.md` is ordered groups `Group <name> → vX.Y.Z (large|small)`; large
     (UI/API/visible/breaking or apps must act) is its own group released whole with migration

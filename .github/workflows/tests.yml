@@ -31,7 +31,10 @@ jobs:
       - name: Run tests/*-test.sh
         # bootstrap-test.sh needs a checkout of the private agent-project-template;
         # without one next to this repo it prints SKIP and exits 0.
+        # Runs under the bash on PATH (macOS /bin/bash 3.2 on the runner), as owners without
+        # Homebrew bash do; every hook must work there.
         run: |
+          bash --version | head -1
           fails=()
           for t in tests/*-test.sh; do
             echo "::group::$t"

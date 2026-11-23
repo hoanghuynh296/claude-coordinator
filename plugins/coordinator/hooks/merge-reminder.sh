@@ -45,7 +45,10 @@ emit() { printf '{"hookSpecificOutput":{"hookEventName":"PostToolUse","additiona
 if ! command -v python3 >/dev/null 2>&1; then emit "$generic (python3 missing: the merge was not recorded.)"; exit 0; fi
 
 # One line per finding: EXEMPT <repo#N> | MERGED <repo#N> | OPEN <ref> <state> | ERROR <ref> | AUTO <ref> | CD <ref> | UNPARSED
-result="$(python3 -I - "${COORDINATOR_GH:-gh}" "${cwd:-$PWD}" "$cmd" "${COORDINATOR_GH_DEADLINE:-20}" <<'PY'
+# The reader is read into a variable first, not fed as a heredoc inside "$(...)": macOS
+# /bin/bash 3.2 scans a heredoc body inside "$(...)" for quotes, and the backticks below
+# end in "unexpected EOF while looking for matching ``'" there.
+IFS= read -r -d '' reader <<'PY' || true
 import json, os, re, shlex, subprocess, sys, time
 gh, cwd = sys.argv[1], sys.argv[2]
 try:
@@ -226,7 +229,8 @@ for pr, repo, auto, cd in merges:
     else:
         print("OPEN", ref, data.get("state", "?"))
 PY
-)" || result="UNPARSED"   # a crash of the reader reminds instead of going silent
+result="$(python3 -I -c "$reader" "${COORDINATOR_GH:-gh}" "${cwd:-$PWD}" "$cmd" "${COORDINATOR_GH_DEADLINE:-20}")" \
+  || result="UNPARSED"   # a crash of the reader reminds instead of going silent
 
 recorded=(); notes=""
 while read -r kind ref extra; do
