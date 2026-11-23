@@ -105,7 +105,10 @@ the test or CI job that checks it (see `packs/artifact-contracts.md`). Omit with
 
 - Risk areas where the Reviewer is mandatory. Typical: auth, permissions, money, data
   deletion, tenancy, secrets, contract changes, anything that controls hardware.
-- Size limits above which the Reviewer is mandatory.
+- Size limits above which the Reviewer is mandatory. Default (C-017): over 400 changed lines or
+  over 25 hand-written files. Not counted: `CHANGELOG.md`, `VERSION`, `package*.json`,
+  lockfiles, `public/**` mirrors and `**/vendor/**`; the profile may add to that list. A
+  release PR is exempt when every feature PR in it passed review.
 - Which checklists apply: always `review-checklist.md`, plus the packs the project uses.
 
 ### 7. Coordinator edit policy
@@ -117,7 +120,9 @@ write code; then say so in the profile and register without the guard.
 ### 8. Budgets
 
 Context thresholds for rotation, report length, model per role, ledger size budget. Defaults:
-soft 250k, hard 400k (or 75% of the model's context window, whichever is lower), reports in 6
+agents soft 250k, hard 400k (or 75% of the model's context window, whichever is lower); the
+coordinator soft 300k, hard 450k on any model and window (C-015; `check-context.sh
+--coordinator`; this replaces the old Opus 1M coordinator's 400k / 700k); reports in 6
 lines, `COORDINATION.md` at most 80 lines. Thresholds may differ per model. For a small
 window, soft is capped at 50% and hard at 75% of it (a 200k window: soft 100k, hard 150k).
 Same-session cap: 175k by default (a `per-issue` agent takes a next issue in the same session

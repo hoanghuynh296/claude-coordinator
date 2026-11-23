@@ -81,8 +81,8 @@ Batch questions into one message, decisions first. Never send status pings.
 2. Not registered yet: follow `coordinator-register.md`. No ledger yet: `adopt.md` (existing
    project) or `kickoff.md` (new project).
 3. On every owner message, measure the contexts of your agents (session tools, or
-   `<plugin>/scripts/check-context.sh`), yours included, against the profile's two
-   thresholds. `SOFT`: no new issue; it finishes the current one, writes its handover and is
+   `<plugin>/scripts/check-context.sh`), yours included (`--coordinator`), against the
+   profile's two thresholds. `SOFT`: no new issue; it finishes the current one, writes its handover and is
    replaced after that PR. `HARD`: it stops at the next safe point and is replaced now.
 4. Keep the sessions flat: every session of the project sits at the top level of the sidebar
    ("Sessions" below). A session nested under you that you started: detach it. One you cannot
@@ -214,7 +214,9 @@ for an agent what that agent's permissions denied: take it to the owner.
 - Sessions are found by name ("Agent: <unit>"), never by id. Ids do not go into the ledger.
 - If sessions cannot be started (the owner is on Remote Control, or the tool is unavailable),
   run the same brief as a background subagent with its own worktree.
-- Two thresholds (profile "Budgets"; defaults 250k soft, 400k hard). Past **soft**: send no
+- Two thresholds (profile "Budgets"; defaults for agents 250k soft, 400k hard; for the
+  coordinator 300k soft, 450k hard on any model and window, C-015: `check-context.sh
+  --coordinator`). Past **soft**: send no
   new issue; the session finishes its current issue (PR, gate green), writes its handover and
   is replaced. Past **hard**: it stops at the next safe point (commit, push), writes a full
   handover, reports "blocked: rotate". Never stop a session mid-task at soft: a fresh one

@@ -58,6 +58,11 @@ transcript s-tiny 90000
 expect "200k window under soft"      ok   "  90k  ok"   env CONTEXT_WINDOW=200k bash "$script" s-tiny
 expect "window above hard changes nothing" ok " 320k  SOFT" bash "$script" --window 1m s-mid
 expect "CONTEXT_WINDOW from env"     ok   " 320k  HARD" env CONTEXT_WINDOW=400000 bash "$script" s-mid
+expect "--coordinator: 320k is SOFT"  ok   " 320k  SOFT" bash "$script" --coordinator s-mid
+expect "--coordinator: 250k is ok"    ok   " 250k  ok"   bash "$script" --coordinator s-soft
+expect "--coordinator: 400k is SOFT"  ok   " 400k  SOFT" bash "$script" --coordinator s-hard
+expect "--coordinator over env"       ok   " 320k  SOFT" env SOFT_AT=100k HARD_AT=200k bash "$script" --coordinator s-mid
+expect "--soft wins over --coordinator" ok " 320k  ok"   bash "$script" --soft 330k --coordinator s-mid
 
 expect "hard below soft is refused"  fail "below soft" bash "$script" --soft 300k --hard 200k s-mid
 expect "bad number is refused"       fail "not a token count" bash "$script" --soft lots s-mid

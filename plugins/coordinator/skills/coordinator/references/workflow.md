@@ -130,11 +130,12 @@ After a release, clear the unit's verification debt items that the release cover
 
 ## 8. Rotate or stop
 
-- **Soft threshold** (default 250k): the session does not stop mid-task. It finishes its
+- **Soft threshold** (default 250k for agents, 300k for the coordinator): the session does not stop mid-task. It finishes its
   current issue (PR, gate green), takes no new one, moves what it learned into the unit's
   docs and writes `handover/<unit>.md` (in flight only) **before that PR merges**: a session
   whose last PR merged may be archived by the app, and its context is lost.
-- **Hard threshold** (default 400k, or 75% of the model's window if lower): it stops at the
+- **Hard threshold** (default 400k, or 75% of the model's window if lower, for agents; 450k
+  for the coordinator): it stops at the
   next safe point (commit, push), writes a full handover (done, left in order, decisions,
   commands to re-run, traps) and reports "blocked: rotate". No new step.
 - Then a fresh session with the same name starts from that note. It is never started by the

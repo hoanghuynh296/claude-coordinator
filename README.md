@@ -151,7 +151,7 @@ id and must register again.
 | `next-clear.sh <session> <owner/repo#N> <reason>` | clear a merged PR the Stop hook waits on, when its author cannot get the Next message; the reason is appended to `coordination/next-cleared.md` in the ledger. `--list` shows what is pending; `--handover` prints it and drops the session's state (written into the handover note); `--add <owner/repo#N>...` lets the replacement take it over |
 | `ci-watch.sh <owner/repo> <N> [<sha>]` | watch a PR's CI until it ends and print one line: `green` (exit 0), `red: <checks> <link>` (1, at the first failure), `error` (2), `stale-head` when the head is not or no longer the reported SHA (3), `timeout` (4, `CI_WATCH_DEADLINE`, default 90 min), `no-checks` (5, `CI_WATCH_NOCHECKS`, default 15 min), not open (6). The coordinator runs it with `run_in_background` on every "PR ready": its exit wakes the coordinator when CI ends |
 | `register.sh <session> <ledger> [unit...] [--allow glob]... [--allow-none] [--no-guard]` | register or `--unregister` a coordinator session |
-| `check-context.sh [--soft N] [--hard N] [--window N] [session...]` | context size per session from its transcript, with a level: `ok`, `SOFT` (finish the current issue, then rotate; default 250k) or `HARD` (rotate now; default 400k). `--window` caps soft at 50% and hard at 75% of the context window. Also `SOFT_AT`, `HARD_AT`, `CONTEXT_WINDOW`; one run per model group |
+| `check-context.sh [--coordinator] [--soft N] [--hard N] [--window N] [session...]` | context size per session from its transcript, with a level: `ok`, `SOFT` (finish the current issue, then rotate; default 250k) or `HARD` (rotate now; default 400k). `--coordinator`: 300k / 450k. `--window` caps soft at 50% and hard at 75% of the context window. Also `SOFT_AT`, `HARD_AT`, `CONTEXT_WINDOW`; one run per model group |
 | `bootstrap.sh <owner/repo> <dir> ...` | the single-repo SaaS starting point: repo from a template (default `hoanghuynh296/agent-project-template`, which is private: pass `--template <your repo>`), placeholders, `develop`, labels, ledger, branch protection. `--ledger-only` creates just the ledger; `--dry-run` prints every action |
 
 ## Layout
@@ -194,6 +194,13 @@ template path when a change touches `bootstrap.sh`.
 ## Changes
 
 - **Unreleased**:
+  - Defaults from owner decisions C-015 and C-017 (#24). Coordinator thresholds soft 300k,
+    hard 450k on any model and window (agents stay 250k / 400k; `check-context.sh
+    --coordinator`). Reviewer size trigger: over 400 changed lines or 25 hand-written files,
+    not counting `CHANGELOG.md`, `VERSION`, `package*.json`, lockfiles, `public/**` mirrors,
+    `**/vendor/**` (the profile may add more); a release PR is exempt when every feature PR in
+    it passed review. Ledger: at most one commit per coordinator turn. Changed: SKILL.md,
+    profile reference and template, workflow, handover, review-merge steps 4 and 7, state-files.
   - Same-session next issue only under 175k AND only when no session can start (#23, owner
     decision C-016). `Next: #m (same session)` now also needs that the coordinator cannot start
     a session this turn (Remote Control, an automated turn, a refused start); the context limit

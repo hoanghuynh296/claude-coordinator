@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Print the current context size of Claude sessions on this machine, from their transcripts.
-# Usage: check-context.sh [--soft N] [--hard N] [--window N] <session_id|transcript.jsonl>...
+# Usage: check-context.sh [--coordinator] [--soft N] [--hard N] [--window N] <session_id|transcript.jsonl>...
 #        (no sessions: the 10 most recent). N is tokens; a k or m suffix is allowed (250k, 1m).
 # Context = input + cache_read + cache_creation tokens of the last assistant turn.
 # One line per session: "<session>  <size>k  <level>  <title>", level is
@@ -8,6 +8,8 @@
 #   SOFT  at or above soft (default 250k): finish the current issue, take no new one, then rotate
 #   HARD  at or above hard (default 400k): stop at the next safe point, write the handover,
 #         report "blocked: rotate"
+# --coordinator: the coordinator's defaults, soft 300k and hard 450k (C-015), over SOFT_AT and
+# HARD_AT; --soft and --hard still win.
 # --window caps soft at 50% and hard at 75% of the model's context window (a 200k window gives
 # soft 100k, hard 150k). Thresholds also come from SOFT_AT, HARD_AT and CONTEXT_WINDOW
 # (ROTATE_AT is the old name of SOFT_AT); arguments win over the environment.
@@ -21,17 +23,21 @@ window="${CONTEXT_WINDOW:-}"
 projects="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/projects"
 command -v python3 >/dev/null 2>&1 || { echo "check-context.sh needs python3" >&2; exit 1; }
 
-args=()
+args=(); soft_arg=""; hard_arg=""; coordinator=""
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --soft) [[ $# -ge 2 ]] || usage; soft="$2"; shift 2 ;;
-    --hard) [[ $# -ge 2 ]] || usage; hard="$2"; shift 2 ;;
+    --soft) [[ $# -ge 2 ]] || usage; soft_arg="$2"; shift 2 ;;
+    --hard) [[ $# -ge 2 ]] || usage; hard_arg="$2"; shift 2 ;;
+    --coordinator) coordinator=1; shift ;;
     --window) [[ $# -ge 2 ]] || usage; window="$2"; shift 2 ;;
     -h|--help) usage ;;
     -*) echo "unknown option $1" >&2; usage ;;
     *) args+=("$1"); shift ;;
   esac
 done
+if [[ -n "$coordinator" ]]; then soft=300k; hard=450k; fi
+[[ -n "$soft_arg" ]] && soft="$soft_arg"
+[[ -n "$hard_arg" ]] && hard="$hard_arg"
 
 files=()
 if [[ ${#args[@]} -eq 0 ]]; then

@@ -49,8 +49,10 @@ Rules:
 - **A delegation expires.** "The owner delegated X for this session" must carry a date and is
   deleted when the session ends. A stale delegation reads as a standing permission.
 - **Sessions are found by name**, never by id. Ids differ per machine.
-- Commit and push after every change that another session would need: a merge, a decision, a
-  release, a session start or rotation, an owner answer.
+- Commit and push the changes another session would need (a merge, a decision, a release, a
+  session start or rotation, an owner answer) before the turn ends: at most one ledger commit
+  per coordinator turn, batching all of that turn's changes (C-015). A handover or rotation
+  still commits before the session is replaced.
 
 ## `ROADMAP.md` shape
 
