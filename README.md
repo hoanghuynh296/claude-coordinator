@@ -169,7 +169,8 @@ plugins/coordinator/
   agents/{reviewer,oneoff-builder}.md
   hooks/hooks.json, hooks/{lib,coordinator-guard,session-start,merge-reminder,next-sent,next-guard,ci-watch-reminder}.sh
   scripts/{init-ledger,ledger-lint,install-guards,pre-push-guard,register,check-context,next-clear,ci-watch,bootstrap}.sh
-tests/{hooks,ledger-lint,pre-push-guard,structure,bootstrap,exec-bits,check-context}-test.sh
+tests/{hooks,ci-watch,ledger-lint,pre-push-guard,structure,bootstrap,exec-bits,check-context}-test.sh
+.github/workflows/tests.yml
 ```
 
 ## Tests
@@ -185,9 +186,17 @@ bash tests/exec-bits-test.sh       # every plugin *.sh is executable in git
 bash tests/check-context-test.sh   # ok / SOFT / HARD levels, thresholds from env and args, window cap
 ```
 
+Gate for a kit PR: CI `tests` green (`.github/workflows/tests.yml` runs every `tests/*-test.sh`
+on each PR and push to `main`, on a GitHub-hosted macOS runner). CI has no checkout of the private
+agent-project-template, so `bootstrap-test.sh` prints `SKIP` there; run it locally with the
+template path when a change touches `bootstrap.sh`.
+
 ## Changes
 
 - **Unreleased**:
+  - CI for the kit (#26): workflow `tests` runs every `tests/*-test.sh` on each PR and push to
+    `main`; the kit's gate is now "CI `tests` green", not pasted output. Fixed on the way:
+    `merge-reminder.sh` failed to parse under macOS `/bin/bash` 3.2 (heredoc inside `$(...)`).
   - Release groups (#30, owner decision C-039). Releases go by feature group, not by a PR count:
     the backlog in `ROADMAP.md` is ordered groups `Group <name> → vX.Y.Z (large|small)`; large
     (UI/API/visible/breaking or apps must act) is its own group released whole with migration

@@ -14,7 +14,7 @@ Last reviewed: {{DATE}}
 
 | Unit | Repo / path | Owns | Model, effort | Session | Gate (must be green to merge) | Released by | Release |
 |---|---|---|---|---|---|---|---|
-| <name> | <owner/repo or dir/**> | <what> | <model>, <effort> | <standing or per-issue> | <exact command or CI job; manual check if any> | <owner or coordinator> | <by feature group; ceiling 2 weeks or 15 PRs> |
+| <name> | <owner/repo or dir/**> | <what> | <model>, <effort> | <standing or per-issue> | <CI check that must be green, e.g. CI `tests` green; manual check if any> | <owner or coordinator> | <by feature group; ceiling 2 weeks or 15 PRs> |
 
 Release: by feature group (large = its own group, released whole with migration notes; small
 = rides with the open group or a patch batch; urgent fix = patch at once). The ceiling is a

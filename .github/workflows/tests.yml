@@ -1,0 +1,45 @@
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    name: tests
+    # Public repo: GitHub-hosted runners are free (handbook standards/ci-runners.md).
+    # macOS, because the kit runs on the owner's Mac and the scripts use BSD tools.
+    runs-on: macos-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Git identity for test repos
+        run: |
+          git config --global user.name "kit-ci"
+          git config --global user.email "kit-ci@users.noreply.github.com"
+          git config --global init.defaultBranch main
+      - name: Run tests/*-test.sh
+        # bootstrap-test.sh needs a checkout of the private agent-project-template;
+        # without one next to this repo it prints SKIP and exits 0.
+        # Runs under the bash on PATH (macOS /bin/bash 3.2 on the runner), as owners without
+        # Homebrew bash do; every hook must work there.
+        run: |
+          bash --version | head -1
+          fails=()
+          for t in tests/*-test.sh; do
+            echo "::group::$t"
+            if bash "$t"; then echo "OK $t"; else echo "::error::$t failed"; fails+=("$t"); fi
+            echo "::endgroup::"
+          done
+          if (( ${#fails[@]} )); then echo "Failed: ${fails[*]}"; exit 1; fi
+          echo "All tests green"
