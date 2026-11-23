@@ -1,5 +1,5 @@
 ---
-description: Audit the coordination state - ledger lint, drift against GitHub, integration limits, verification debt, idle units, stale delegations - and fix what is wrong
+description: Audit the coordination state - ledger lint, drift against GitHub, release groups and ceilings, verification debt, idle units, stale delegations - and fix what is wrong
 ---
 
 Load the `coordinator` skill, then follow its procedure `references/procedures/audit.md`.

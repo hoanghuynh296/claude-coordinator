@@ -121,6 +121,17 @@ bash "$scripts/install-guards.sh" "$w/r" >/dev/null 2>&1 || rc=$?
 [[ $rc -eq 0 && "$h1" == "$(cat "$w/r/.git/hooks/pre-commit")" ]] \
   && { pass=$((pass+1)); echo "PASS re-install is idempotent"; } || { failn=$((failn+1)); echo "FAIL re-install (rc=$rc)"; }
 
+fresh g1; printf '| core | v0.10.0 | 3 PRs, since 2020-01-01; group Phone filters | #5 | nothing |\n' >> "$w/g1/COORDINATION.md"
+expect_lint "unit row past the ceiling days is a warning" ok "$w/g1" "safety ceiling"
+fresh g2; printf '| core | v0.10.0 | 3 PRs, since %s; group Phone filters | #5 | nothing |\n' "$(date +%Y-%m-%d)" >> "$w/g2/COORDINATION.md"
+expect_lint "unit row inside the ceiling is clean" ok "$w/g2" "1 warning(s)"
+fresh g3; printf '#### Group Phone filters → v0.11.0 (large)\n#### Group Fixes → v0.10.1 (small)\n' >> "$w/g3/coordination/ROADMAP.md"
+expect_lint "sized release groups are accepted" ok "$w/g3" "0 error(s)"
+fresh g4; printf '#### Group Phone filters → v0.11.0\n' >> "$w/g4/coordination/ROADMAP.md"
+expect_lint "group heading without a size is a warning" ok "$w/g4" "needs its size"
+fresh g5; sed -i.bak 's/Integration limit/Release/' "$w/g5/coordination/PROFILE.md"; rm -f "$w/g5/coordination/PROFILE.md.bak"
+expect_lint "old and new profile column both lint" ok "$w/g5" "0 error(s)"
+
 [[ -n "${KEEP:-}" ]] || rm -rf "${w:?}"
 echo "passed $pass, failed $failn"
 [[ $failn -eq 0 ]]

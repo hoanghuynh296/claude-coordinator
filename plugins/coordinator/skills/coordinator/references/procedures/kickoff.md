@@ -22,7 +22,7 @@ In the scratchpad write:
   criteria (or the first ordered backlog if the cadence is continuous), risks, owner-side
   tasks.
 - `PROFILE.md` from `references/templates/PROFILE.md`, using `references/profile.md` to choose:
-  topology, units with session mode, gate, release authority and integration limit, optional
+  topology, units with session mode, gate, release authority and release rule (groups, ceiling), optional
   roles (only those whose trigger is true), flow, contracts, review rules, packs, budgets,
   owner rules. Start from the closest starting point in `references/profile.md` and adjust.
 

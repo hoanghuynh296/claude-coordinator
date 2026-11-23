@@ -23,7 +23,7 @@ issues and independent review.
 ### 2. Units
 
 For each unit: name, repo and path, what it owns, model and effort, session mode, its
-verification gate, who may release it, and its integration limit.
+verification gate, who may release it, and its release rule (groups + safety ceiling).
 
 **Session mode**
 
@@ -60,9 +60,19 @@ coordinator watches before merging; they may be the same checks.
 **Release authority.** `owner` or `coordinator`, per unit. Typical: the owner releases what
 users see; the coordinator releases libraries, data and internal tools.
 
-**Integration limit.** How far the integration branch may run ahead of the last release before
-feature work stops (principle 6). For example "15 PRs or 5 days". Set it from how much the
-releaser can verify in one sitting.
+**Release** (column "Release"; older profiles call it "Integration limit", and both stay valid).
+The group rule plus the safety ceiling (principle 6), for example "by feature group; ceiling
+2 weeks or 15 PRs".
+- *Group rule:* the backlog is ordered release groups in `ROADMAP.md`; a group is released when
+  complete and verified. **Large** (changes UI or an API, a breaking or visible change, or apps
+  must act: migration, new config) is its own group, released whole with migration notes (in a
+  library a minor; a major stays the owner's). **Small** (fixes, docs, internal refactors,
+  additive changes) rides with the open group or is batched into a patch. **Urgent** (broken
+  build in an app, security, data loss, production regression) is a patch at once.
+- *Ceiling:* how far the integration branch may run ahead of the last release before new
+  feature work in that unit stops. Default 2 weeks or 15 PRs; set it tighter from how much the
+  releaser can verify in one sitting. It forces a decision (split the group and release what is
+  complete and verified, or finish the group); it never releases by itself.
 
 ### 3. Roles (optional ones)
 
@@ -153,7 +163,7 @@ Pick the closest one, then adjust. They are examples, not modes.
 ## Changing the profile
 
 A profile is expected to change. Review it when: a unit's agent idles often (switch to
-`per-issue`), PRs conflict on shared files (add Platform), a release needs a huge review (lower
-the integration limit), the ledger lint keeps failing (the state is in the wrong file), or the
+`per-issue`), PRs conflict on shared files (add Platform), a release needs a huge review (tighten
+the safety ceiling or split the group), the ledger lint keeps failing (the state is in the wrong file), or the
 owner adds a rule. Change one thing, log it in `DECISIONS.md`, and tell the affected agents in
 their next batched message.

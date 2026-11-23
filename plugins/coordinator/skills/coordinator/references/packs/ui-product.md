@@ -14,7 +14,7 @@ parts:
    since the last one).
 
 A PR merged without its manual pass is noted `UNVERIFIED: browser` and goes on the
-verification debt list in `ROADMAP.md`. The integration limit in the profile keeps that list
+verification debt list in `ROADMAP.md`. Releasing by group and the safety ceiling in the profile keep that list
 short enough to check in one sitting.
 
 ## The manual pass

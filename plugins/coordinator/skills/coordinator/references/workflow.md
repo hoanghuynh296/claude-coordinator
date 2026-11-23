@@ -95,8 +95,10 @@ until it has.
    context (`mcp__ccd_session_mgmt__get_usage`) and send it `PR #<n> merged. Next: <issue |
    handover | stand by | done>` (`review-merge.md`, step 9). Without `(same session)` a
    `per-issue` agent gets `Next: done` and is archived.
-7. Check the unit's integration limit. At the limit: stop handing out feature issues for that
-   unit and go to step 6 of this workflow.
+7. Check the unit's open release group and its safety ceiling. Group complete: go to step 6
+   of this workflow for that group. Ceiling reached (default 2 weeks or 15 PRs): stop handing
+   out feature issues for that unit; split the group and release what is complete and
+   verified, or finish the group first.
 
 ## 6. Verify and release
 

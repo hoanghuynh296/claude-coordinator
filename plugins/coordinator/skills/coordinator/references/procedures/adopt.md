@@ -16,7 +16,7 @@ Adoption changes how work is tracked, not the product.
 ## Step 2 - propose a profile (one message, then wait)
 Draft `PROFILE.md` from `references/templates/PROFILE.md` so that it describes how the project
 already works, and list separately what you would change and why (for example: an agent that
-idles → `per-issue`; no integration limit → set one; decisions cited but defined nowhere →
+idles → `per-issue`; no release rule → groups plus a safety ceiling; decisions cited but defined nowhere →
 `DECISIONS.md`). Ask the owner to approve. **Change nothing before the owner approves.**
 
 ## Step 3 - create or migrate the ledger
