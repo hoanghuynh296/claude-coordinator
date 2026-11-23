@@ -17,10 +17,11 @@
 #   - COORDINATION.md looks like a log (more than HISTORY_MAX lines that describe finished work)
 #   - a "delegat..." line in COORDINATION.md carries no date
 #   - PROFILE.md still has unfilled <...> fields
-#   - a COORDINATION.md unit row says "since YYYY-MM-DD" and that date is more than CEILING_DAYS
+#   - a COORDINATION.md table row that mentions PRs/ahead says "since YYYY-MM-DD" and that date is more than CEILING_DAYS
 #     (default 14, the group standard's safety ceiling) ago: the ceiling is passed, so no new
 #     feature work in that unit until the open release group is split or finished
-#   - a "Group <name>" heading in ROADMAP.md has no "(large)" or "(small)" size
+#   - a release group heading ("Group <name> → vX.Y.Z") in ROADMAP.md has no "(large)" or "(small)" size;
+#     other headings that start with "Group" are ignored
 # Release groups are optional: a profile with the old "Integration limit" column and a ROADMAP
 # without group headings stay valid (no error, no warning).
 #
@@ -129,7 +130,7 @@ if ledger is not None:
     today = datetime.date.today()
     for i, line in enumerate(ledger, 1):
         m = re.match(r"\s*\|", line)
-        s = re.search(r"since\s+(\d{4}-\d{2}-\d{2})", line) if m else None
+        s = re.search(r"since\s+(\d{4}-\d{2}-\d{2})", line) if m and re.search(r"ahead|PRs?\b", line) else None
         if s:
             try:
                 age = (today - datetime.date.fromisoformat(s.group(1))).days
@@ -181,7 +182,7 @@ if profile is not None:
 roadmap = read("coordination/ROADMAP.md")
 if roadmap is not None:
     for i, line in enumerate(roadmap, 1):
-        if re.match(r"\s*#+\s*Group\s", line) and "<" not in line and not re.search(r"\((large|small)\)", line):
+        if re.match(r"\s*#+\s*Group\s+\S.*(→|->)\s*v?\d", line) and not re.search(r"\((large|small)\)", line):
             warn(f"coordination/ROADMAP.md:{i}: a release group heading needs its size: "
                  "Group <name> → vX.Y.Z (large|small)")
 

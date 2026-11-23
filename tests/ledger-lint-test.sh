@@ -132,6 +132,11 @@ expect_lint "group heading without a size is a warning" ok "$w/g4" "needs its si
 fresh g5; sed -i.bak 's/Integration limit/Release/' "$w/g5/coordination/PROFILE.md"; rm -f "$w/g5/coordination/PROFILE.md.bak"
 expect_lint "old and new profile column both lint" ok "$w/g5" "0 error(s)"
 
+fresh g6; printf '## Group findings (first survey)\n' >> "$w/g6/coordination/ROADMAP.md"
+expect_lint "non-release heading starting with Group is ignored" ok "$w/g6" "1 warning(s)"
+fresh g7; printf '| core | idle since 2020-01-01 | nothing |\n' >> "$w/g7/COORDINATION.md"
+expect_lint "non-unit row with an old since-date gives no ceiling warning" ok "$w/g7" "1 warning(s)"
+
 [[ -n "${KEEP:-}" ]] || rm -rf "${w:?}"
 echo "passed $pass, failed $failn"
 [[ $failn -eq 0 ]]
