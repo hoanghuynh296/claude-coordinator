@@ -261,6 +261,18 @@ has references/profile.md 'Same-session cap: 175k' && has references/templates/P
 for f in SKILL.md references/workflow.md references/profile.md references/pitfalls.md references/procedures/review-merge.md references/templates/PROFILE.md; do
   ! grep -q '50% of \(the unit.s \)\?soft' "$f" && ok "$f has no 50%-of-soft rule" || bad "$f still has the 50%-of-soft rule"
 done
+# C-015 / C-017 defaults (#24): coordinator 300k/450k, Reviewer size trigger, one ledger commit per turn.
+for f in SKILL.md references/profile.md references/templates/PROFILE.md; do
+  has "$f" '300k' && has "$f" '450k' && has "$f" '--coordinator' && ok "$f gives the coordinator 300k / 450k" || bad "$f lacks the coordinator 300k / 450k"
+done
+! grep -rq 'soft 400k, hard 700k' "$skill" && ok "no 400k / 700k coordinator default left" || bad "an old 700k coordinator default is left"
+for f in references/procedures/review-merge.md references/profile.md references/templates/PROFILE.md; do
+  has "$f" '400 changed lines' && has "$f" '25 hand-written files' && has "$f" '\*\*/vendor/\*\*' && has "$f" 'release PR is exempt' \
+    && ok "$f states the Reviewer size trigger" || bad "$f lacks the Reviewer size trigger"
+done
+for f in references/state-files.md references/procedures/review-merge.md; do
+  has "$f" 'one ledger commit\|one commit' && ok "$f batches ledger commits per turn" || bad "$f lacks one ledger commit per turn"
+done
 # Archive fallback: two calls, then rename "(old)" and one batched owner line.
 for f in SKILL.md references/procedures/review-merge.md references/workflow.md references/procedures/handover.md; do
   has "$f" '(old)' && has "$f" 'Archive finished sessions: <names>' \

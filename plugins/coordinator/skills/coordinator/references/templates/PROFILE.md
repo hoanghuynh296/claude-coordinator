@@ -73,7 +73,9 @@ merge, sends the author `PR #<n> merged. Next: <issue | handover | stand by | do
 ## 6. Review
 
 - Reviewer mandatory for: <risk areas, e.g. auth, money, contract or lock changes, hardware control>.
-- Reviewer mandatory above: <e.g. 400 changed lines or 15 files>.
+- Reviewer mandatory above: 400 changed lines or 25 hand-written files <defaults>. Not counted:
+  `CHANGELOG.md`, `VERSION`, `package*.json`, lockfiles, `public/**` mirrors, `**/vendor/**`
+  <, plus: ...>. A release PR is exempt when every feature PR in it passed review.
 - Checklists: core + packs <list: saas-multitenant, artifact-contracts, ui-product>.
 - Manual checks the gate does not cover: <e.g. browser pass per release by the coordinator>.
 
@@ -88,8 +90,9 @@ Everything else goes through an issue for the owning unit.
   gate green), writes its handover before that PR merges, and is replaced.
 - Context, hard: <400k, or 75% of the model's context window if lower>. Past it a session
   stops at the next safe point (commit, push), writes a full handover, reports "blocked: rotate".
-- <Per model, if they differ: e.g. Opus 1M: soft 400k, hard 700k. A small window caps soft at
-  50% and hard at 75% of it: a 200k window gives soft 100k, hard 150k.>
+- Coordinator: soft <300k>, hard <450k>, on any model and window (`check-context.sh --coordinator`).
+- <Agents per model, if they differ. A small window caps an agent's soft at 50% and hard at 75%
+  of it: a 200k window gives soft 100k, hard 150k.>
 - Same-session cap (`per-issue` units): <175k>. A same-session next issue only under it.
 - Reports: at most <6> lines. Reviewer: at most 15 lines.
 - `COORDINATION.md`: at most <80> lines.

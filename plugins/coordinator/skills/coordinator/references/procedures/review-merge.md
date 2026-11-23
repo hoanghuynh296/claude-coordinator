@@ -31,7 +31,10 @@ Review and merge the named pull request. Read the unit's row and the
 3. **Scope.** The diff stays inside the unit's ownership and the issue's scope. Otherwise
    send it back.
 4. **Reviewer.** Mandatory when the diff touches a risk area or exceeds the size limit in the
-   profile. Spawn `coordinator:reviewer` with the repo, PR number, issue link, risk area and
+   profile (default: over 400 changed lines or over 25 hand-written files, not counting
+   `CHANGELOG.md`, `VERSION`, `package*.json`, lockfiles, `public/**` mirrors, `**/vendor/**`
+   and the profile's additions to that list). A release PR is exempt from the size limit when
+   every feature PR in it passed review. Spawn `coordinator:reviewer` with the repo, PR number, issue link, risk area and
    the packs that apply. Otherwise review the diff yourself against
    `references/review-checklist.md` plus the profile's packs.
    - Blocking findings → one batched message to the agent (with a red CI's failures, if the
@@ -74,7 +77,8 @@ Review and merge the named pull request. Read the unit's row and the
      and ask the owner again to turn the setting off.
 7. **Ledger.** Update the unit's row in `COORDINATION.md` (in progress, "integration ahead
    by"); remove the issue from `ROADMAP.md`. Do not add a line about the merged PR. Lint,
-   commit and push.
+   then commit and push once at the end of your turn, together with every other ledger change
+   of that turn (several merges in one turn: one commit).
 8. **Group and ceiling.** Check the unit's open release group in `ROADMAP.md`: all its issues
    merged and its debt rows verifiable → the next thing for that unit is `milestone-close`
    for the group (urgent patches go at once). Then check the safety ceiling (profile "Release"

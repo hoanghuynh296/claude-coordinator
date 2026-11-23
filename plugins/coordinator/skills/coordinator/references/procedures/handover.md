@@ -6,8 +6,8 @@ Write a handover for the named unit or session (none named = this coordinator se
 handover carries only what is in flight; see `references/state-files.md`.
 
 1. Measure the context (session tools, or
-   `bash "<plugin>/scripts/check-context.sh" <session id>`). `SOFT`: send it no new issue and
-   let it finish the current one; the handover is due before that PR merges. `HARD`: now.
+   `bash "<plugin>/scripts/check-context.sh" <session id>`, with `--coordinator` for a
+   coordinator). `SOFT`: send it no new issue and let it finish the current one; the handover is due before that PR merges. `HARD`: now.
    Either way the note must exist before the session's last PR merges, since the coordinator
    archives a `per-issue` session right after its PR merges.
 2. **A unit's `standing` session:** send it one message asking it to (a) at `SOFT`, finish the
