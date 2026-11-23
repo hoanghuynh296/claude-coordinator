@@ -194,6 +194,16 @@ template path when a change touches `bootstrap.sh`.
 ## Changes
 
 - **Unreleased**:
+  - UI draft gate (#29, owner decisions C-022 and C-023). Task issues of `ui-product` units carry
+    `Draft: required | not needed` (new screen, layout change or multi-step flow → required).
+    The agent first builds a mock-data draft, sends the owner three screenshots per screen
+    (desktop, iPad, iPhone) and reports `Draft ready:` (draft URL, files), then waits; on the
+    owner's approval the coordinator comments `Draft approved: <date>` on the issue and sends
+    `Next: build #<n> (same session)`, the same issue's build phase and so exempt from the
+    same-session conditions. Review: a `Draft: required` PR links the approval and keeps no
+    `_draft` route. Changed: ui-product pack, task-issue template, ticket step 2, workflow
+    sections 4 and 5, review-merge step 5, unit-brief rule 10, profile reference, SKILL.md.
+    The agent-side Stop hook (#10, not shipped yet) must accept `Draft ready` as a report.
   - Defaults from owner decisions C-015 and C-017 (#24). Coordinator thresholds soft 300k,
     hard 450k on any model and window (agents stay 250k / 400k; `check-context.sh
     --coordinator`). Reviewer size trigger: over 400 changed lines or 25 hand-written files,

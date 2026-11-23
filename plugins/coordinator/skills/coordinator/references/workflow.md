@@ -59,7 +59,8 @@ Fresh branch from the integration branch → commit after each step, push after 
 and after every commit → PR that closes the issue → local gate (lint and tests) green → report once, by message to the
 coordinator session by name ("Coordinator: <project>"): "PR ready" (with the local gate's
 evidence, the head SHA and the CI state at that moment: pending, green or red), "blocked /
-decision needed", or "handover written", ending with `Context: <k tokens>`. The agent reports
+decision needed", "handover written", or, for an issue with `Draft: required`, "Draft ready"
+before the build (`packs/ui-product.md`), ending with `Context: <k tokens>`. The agent reports
 as soon as the PR is pushed and the local gate is green; it never waits for CI, because it
 runs only when a message arrives and a green CI run sends none. The coordinator owns the CI
 wait (section 5). Before every push the agent checks that
@@ -80,6 +81,10 @@ until it has.
    the coordinator when CI ends (green, red or stale-head). Review runs in parallel.
    Gate green, per the profile: the local gate's evidence and CI green on the reported head,
    checked by the coordinator, not taken from the report. Merge only then.
+   On "Draft ready" (no merge, no CI watch): the owner reviews the screenshots. Pass change
+   requests to the agent; on the owner's approval comment `Draft approved: <date>` on the
+   issue, note it in the unit's row and send `Next: build #<n> (same session)`. That is the
+   same issue's build phase, not a next issue, so the same-session conditions do not apply.
 2. Diff inside the unit's ownership and the issue's scope.
 3. Reviewer subagent when the profile's risk areas or size limits say so. Re-run it on fix
    commits in a risk area. Above the line threshold in a risk area, split the work: contract or

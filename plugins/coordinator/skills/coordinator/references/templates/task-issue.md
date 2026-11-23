@@ -20,6 +20,8 @@ Say what evidence the PR must carry.>
 - In: <paths or areas>
 - Out: <what not to touch or solve here>
 
+Draft: <required | not needed>   (UI units under the `ui-product` pack only; omit elsewhere)
+
 ## Depends on
 <Issue links, contract versions, an owner task. "Nothing" if so.>
 
@@ -32,5 +34,8 @@ Rules for the writer:
 - One issue is one PR. If it needs two units, write two issues and link them.
 - A contract or format change is its own issue and comes first.
 - Acceptance criteria describe outcomes, not steps.
+- A UI unit under the `ui-product` pack: the `Draft:` line is required. New screen, layout
+  change, or multi-step flow → `Draft: required`; otherwise `Draft: not needed`
+  (`packs/ui-product.md`, "A draft before the build").
 - Anything that needs the owner (a secret, a purchase, a device) is listed under "Depends
   on" and also in the owner queue of `COORDINATION.md`.
