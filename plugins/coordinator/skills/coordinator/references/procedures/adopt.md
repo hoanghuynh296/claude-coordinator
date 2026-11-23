@@ -34,7 +34,7 @@ idles → `per-issue`; no release rule → groups plus a safety ceiling; decisio
 - Run `bash "<plugin>/scripts/ledger-lint.sh" <ledger-dir>` until it passes.
 
 ## Step 4 - guards and labels
-- `bash "<plugin>/scripts/install-guards.sh" --settings <unit-dir>...`
+- `bash "<plugin>/scripts/install-guards.sh" --settings --tools "<unit's Tools>" <unit-dir>...`
 - Label `task` in each repo (`unit:<unit>` too in a single-repo project).
 - One short docs PR per unit: the "how work arrives" rules in its `AGENTS.md`, and a one-line
   entry for each decision that binds it.

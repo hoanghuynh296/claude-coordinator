@@ -20,6 +20,10 @@ Release: by feature group (large = its own group, released whole with migration 
 = rides with the open group or a patch batch; urgent fix = patch at once). The ceiling is a
 safety net only: past it, no new feature work in that unit until the group is split or done.
 
+Tools (what each unit's agents keep; every other optional group of `scripts/agent-tools.json`
+is off, written by `install-guards.sh --tools "<groups>"` into the unit repo's committed
+`.claude/settings.json`): <unit>: <none | browser semi-design | ios-simulator | ...>.
+
 Agent session names: "Agent: <unit>" (per-issue: "Agent: <unit> #<issue>").
 Every session sits at the top level of the sidebar, each agent in its own worktree: whoever
 starts a session detaches it right away. Agents report by message to "Coordinator:

@@ -1,0 +1,68 @@
+{
+  "about": "Optional tool groups for agent sessions. install-guards.sh --tools \"<groups to keep>\" turns every group not kept off in the unit repo's .claude/settings.json and leaves the kept ones on. Never listed here, so never touched: Bash (git, gh), the file tools, the ccd_* session and PR tools, SendMessage, the coordinator plugin, the owner's own MCP servers (for example codebase-memory-mcp), claude-api, code-review.",
+  "groups": {
+    "browser": {
+      "why": "Built-in browser pane, for units that verify UI in a browser.",
+      "deny": ["mcp__Claude_Browser"],
+      "skillsOff": ["anthropic-skills:built-in-browser"]
+    },
+    "ios-simulator": {
+      "why": "iOS Simulator, for units that build and check an iOS app.",
+      "deny": ["mcp__Claude_Code_iOS_Simulator"]
+    },
+    "semi-design": {
+      "why": "Semi Design System skills (semi-ui, semi-check, ...), for UI units.",
+      "pluginsOff": ["semi-design@semi-marketplace"]
+    },
+    "chrome": {
+      "why": "Claude in Chrome (the owner's real Chrome); agents use the built-in browser instead.",
+      "deny": ["mcp__claude-in-chrome"],
+      "skillsOff": ["anthropic-skills:chrome-browser"]
+    },
+    "computer-use": {
+      "why": "Desktop control of the owner's Mac; no unit agent needs it.",
+      "deny": ["mcp__computer-use"],
+      "skillsOff": ["anthropic-skills:computer-use"]
+    },
+    "cloudflare": {
+      "why": "Cloudflare plugin (its MCP server and skills); only a unit that deploys to Cloudflare keeps it.",
+      "deny": ["mcp__plugin_cloudflare_cloudflare"],
+      "skillsOff": [
+        "cloudflare:agents-sdk", "cloudflare:basin", "cloudflare:cf-cli", "cloudflare:cloudflare",
+        "cloudflare:cloudflare-app-bootstrap", "cloudflare:cloudflare-email-service",
+        "cloudflare:cloudflare-one", "cloudflare:cloudflare-one-migrations",
+        "cloudflare:durable-objects", "cloudflare:frameworks-on-cloudflare",
+        "cloudflare:gateway-workers", "cloudflare:k2", "cloudflare:nextjs-on-cloudflare",
+        "cloudflare:sandbox-migrate-to-next", "cloudflare:sandbox-next",
+        "cloudflare:sandbox-stable", "cloudflare:turnstile-spin", "cloudflare:web-perf",
+        "cloudflare:workers-best-practices", "cloudflare:workers-development",
+        "cloudflare:workers-profiling", "cloudflare:wrangler"
+      ]
+    },
+    "office": {
+      "why": "Word, PowerPoint, Excel, PDF, Google Workspace and Docs skills; agents write code and Markdown.",
+      "skillsOff": [
+        "anthropic-skills:docx", "anthropic-skills:pptx", "anthropic-skills:xlsx",
+        "anthropic-skills:pdf", "anthropic-skills:google-workspace", "anthropic-skills:docs"
+      ]
+    },
+    "artifacts": {
+      "why": "Published pages, inline widgets and charts; agents report by message, not by page.",
+      "deny": ["Artifact", "ArtifactComments", "ArtifactData", "mcp__visualize", "mcp__easel"],
+      "skillsOff": ["artifact-design", "artifact-diagramming", "artifact-capabilities", "dataviz"]
+    },
+    "desktop-extras": {
+      "why": "Terminal panel, scheduled tasks, connector registry and personal-assistant skills; agents use Bash.",
+      "deny": ["mcp__terminal", "mcp__scheduled-tasks", "mcp__mcp-registry"],
+      "skillsOff": [
+        "anthropic-skills:morning", "anthropic-skills:import-memory", "anthropic-skills:setup-claude",
+        "anthropic-skills:consolidate-memory", "anthropic-skills:explain-usage",
+        "anthropic-skills:deep-research", "anthropic-skills:skill-creator"
+      ]
+    },
+    "connectors": {
+      "why": "claude.ai cloud connectors (Drive, Docs, ...); a unit that reads one keeps it.",
+      "settingsOn": ["disableClaudeAiConnectors"]
+    }
+  }
+}

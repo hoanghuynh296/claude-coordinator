@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Install the kit's mechanical guards into unit checkouts.
-# Usage: install-guards.sh [--settings] [--protect "main master"] [--force] <repo-dir>...
+# Usage: install-guards.sh [--settings] [--protect "main master"] [--tools "<groups>"] [--force] <repo-dir>...
 #
 #   For each repo dir:
 #     - installs scripts/pre-push-guard.sh as the repo's pre-push hook (shared by all its
@@ -13,18 +13,24 @@
 #                    those branches are refused locally (pull requests only).
 #   --settings       also turn on "delete branch on merge" on GitHub for the repo's origin
 #                    (needs `gh` with access; this is free on every plan).
+#   --tools "a b"    lean agent tool set: merge into the repo's .claude/settings.json the rules
+#                    that turn off every optional tool group of scripts/agent-tools.json except
+#                    the groups listed (the unit's "Tools" line; "none" keeps none). Other keys
+#                    are kept; a re-run is idempotent. Commit the file through a PR so new
+#                    worktrees get it. Needs python3.
 #
 # Hooks are local to a clone: run this again on every new machine and for every new clone.
 set -euo pipefail
 
-usage() { sed -n '2,18p' "$0" | sed 's/^# \{0,1\}//'; exit 2; }
+usage() { sed -n '2,22p' "$0" | sed 's/^# \{0,1\}//'; exit 2; }
 
-settings=0; force=0; protect=""; repos=()
+settings=0; force=0; protect=""; tools=""; tools_set=0; repos=()
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --settings) settings=1; shift ;;
     --force) force=1; shift ;;
     --protect) protect="${2:?--protect needs a list}"; shift 2 ;;
+    --tools) tools="${2:?--tools needs the groups to keep (or none)}"; tools_set=1; shift 2 ;;
     -h|--help) usage ;;
     --*) echo "unknown option: $1" >&2; usage ;;
     *) repos+=("$1"); shift ;;
@@ -94,6 +100,20 @@ HOOK
   if [[ -n "$protect" ]]; then
     git -C "$repo" config coordinator.protectedBranches "$protect"
     echo "    protected branches (local pushes refused): $protect"
+  fi
+
+  if [[ $tools_set -eq 1 ]]; then
+    if [[ -z "$top" ]]; then
+      echo "    FAILED: no work tree; agent tool settings not written" >&2; rc=1
+    elif ! command -v python3 >/dev/null 2>&1; then
+      echo "    FAILED: python3 not found; agent tool settings not written" >&2; rc=1
+    elif out="$(python3 -I "$(dirname "$src")/lean-tools.py" "$(dirname "$src")/agent-tools.json" \
+                "$top/.claude/settings.json" "$tools")"; then
+      echo "    agent tools ($out): $top/.claude/settings.json keeps: $tools"
+      [[ "$out" == written ]] && echo "    commit .claude/settings.json through a PR so new worktrees get it"
+    else
+      echo "    FAILED: agent tool settings not written" >&2; rc=1
+    fi
   fi
 
   if [[ $settings -eq 1 ]]; then
