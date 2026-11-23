@@ -95,13 +95,15 @@ Review and merge the named pull request. Read the unit's row and the
      hold; then send `PR #<n> merged. Next: #<m> (same session)` and do not archive it:
      (1) `#m` is in the same unit; (2) the agent's context, measured with
      `mcp__ccd_session_mgmt__get_usage` or `scripts/check-context.sh` (not self-reported), is
-     under 50% of the unit's soft threshold; (3) `#m` is not in a risk area where the profile
-     makes the Reviewer mandatory; (4) the session has done fewer than 3 issues in a row (count
+     under the same-session cap (default 175k, or the profile's Budgets line); (3) you cannot
+     start a session in this turn (the owner is on Remote Control, an automated turn, or
+     `start_session` was refused): when you can start one, `#m` goes to a fresh session;
+     (4) `#m` is not in a risk area where the profile makes the Reviewer mandatory; (5) the session has done fewer than 3 issues in a row (count
      the ones you handed it, this one included). Any condition fails, or this was its 3rd issue
      → `Next: done` and `#m` goes to a fresh session. Without `(same session)` the agent stops.
      Record the count in the ledger's unit row ("Agent: <unit> #<m>, issue k/3") each time you
      send a Next, so it survives a coordinator rotation; an unknown count counts as a failed
-     condition (4): the next issue goes to a fresh session.
+     condition (5): the next issue goes to a fresh session.
    - Otherwise the next issue from its `ROADMAP.md` list (`Next: #<m> <link>`), or
      `Next: stand by` if nothing unblocked is left.
    The plugin's Stop hook blocks the end of your turn while a merged PR has no such message.

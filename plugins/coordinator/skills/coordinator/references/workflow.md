@@ -35,8 +35,10 @@ through its full lifecycle (section 4) and waits; the next issue goes out in the
 message after the merge (`PR #<n> merged. Next: <issue>`). Units in `per-issue` mode get a
 fresh session per issue instead (brief: `templates/unit-brief.md` plus the issue link), unless
 the coordinator sends the strict same-session form `PR #<n> merged. Next: #<m> (same session)`
-(`review-merge.md` step 9: same unit, context under 50% of soft measured with the session tools,
-no mandatory-Reviewer risk area, fewer than 3 issues in a row in that session). After the 3rd
+(`review-merge.md` step 9: same unit, context under 175k (or the profile's same-session cap)
+measured with the session tools, no session can be started in this turn (Remote Control, an
+automated turn, a refused start), no mandatory-Reviewer risk area, fewer than 3 issues in a row
+in that session). When a session can be started, the next issue always goes to a fresh one. After the 3rd
 issue, or when any condition fails, the next issue goes to a fresh session.
 
 Sessions can only be started in a turn the owner started from the desktop app. Start every

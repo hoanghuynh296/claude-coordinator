@@ -34,9 +34,10 @@ verification gate, who may release it, and its release rule (groups + safety cei
 
 A `per-issue` session may take the next issue of its unit in the same session only when the
 coordinator sends `PR #<n> merged. Next: #<m> (same session)`, which it does only if `#m` is in
-the same unit, the agent's context (measured, not self-reported) is under 50% of the unit's soft
-threshold, `#m` is not in a Reviewer-mandatory risk area, and the session has done fewer than 3
-issues in a row. Otherwise it gets `Next: done` and the next issue starts fresh. The session
+the same unit, the agent's context (measured, not self-reported) is under the same-session cap
+(default 175k, Budgets), the coordinator cannot start a session in this turn (Remote Control, an
+automated turn, a refused start), `#m` is not in a Reviewer-mandatory risk area, and the session
+has done fewer than 3 issues in a row. Otherwise it gets `Next: done` and the next issue starts fresh. The session
 stays `per-issue`: it never becomes `standing` by repetition.
 
 `per-issue` only works if the unit's `AGENTS.md` and docs carry everything a cold start needs.
@@ -119,6 +120,8 @@ Context thresholds for rotation, report length, model per role, ledger size budg
 soft 250k, hard 400k (or 75% of the model's context window, whichever is lower), reports in 6
 lines, `COORDINATION.md` at most 80 lines. Thresholds may differ per model. For a small
 window, soft is capped at 50% and hard at 75% of it (a 200k window: soft 100k, hard 150k).
+Same-session cap: 175k by default (a `per-issue` agent takes a next issue in the same session
+only under it; section 3). A Budgets line overrides it.
 
 - **Soft:** do not stop mid-task. The session finishes its current issue (PR, gate green),
   takes no new one, writes its handover, and is replaced after that PR. The coordinator sends

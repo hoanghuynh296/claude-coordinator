@@ -194,6 +194,11 @@ template path when a change touches `bootstrap.sh`.
 ## Changes
 
 - **Unreleased**:
+  - Same-session next issue only under 175k AND only when no session can start (#23, owner
+    decision C-016). `Next: #m (same session)` now also needs that the coordinator cannot start
+    a session this turn (Remote Control, an automated turn, a refused start); the context limit
+    is a cap (default 175k, a profile Budgets line), not 50% of soft. Changed: SKILL.md Sessions,
+    workflow, profile reference and template, review-merge step 9, pitfalls 37.
   - CI for the kit (#26): workflow `tests` runs every `tests/*-test.sh` on each PR and push to
     `main`; the kit's gate is now "CI `tests` green", not pasted output. Fixed on the way:
     `merge-reminder.sh` failed to parse under macOS `/bin/bash` 3.2 (heredoc inside `$(...)`).
