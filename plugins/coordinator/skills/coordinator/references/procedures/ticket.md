@@ -10,7 +10,10 @@ Create one task issue for the unit and goal that were given.
 2. Write the body from `references/templates/task-issue.md` into a scratchpad file: goal,
    acceptance criteria as observable outcomes, the checks that prove it (the unit's gate plus
    anything specific), scope in and out, dependencies, notes. Write for a reader who has not
-   seen this conversation.
+   seen this conversation. For a unit under the `ui-product` pack, set the `Draft:` line:
+   a new screen, a layout change, or a multi-step flow → `Draft: required`; a copy, bug,
+   spacing or token fix, a design-system sync, or a change that follows an approved draft →
+   `Draft: not needed` (`packs/ui-product.md`). The owner may override it.
 3. **Group and size.** Place the issue in a release group of the unit in `ROADMAP.md`, or start
    a new group (name, target version). Size it: **large** (changes UI or an API, a breaking or
    visible change for apps, or apps must act) is its own group, never mixed into another;

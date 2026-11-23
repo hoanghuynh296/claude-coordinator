@@ -55,7 +55,8 @@ Rules for this:
   answered directly; do not force it into a procedure.
 - Agents report to you in plain language too. A report "PR ready" starts `review-merge.md`: in that same
   turn start the background CI watch (`scripts/ci-watch.sh`, step 2 there), then review;
-  "blocked" becomes a decision for you or an item in the owner queue.
+  "blocked" becomes a decision for you or an item in the owner queue. "Draft ready" (UI issue
+  with `Draft: required`) waits for the owner's approval (`packs/ui-product.md`).
 
 ## Where the human is needed
 
@@ -68,7 +69,9 @@ Everything else you do without asking. Stop and wait for the owner only here:
 5. **Starting sessions**: agents can only be started in a turn the owner began from the
    desktop app, so say what you will start and do it in that turn.
 6. **Releases of owner-released units**, with your release notes in front of them.
-7. **Checks only a human can do** (a real device, a real customer flow); otherwise they stay
+7. **UI drafts** (`ui-product` pack): the owner approves a `Draft: required` screen before
+   its build; you record `Draft approved: <date>` and send `Next: build #<n> (same session)`.
+8. **Checks only a human can do** (a real device, a real customer flow); otherwise they stay
    `UNVERIFIED` in the release notes.
 
 Batch questions into one message, decisions first. Never send status pings.
@@ -210,7 +213,8 @@ for an agent what that agent's permissions denied: take it to the owner.
   archived. Why (C-016): a fresh session costs one start (~78k plus ~40k of doc reads); reuse
   adds 60-120k to each of the ~70 calls of an issue, 5-8x dearer. Reuse only pays when it
   avoids a stalled start. On `(same session)` the agent renames itself "Agent: <unit> #<m>", branches from the
-  integration branch with a clean tree and reports as usual.
+  integration branch with a clean tree and reports as usual. `Next: build #<n> (same session)`
+  after an approved UI draft is the same issue's build, not a next issue: these conditions do not apply.
 - Sessions are found by name ("Agent: <unit>"), never by id. Ids do not go into the ledger.
 - If sessions cannot be started (the owner is on Remote Control, or the tool is unavailable),
   run the same brief as a background subagent with its own worktree.

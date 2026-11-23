@@ -53,7 +53,8 @@ unit.
    branch, report "PR ready" again (new head SHA, CI state, local gate green) and wait again.
 9. Anything that costs money is the owner's decision: flag it, do not choose it.
 10. Report only (a) PR ready (pushed, local gate green, head SHA, CI state), (b) blocked or decision needed, (c) handover
-    written. End every report with `Context: <k tokens>` (your current context size). Every report is a message to the coordinator session by name ("Coordinator:
+    written, (d) `Draft ready:` for an issue that says `Draft: required` (draft URL, screenshots sent
+    to the owner, then wait for `Next: build #<n> (same session)`; `packs/ui-product.md`). End every report with `Context: <k tokens>` (your current context size). Every report is a message to the coordinator session by name ("Coordinator:
     <project>"); no turn-end note reaches it, so a report you do not send is lost. If a new
     coordinator tells you its name, report to that one from then on. <Subagent fallback: your
     final answer is the report; send no message.> At most <6> lines: issue,
