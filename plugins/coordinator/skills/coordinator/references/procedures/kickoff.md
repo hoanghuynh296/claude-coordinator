@@ -43,8 +43,9 @@ approves in a later message.**
   that repo, or pass `--template <your own template repo>`; run it with `--dry-run` first).
   For other shapes create the repos with `gh repo create`, add the integration branch, and
   give each unit an `AGENTS.md`.
-- Guards: `bash "<plugin>/scripts/install-guards.sh" --settings <unit-dir>...`
-  (pre-push guard, delete-branch-on-merge). Releases follow one standard: `release/vX.Y.Z`
+- Guards: `bash "<plugin>/scripts/install-guards.sh" --settings --tools "<unit's Tools>" <unit-dir>...`
+  (pre-push guard, delete-branch-on-merge, lean agent tool set; one run per unit, then commit
+  its `.claude/settings.json` and `.claude/lean-tools.lock.json` through a PR). Releases follow one standard: `release/vX.Y.Z`
   from `develop` → PR into `main` → tag → back-merge `main` into `develop`, so `develop` is
   never a PR head and delete-branch-on-merge cannot remove it. The coordinator names its own
   branches `release/vX.Y.Z`, `backmerge/vX.Y.Z` or `coordinator/<topic>` (the Next guard skips them).

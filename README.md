@@ -135,7 +135,7 @@ files, review checklist, pitfalls, packs, templates) and two agents: `coordinato
 | Next guard (Stop hook) | a coordinator ending its turn while a merged PR's author has not been told `PR #N merged. Next: ...`: the stop is blocked with the PRs and the message format; at most 3 blocks per turn, then a warning. `scripts/next-clear.sh <session> <owner/repo#N> "<reason>"` clears a PR whose author cannot be messaged, logging the reason to the ledger's `coordination/next-cleared.md` |
 | `scripts/ledger-lint.sh <ledger>` | a ledger out of shape: missing files, over the size budget, session ids or home paths, decision ids cited but not defined, leftover placeholders. Warns on a stale date, on history in the live ledger, on an undated delegation |
 | `scripts/pre-push-guard.sh` (git pre-push hook) | pushing to a branch whose pull request is already merged or closed; optional local protection of release branches |
-| `scripts/install-guards.sh [--settings] <repo>...` | installs the pre-push guard in each clone; `--settings` turns on delete-branch-on-merge on GitHub |
+| `scripts/install-guards.sh [--settings] [--tools "<groups>"] <repo>...` | installs the pre-push guard in each clone; `--settings` turns on delete-branch-on-merge on GitHub; `--tools` merges the lean agent tool set (every optional group of `scripts/agent-tools.json` not listed is turned off) into the repo's `.claude/settings.json` |
 
 Limits: the edit guard covers the edit tools only; a shell redirection is not blocked. The
 pre-push guard fails open when `gh` cannot reach the repo. A forked session gets a new session
@@ -184,6 +184,7 @@ bash tests/pre-push-guard-test.sh  # merged, closed and open PRs with a fake gh;
 bash tests/bootstrap-test.sh [template-dir]   # full bootstrap against local bare repos and a fake gh
 bash tests/structure-test.sh       # commands, procedures and the skill agree; listing text fits the cap; key rules present
 bash tests/exec-bits-test.sh       # every plugin *.sh is executable in git
+bash tests/agent-tools-test.sh     # install-guards --tools: merge, idempotent, groups back on, refusals, catalog spares core tools
 bash tests/check-context-test.sh   # ok / SOFT / HARD levels, thresholds from env and args, window cap
 bash tests/prune-worktrees-test.sh # dirty, unpushed, live, open PR, young, locked, stray kept; clean pushed old removed; --discard
 ```
@@ -196,6 +197,18 @@ template path when a change touches `bootstrap.sh`.
 ## Changes
 
 - **Unreleased**:
+  - Lean agent tool set (#27, owner decision C-018). `install-guards.sh --tools "<groups>"`
+    merges into the unit repo's `.claude/settings.json` the rules that turn off every optional
+    tool group of the new `scripts/agent-tools.json` not kept: `permissions.deny` for whole MCP
+    servers and tools (a whole-tool deny drops them from the agent's context), `skillOverrides`
+    `off` for skills, `enabledPlugins` false for plugins, `disableClaudeAiConnectors`. What it
+    adds is recorded in `.claude/lean-tools.lock.json` and only that is ever removed: an entry
+    the file already had is never removed, a different value (a skill at `name-only`) is kept
+    with a warning. Other keys stay, a re-run is idempotent, a kept group is switched back on,
+    broken JSON or an unknown group writes nothing; UTF-8 kept, atomic write, a symlinked
+    settings file writes its target (`lean-tools.py`, needs python3). New "Tools" line in the PROFILE template (section 2) and the unit brief; profile
+    reference, kickoff and adopt pass `--tools`. Existing units: run it once per unit repo and
+    commit both files through a PR. Test `tests/agent-tools-test.sh`.
   - Finished worktrees are removed (#28, owner decision C-019: 25 GB of finished agent worktrees
     filled the disk). New `scripts/prune-worktrees.sh` (dry run by default, `--apply` removes)
     removes a `.claude/worktrees/*` worktree only when it is unlocked, unchanged for 6 hours,

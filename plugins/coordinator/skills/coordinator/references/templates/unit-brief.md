@@ -23,6 +23,11 @@ Report "blocked: need <change> from <unit>".
 
 Read first: `AGENTS.md`<, `OWNERSHIP.md`, the contract files this unit produces or consumes>.
 
+Tools: <the unit's "Tools" line from the profile, e.g. `browser semi-design` for a UI unit,
+`none` otherwise>. Every other optional tool group (`scripts/agent-tools.json`) is off in this
+repo's `.claude/settings.json`; `gh` and `git` run through Bash. Need one that is off? Report
+"blocked: need tool <group>".
+
 <Local set-up for this machine, if any.>
 
 ## Cross-lane mini-exception (only when the issue names one)
