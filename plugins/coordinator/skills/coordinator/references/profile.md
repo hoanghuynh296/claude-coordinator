@@ -62,12 +62,13 @@ coordinator watches before merging; they may be the same checks.
 
 **Tools.** The optional tool groups each unit's agents keep (`scripts/agent-tools.json`:
 `browser`, `ios-simulator`, `semi-design`, `chrome`, `computer-use`, `cloudflare`, `office`,
-`artifacts`, `desktop-extras`, `connectors`); everything else is off, which cuts the start cost
+`docs`, `artifacts`, `desktop-extras`, `connectors`); everything else is off, which cuts the start cost
 of every agent call (owner decision C-018 in Semi Group). Default `none`; a UI unit keeps
 `browser semi-design` (`ios-simulator` for an iOS app), a unit that deploys to Cloudflare keeps
 `cloudflare`. `install-guards.sh --tools "<groups>" <unit-dir>` merges the rules into the repo's
-`.claude/settings.json` (other keys kept, idempotent); commit that file through a PR so every
-new worktree gets it. Bash (`gh`, `git`), the file tools, the session and PR tools and the
+`.claude/settings.json` (other keys kept, idempotent; what it adds is recorded in
+`.claude/lean-tools.lock.json` and only that is ever removed); commit both files through a PR
+so every new worktree gets them. Bash (`gh`, `git`), the file tools, the session and PR tools and the
 coordinator plugin are never turned off. The owner confirms each unit's list.
 
 **Release authority.** `owner` or `coordinator`, per unit. Typical: the owner releases what

@@ -199,12 +199,14 @@ template path when a change touches `bootstrap.sh`.
     merges into the unit repo's `.claude/settings.json` the rules that turn off every optional
     tool group of the new `scripts/agent-tools.json` not kept: `permissions.deny` for whole MCP
     servers and tools (a whole-tool deny drops them from the agent's context), `skillOverrides`
-    `off` for skills, `enabledPlugins` false for plugins, `disableClaudeAiConnectors`. Only the
-    catalog's entries are touched; other keys stay, a re-run is idempotent, a kept group is
-    switched back on, broken JSON or an unknown group writes nothing (`lean-tools.py`, needs
-    python3). New "Tools" line in the PROFILE template (section 2) and the unit brief; profile
+    `off` for skills, `enabledPlugins` false for plugins, `disableClaudeAiConnectors`. What it
+    adds is recorded in `.claude/lean-tools.lock.json` and only that is ever removed: an entry
+    the file already had is never removed, a different value (a skill at `name-only`) is kept
+    with a warning. Other keys stay, a re-run is idempotent, a kept group is switched back on,
+    broken JSON or an unknown group writes nothing; UTF-8 kept, atomic write, a symlinked
+    settings file writes its target (`lean-tools.py`, needs python3). New "Tools" line in the PROFILE template (section 2) and the unit brief; profile
     reference, kickoff and adopt pass `--tools`. Existing units: run it once per unit repo and
-    commit the file through a PR. Test `tests/agent-tools-test.sh`.
+    commit both files through a PR. Test `tests/agent-tools-test.sh`.
   - UI draft gate (#29, owner decisions C-022 and C-023). Task issues of `ui-product` units carry
     `Draft: required | not needed` (new screen, layout change or multi-step flow → required).
     The agent first builds a mock-data draft, sends the owner three screenshots per screen

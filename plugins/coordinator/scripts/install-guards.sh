@@ -16,13 +16,14 @@
 #   --tools "a b"    lean agent tool set: merge into the repo's .claude/settings.json the rules
 #                    that turn off every optional tool group of scripts/agent-tools.json except
 #                    the groups listed (the unit's "Tools" line; "none" keeps none). Other keys
-#                    are kept; a re-run is idempotent. Commit the file through a PR so new
-#                    worktrees get it. Needs python3.
+#                    are kept; what it adds is recorded in .claude/lean-tools.lock.json and
+#                    only that is ever removed; a re-run is idempotent. Commit both files
+#                    through a PR so new worktrees get them. Needs python3.
 #
 # Hooks are local to a clone: run this again on every new machine and for every new clone.
 set -euo pipefail
 
-usage() { sed -n '2,22p' "$0" | sed 's/^# \{0,1\}//'; exit 2; }
+usage() { sed -n '2,23p' "$0" | sed 's/^# \{0,1\}//'; exit 2; }
 
 settings=0; force=0; protect=""; tools=""; tools_set=0; repos=()
 while [[ $# -gt 0 ]]; do
@@ -110,7 +111,7 @@ HOOK
     elif out="$(python3 -I "$(dirname "$src")/lean-tools.py" "$(dirname "$src")/agent-tools.json" \
                 "$top/.claude/settings.json" "$tools")"; then
       echo "    agent tools ($out): $top/.claude/settings.json keeps: $tools"
-      [[ "$out" == written ]] && echo "    commit .claude/settings.json through a PR so new worktrees get it"
+      [[ "$out" == written ]] && echo "    commit .claude/settings.json and .claude/lean-tools.lock.json through a PR so new worktrees get them"
     else
       echo "    FAILED: agent tool settings not written" >&2; rc=1
     fi

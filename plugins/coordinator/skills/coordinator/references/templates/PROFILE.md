@@ -22,7 +22,7 @@ safety net only: past it, no new feature work in that unit until the group is sp
 
 Tools (what each unit's agents keep; every other optional group of `scripts/agent-tools.json`
 is off, written by `install-guards.sh --tools "<groups>"` into the unit repo's committed
-`.claude/settings.json`): <unit>: <none | browser semi-design | ios-simulator | ...>.
+`.claude/settings.json` and `.claude/lean-tools.lock.json`): <unit>: <none | browser semi-design | ios-simulator | ...>.
 
 Agent session names: "Agent: <unit>" (per-issue: "Agent: <unit> #<issue>").
 Every session sits at the top level of the sidebar, each agent in its own worktree: whoever

@@ -40,11 +40,15 @@
       ]
     },
     "office": {
-      "why": "Word, PowerPoint, Excel, PDF, Google Workspace and Docs skills; agents write code and Markdown.",
+      "why": "Word, PowerPoint, Excel, PDF and Google Workspace skills; agents write code and Markdown.",
       "skillsOff": [
         "anthropic-skills:docx", "anthropic-skills:pptx", "anthropic-skills:xlsx",
-        "anthropic-skills:pdf", "anthropic-skills:google-workspace", "anthropic-skills:docs"
+        "anthropic-skills:pdf", "anthropic-skills:google-workspace"
       ]
+    },
+    "docs": {
+      "why": "Claude Docs documents (shared, commented docs); agents write Markdown in the repo.",
+      "skillsOff": ["anthropic-skills:docs"]
     },
     "artifacts": {
       "why": "Published pages, inline widgets and charts; agents report by message, not by page.",
