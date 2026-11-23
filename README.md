@@ -151,7 +151,7 @@ id and must register again.
 | `next-clear.sh <session> <owner/repo#N> <reason>` | clear a merged PR the Stop hook waits on, when its author cannot get the Next message; the reason is appended to `coordination/next-cleared.md` in the ledger. `--list` shows what is pending; `--handover` prints it and drops the session's state (written into the handover note); `--add <owner/repo#N>...` lets the replacement take it over |
 | `ci-watch.sh <owner/repo> <N> [<sha>]` | watch a PR's CI until it ends and print one line: `green` (exit 0), `red: <checks> <link>` (1, at the first failure), `error` (2), `stale-head` when the head is not or no longer the reported SHA (3), `timeout` (4, `CI_WATCH_DEADLINE`, default 90 min), `no-checks` (5, `CI_WATCH_NOCHECKS`, default 15 min), not open (6). The coordinator runs it with `run_in_background` on every "PR ready": its exit wakes the coordinator when CI ends |
 | `register.sh <session> <ledger> [unit...] [--allow glob]... [--allow-none] [--no-guard]` | register or `--unregister` a coordinator session |
-| `prune-worktrees.sh <root>... (--sessions <file> \| --no-session-check) [--apply] [--min-age-hours N] [--discard <glob>]...` | remove finished agent worktrees (`.claude/worktrees/*`) under the roots: only a registered, unlocked worktree with no change for N hours (default 6), a clean `git status` (or only changes matching `--discard`), HEAD in a remote branch and no live session in it (`--sessions`: the `list_sessions` JSON). `git worktree remove`, branches kept, stray folders reported and kept; prints the space freed. Dry run unless `--apply` |
+| `prune-worktrees.sh <root>... (--sessions <file> \| --no-session-check) [--apply] [--min-age-hours N] [--discard <glob>]...` | remove finished agent worktrees (`.claude/worktrees/*`) under the roots: only a registered, unlocked worktree with no change for N hours (default 6), a clean `git status` (or only changes matching `--discard`), HEAD in a remote branch, and (`--sessions`: the `list_sessions` JSON) no live session in it or on its branch and no open PR for its branch (`gh`; a failed lookup keeps it). `git worktree remove`, branches kept, stray folders reported and kept; prints the space freed. Dry run unless `--apply` |
 | `check-context.sh [--coordinator] [--soft N] [--hard N] [--window N] [session...]` | context size per session from its transcript, with a level: `ok`, `SOFT` (finish the current issue, then rotate; default 250k) or `HARD` (rotate now; default 400k). `--coordinator`: 300k / 450k. `--window` caps soft at 50% and hard at 75% of the context window. Also `SOFT_AT`, `HARD_AT`, `CONTEXT_WINDOW`; one run per model group |
 | `bootstrap.sh <owner/repo> <dir> ...` | the single-repo SaaS starting point: repo from a template (default `hoanghuynh296/agent-project-template`, which is private: pass `--template <your repo>`), placeholders, `develop`, labels, ledger, branch protection. `--ledger-only` creates just the ledger; `--dry-run` prints every action |
 
@@ -185,7 +185,7 @@ bash tests/bootstrap-test.sh [template-dir]   # full bootstrap against local bar
 bash tests/structure-test.sh       # commands, procedures and the skill agree; listing text fits the cap; key rules present
 bash tests/exec-bits-test.sh       # every plugin *.sh is executable in git
 bash tests/check-context-test.sh   # ok / SOFT / HARD levels, thresholds from env and args, window cap
-bash tests/prune-worktrees-test.sh # dirty, unpushed, live, young, locked, stray kept; clean pushed old removed; --discard
+bash tests/prune-worktrees-test.sh # dirty, unpushed, live, open PR, young, locked, stray kept; clean pushed old removed; --discard
 ```
 
 Gate for a kit PR: CI `tests` green (`.github/workflows/tests.yml` runs every `tests/*-test.sh`
@@ -199,7 +199,8 @@ template path when a change touches `bootstrap.sh`.
   - Finished worktrees are removed (#28, owner decision C-019: 25 GB of finished agent worktrees
     filled the disk). New `scripts/prune-worktrees.sh` (dry run by default, `--apply` removes)
     removes a `.claude/worktrees/*` worktree only when it is unlocked, unchanged for 6 hours,
-    clean (or only `--discard` matches), pushed, and no live session works in it; never a
+    clean (or only `--discard` matches), pushed, and with no live session in it or on its branch
+    and no open PR for its branch (a failed lookup keeps it); never a
     branch, never a stray folder. review-merge step 6: after archiving a `per-issue` session,
     check its worktree is gone, else prune it. Audit step 12: prune once per working day over
     the units (a group coordinator over the group's root folder).
