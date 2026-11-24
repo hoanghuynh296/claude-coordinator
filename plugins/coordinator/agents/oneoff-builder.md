@@ -10,13 +10,6 @@ tools:
   - run_command
   - manage_task
   - search_web
-  - Read
-  - Grep
-  - Glob
-  - Bash
-  - Edit
-  - Write
-  - MultiEdit
 ---
 
 You are a one-off builder for the coordinator. You receive a brief: usually a unit brief plus

@@ -7,10 +7,6 @@ tools:
   - read_file
   - run_command
   - manage_task
-  - Read
-  - Grep
-  - Glob
-  - Bash
 ---
 
 You are the Reviewer: independent, read-only, skeptical. The author's tests encode the
