@@ -53,9 +53,13 @@ python3 -I - "$plugin" "$root" <<'PY' && ok "plugin.json and marketplace.json ag
 import json, os, sys
 plugin, root = sys.argv[1:3]
 p = json.load(open(os.path.join(plugin, ".claude-plugin", "plugin.json")))
+ag_p = json.load(open(os.path.join(plugin, "plugin.json")))
+ag_h = json.load(open(os.path.join(plugin, "hooks.json")))
 m = json.load(open(os.path.join(root, ".claude-plugin", "marketplace.json")))
 entry = m["plugins"][0]
-assert entry["name"] == p["name"], "entry name and manifest name differ"
+assert entry["name"] == p["name"] == ag_p["name"], "entry name and manifest names differ"
+assert p["version"] == ag_p["version"], "Claude and Antigravity plugin.json versions differ"
+assert "coordinator-hooks" in ag_h, "Antigravity root hooks.json missing coordinator-hooks"
 assert os.path.isdir(os.path.join(root, entry["source"])), "plugin source path missing"
 assert p["version"].count(".") == 2, "version is not x.y.z"
 PY

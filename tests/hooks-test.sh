@@ -327,6 +327,38 @@ done
 unset COORDINATOR_NO_JQ
 python3 -I -c 'import json,sys; json.load(open(sys.argv[1]))' "$hooks/hooks.json" && { pass=$((pass+1)); echo "PASS hooks.json parses"; } \
   || { failn=$((failn+1)); echo "FAIL hooks.json does not parse"; }
+
+echo "--- Antigravity hook payloads (conversationId, toolCall.args, continuationActive)"
+ag_ev() { # convId tool Path
+  printf '{"conversationId":"%s","cwd":"%s","artifactDirectoryPath":"/private/tmp/ag-brain/a","hookEventName":"PreToolUse","toolCall":{"id":"t1","name":"%s","args":{"Path":"%s","Content":"x"}}}' "$1" "$P" "$2" "$3"
+}
+expect_out "AG guard: ledger file allowed"           '{"decision":"allow"}' "$(ag_ev coord-1 write_file "$L/COORDINATION.md" | bash "$hooks/coordinator-guard.sh")"
+expect_out "AG guard: docs/PLAN.md allowed"          '{"decision":"allow"}' "$(ag_ev coord-1 edit_file "$P/docs/PLAN.md" | bash "$hooks/coordinator-guard.sh")"
+expect_out "AG guard: artifactDirectoryPath allowed" '{"decision":"allow"}' "$(ag_ev coord-1 write_file "/private/tmp/ag-brain/a/plan.md" | bash "$hooks/coordinator-guard.sh")"
+expect_out "AG guard: ~/.gemini allowed"             '{"decision":"allow"}' "$(ag_ev coord-1 write_file "$HOME/.gemini/antigravity/x.md" | bash "$hooks/coordinator-guard.sh")"
+expect_out "AG guard: unit code denied"              '"decision":"deny"'    "$(ag_ev coord-1 edit_file "$P/src/app.ts" | bash "$hooks/coordinator-guard.sh")"
+expect_out "AG guard: unregistered allowed"          '{"decision":"allow"}' "$(ag_ev lane-7 edit_file "$P/src/app.ts" | bash "$hooks/coordinator-guard.sh")"
+expect_out "AG SessionStart: registered JSON"        '"injectSteps"'        "$(printf '{"conversationId":"coord-1","workspacePaths":["%s"],"hookEventName":"SessionStart"}' "$P" | bash "$hooks/session-start.sh")"
+expect_out "AG SessionStart: unregistered ledger"    'session id ag-new-1'  "$(printf '{"conversationId":"ag-new-1","workspacePaths":["%s"],"hookEventName":"SessionStart"}' "$WS" | bash "$hooks/session-start.sh")"
+expect_out "AG SessionStart: plain folder -> {}"     '{}'                   "$(printf '{"conversationId":"ag-new-2","workspacePaths":["%s"],"hookEventName":"SessionStart"}' "$tmp/plain" | bash "$hooks/session-start.sh")"
+
+reset
+merged 'o/r#12'
+ag_mr="$(printf '{"conversationId":"coord-1","cwd":"%s","hookEventName":"PostToolUse","toolCall":{"id":"t2","name":"run_command","args":{"CommandLine":"gh pr merge 12 --repo o/r --merge"}}}' "$tmp" | bash "$hooks/merge-reminder.sh")"
+expect_eq  "AG PostToolUse returns {}"               "{}" "$ag_mr"
+expect_eq  "AG merge records o/r#12"                 "o/r#12 " "$(pend coord-1)"
+ag_stop="$(printf '{"conversationId":"coord-1","hookEventName":"Stop","continuationActive":false}' | bash "$hooks/next-guard.sh")"
+expect_out "AG Stop returns decision:continue"       '"decision":"continue"' "$ag_stop"
+expect_out "AG Stop names o/r#12"                    'o/r#12' "$ag_stop"
+ag_sm="$(printf '{"conversationId":"coord-1","hookEventName":"PostToolUse","toolCall":{"id":"t3","name":"send_message","args":{"Recipient":"w1","Message":"PR #12 merged. Next: #50"}}}' | bash "$hooks/next-sent.sh")"
+expect_eq  "AG next-sent returns {}"                 "{}" "$ag_sm"
+expect_eq  "AG next-sent clears o/r#12"              "" "$(pend coord-1)"
+expect_eq  "AG Stop when nothing pending -> stop"    '{"decision":"stop"}' "$(printf '{"conversationId":"coord-1","hookEventName":"Stop","continuationActive":false}' | bash "$hooks/next-guard.sh")"
+ag_ci="$(printf '{"conversationId":"coord-6","hookEventName":"PreInvocation","lastUserInput":"PR ready: https://github.com/o/r/pull/12 head abc1234"}' | bash "$hooks/ci-watch-reminder.sh")"
+expect_out "AG PreInvocation PR ready -> injectSteps" '"injectSteps"' "$ag_ci"
+expect_out "AG PreInvocation includes ci-watch cmd"   'o/r 12 <head sha>' "$ag_ci"
+expect_eq  "AG PreInvocation ordinary input -> {}"    "{}" "$(printf '{"conversationId":"coord-6","hookEventName":"PreInvocation","lastUserInput":"status?"}' | bash "$hooks/ci-watch-reminder.sh")"
+
 echo "---"
 rm -rf "$tmp"
 echo "passed $pass, failed $failn"

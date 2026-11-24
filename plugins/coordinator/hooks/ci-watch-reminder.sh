@@ -14,12 +14,17 @@ set -u
 
 plugin="$(cd "$(dirname "$0")/.." && pwd -P)"
 input="$(cat)"
-sid="$(json_get "$input" session_id)" || exit 0
-registration_file "$sid" >/dev/null || exit 0
+sid="$(hook_sid "$input")" || exit 0
+ag=0; is_antigravity "$input" && ag=1
+silent() { (( ag )) && printf '{}\n'; exit 0; }
+registration_file "$sid" >/dev/null || silent
 
 event="$(json_get "$input" hook_event_name)"
+[[ -z "$event" ]] && event="$(json_get "$input" hookEventName)"
 if [[ "$event" == "UserPromptSubmit" ]]; then
   text="$(json_get "$input" prompt)"
+elif [[ "$event" == "PreInvocation" ]]; then
+  text="$(json_get "$input" lastUserInput)"
 else
   event="PostToolUse"
   text="$(json_get "$input" tool_response)"
@@ -68,7 +73,7 @@ for t in items:
         print(t)
 ' 2>/dev/null)" || firsts="$(loose)"   # reader crashed: fail open
 else firsts="$(loose)"; fi   # no python3: fail open, as merge-reminder does
-[[ -n "$firsts" ]] || exit 0
+[[ -n "$firsts" ]] || silent
 text="$firsts"
 
 cmds=(); rest="$text"
@@ -81,4 +86,8 @@ done
 
 msg="Coordinator: an agent reported \"PR ready\". In THIS turn start the CI watch in the background (Bash with run_in_background), with the head SHA from the report: bash \"$plugin/scripts/ci-watch.sh\" <owner/repo> <N> <head sha>. Its exit wakes you when CI ends (green, red or stale-head); a green run wakes nobody else. Review in parallel (Reviewer if the profile requires it); merge only when CI is green on the reported head and the review passed (review-merge.md, steps 2 and 6)."
 [[ ${#cmds[@]} -gt 0 ]] && msg+=" For the PR(s) named: $(printf '%s; ' "${cmds[@]}")"
-printf '{"hookSpecificOutput":{"hookEventName":"%s","additionalContext":%s}}\n' "$event" "$(json_string "${msg%; }")"
+if (( ag )); then
+  printf '{"injectSteps":[{"systemMessage":{"systemMessage":%s}}]}\n' "$(json_string "${msg%; }")"
+else
+  printf '{"hookSpecificOutput":{"hookEventName":"%s","additionalContext":%s}}\n' "$event" "$(json_string "${msg%; }")"
+fi

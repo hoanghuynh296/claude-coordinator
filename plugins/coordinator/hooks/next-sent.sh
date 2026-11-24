@@ -12,12 +12,16 @@ set -u
 . "$(dirname "$0")/lib.sh"
 
 input="$(cat)"
-sid="$(json_get "$input" session_id)" || exit 0
-registration_file "$sid" >/dev/null || exit 0
+sid="$(hook_sid "$input")" || exit 0
+ag=0; is_antigravity "$input" && ag=1
+silent() { (( ag )) && printf '{}\n'; exit 0; }
+registration_file "$sid" >/dev/null || silent
 
 text="$(json_get "$input" tool_input.message)"
-[[ -n "$text" ]] || exit 0
-[[ "$text" =~ (^|[^A-Za-z])Next:[[:space:]]*[^[:space:]] ]] || exit 0
+[[ -z "$text" ]] && text="$(json_get "$input" toolCall.args.Message)"
+[[ -z "$text" ]] && text="$(json_get "$input" toolCall.args.brief)"
+[[ -n "$text" ]] || silent
+[[ "$text" =~ (^|[^A-Za-z])Next:[[:space:]]*[^[:space:]] ]] || silent
 
 cleared=(); ambiguous=()
 rest="$text"
@@ -28,11 +32,15 @@ while [[ "$rest" =~ $re ]]; do
   if [[ $rc -eq 0 ]]; then pending_remove "$sid" "$key" && cleared+=("$key")
   elif [[ $rc -eq 2 ]]; then ambiguous+=("$ref"); fi
 done
-[[ ${#cleared[@]} -gt 0 || ${#ambiguous[@]} -gt 0 ]] || exit 0
+[[ ${#cleared[@]} -gt 0 || ${#ambiguous[@]} -gt 0 ]] || silent
 
 msg="Coordinator:"
 [[ ${#cleared[@]} -gt 0 ]] && msg+=" Next sent for ${cleared[*]}."
 [[ ${#ambiguous[@]} -gt 0 ]] && msg+=" Not cleared: ${ambiguous[*]} is pending in more than one repo; write \"PR owner/repo#N merged. Next: ...\"."
 left="$(pending_keys "$sid" | tr '\n' ' ')"
 [[ -n "$left" ]] && msg+=" Still pending: ${left% }."
-printf '{"hookSpecificOutput":{"hookEventName":"PostToolUse","additionalContext":%s}}\n' "$(json_string "$msg")"
+if (( ag )); then
+  printf '{}\n'
+else
+  printf '{"hookSpecificOutput":{"hookEventName":"PostToolUse","additionalContext":%s}}\n' "$(json_string "$msg")"
+fi

@@ -21,6 +21,7 @@ soft="${SOFT_AT:-${ROTATE_AT:-250k}}"
 hard="${HARD_AT:-400k}"
 window="${CONTEXT_WINDOW:-}"
 projects="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/projects"
+ag_brains="${ANTIGRAVITY_BRAIN_DIR:-$HOME/.gemini/antigravity/brain}"
 command -v python3 >/dev/null 2>&1 || { echo "check-context.sh needs python3" >&2; exit 1; }
 
 args=(); soft_arg=""; hard_arg=""; coordinator=""
@@ -42,10 +43,12 @@ if [[ -n "$coordinator" ]]; then soft=300k; hard=450k; fi
 files=()
 if [[ ${#args[@]} -eq 0 ]]; then
   # shellcheck disable=SC2012  # ls -t is the portable way to sort by mtime; names are UUIDs
-  while IFS= read -r f; do files+=("$f"); done < <(ls -t "$projects"/*/*.jsonl 2>/dev/null | head -n 10)
+  while IFS= read -r f; do files+=("$f"); done < <(ls -t "$projects"/*/*.jsonl "$ag_brains"/*/.system_generated/logs/transcript.jsonl 2>/dev/null | head -n 10)
 else
   for a in "${args[@]}"; do
     if [[ -f "$a" ]]; then files+=("$a")
+    elif [[ -f "$ag_brains/$a/.system_generated/logs/transcript.jsonl" ]]; then
+      files+=("$ag_brains/$a/.system_generated/logs/transcript.jsonl")
     else
       matches=("$projects"/*/"$a".jsonl)
       if [[ -f "${matches[0]}" ]]; then files+=("${matches[0]}"); else echo "no transcript for $a" >&2; fi
@@ -90,7 +93,17 @@ for path in sys.argv[4:]:
             u = msg.get("usage") if isinstance(msg, dict) else None
             if rec.get("type") == "assistant" and u and not rec.get("isSidechain"):
                 last = u
-    sid = os.path.basename(path)[:-6]
+            elif rec.get("type") == "PLANNER_RESPONSE" and ("input_tokens" in rec or "cache_read_tokens" in rec):
+                last = {
+                    "input_tokens": rec.get("input_tokens", 0),
+                    "cache_read_input_tokens": rec.get("cache_read_tokens", 0),
+                    "cache_creation_input_tokens": rec.get("cache_creation_tokens", 0),
+                }
+    base = os.path.basename(path)
+    if base == "transcript.jsonl" and os.path.basename(os.path.dirname(path)) == "logs":
+        sid = os.path.basename(os.path.dirname(os.path.dirname(os.path.dirname(path))))
+    else:
+        sid = base[:-6]
     if last is None:
         print(f"{sid}  no usage yet  {title}")
         continue
