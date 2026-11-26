@@ -250,8 +250,8 @@ assert any("ci-watch-reminder.sh" in x["command"] for e in h["UserPromptSubmit"]
 m = [e["matcher"] for e in h["PostToolUse"] if any("ci-watch-reminder.sh" in x["command"] for x in e["hooks"])]
 assert m and "ReadNotifications" in m[0] and "FetchInboxMessage" in m[0]
 PY3
-grep -q '^- \*\*0\.9\.0\*\*' "$root/README.md" && grep -q '^- \*\*0\.10\.0\*\*' "$root/README.md" && grep -q '"version": "0.10.0"' "$plugin/.claude-plugin/plugin.json" \
-  && ok "README changelog and plugin.json at 0.10.0" || bad "0.10.0 missing from README or plugin.json"
+grep -q '^- \*\*0\.11\.0\*\*' "$root/README.md" && grep -q '^- \*\*0\.11\.1\*\*' "$root/README.md" && grep -q '"version": "0.11.1"' "$plugin/.claude-plugin/plugin.json" \
+  && ok "README changelog and plugin.json at 0.11.1" || bad "0.11.1 missing from README or plugin.json"
 # Same-session next issue (0.9.0): the strict conditions are stated where the coordinator and the agent read them.
 for f in SKILL.md references/workflow.md references/profile.md references/pitfalls.md references/procedures/review-merge.md references/templates/PROFILE.md references/templates/unit-brief.md; do
   has "$f" '(same session)' && ok "$f gives the same-session Next" || bad "$f lacks the same-session Next"

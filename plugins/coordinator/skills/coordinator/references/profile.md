@@ -97,7 +97,7 @@ None is mandatory. Add a role when its trigger is true; remove it when it stops 
 | Platform (sole owner of shared and root files: CI, build files, infra) | several units edit the same root files and their PRs conflict |
 | QA (acceptance tests from exit criteria, verdict on staging) | the product has user-facing flows, a staging environment, and milestones with exit criteria |
 | Reviewer (independent, read-only subagent) | always available; the profile lists the risk areas and size limits that make it mandatory |
-| One-off builder (subagent with its own branch and PR) | small self-contained tasks outside any unit's queue, or when sessions cannot be started |
+| One-off builder (subagent with its own branch and PR) | small self-contained tasks outside any unit's queue, or when sessions cannot be started (then the coordinator registers with `--no-guard`: subagents inherit its edit guard) |
 
 ### 4. Flow
 
@@ -151,6 +151,12 @@ only under it; section 3). A Budgets line overrides it.
 
 `check-context.sh --soft <n> --hard <n> [--window <n>]` reports `ok`, `SOFT` or `HARD`. One
 run applies one set of thresholds: run it once per model group when they differ.
+
+**Token economy.** The general rules are in `references/token-economy.md`. The profile adds
+what is specific: the model per task type, the local test commands and scope, and the
+"Known" list every brief carries (flaky tests, tool limits, ports, accounts). The token
+audit (`procedures/token-audit.md`) measures and updates both: general findings go into the
+plugin, project findings into this section.
 
 ### 9. Deploy
 

@@ -42,6 +42,9 @@ Review and merge the named pull request. Read the unit's row and the
      reports "PR ready" again and waits again; review that report from step 1 and start a new
      CI watch for the new head (step 2).
    - Fix commits in a risk area: run the Reviewer again on the fix commits before merging.
+   - Fix commits outside a risk area: check them yourself from the diff of the fix range and the
+     CI; no second Reviewer run (`references/token-economy.md`, rule 9). A re-review, when
+     needed, covers only the fix range and may use the profile's cheaper review model.
    - Above the Reviewer line threshold in a risk area, send the work back to be split: the
      contract or migration PR first, then the logic, then the UI.
    - A cross-lane mini-exception (a small change in another lane's file) is allowed only if the
