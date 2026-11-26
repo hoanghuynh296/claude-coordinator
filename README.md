@@ -200,6 +200,16 @@ template path when a change touches `bootstrap.sh`.
 ## Changes
 
 - **Unreleased**: nothing yet.
+- **0.12.0** (2026-11-26): Antigravity alongside Claude Code (#40). Every hook reads both
+  payloads (`session_id` or `conversationId`, `tool_input` or `toolCall.args`) and answers in
+  the runtime's own format; Claude Code output is unchanged. New `plugins/coordinator/plugin.json`
+  and `hooks.json` for Antigravity's plugin discovery (same version as the Claude manifest),
+  a runtime mapping table in SKILL.md, `check-context.sh` also reads Antigravity transcripts
+  (`ANTIGRAVITY_BRAIN_DIR`, default `~/.gemini/antigravity/brain`), and the coordinator guard
+  allows `~/.gemini/**`. The agents keep their Claude Code frontmatter (tools, read-only
+  Reviewer, model); on Antigravity they are marked `subagent: true` and run with its default
+  tool set. On Antigravity the merge and Next-sent reminders are silent; the Stop guard still
+  holds an unsent Next.
 - **0.11.1** (2026-11-26): builder subagents may write when sessions cannot be started. When
   the owner is on Remote Control or the coordinator runs as a terminal CLI session, the
   coordinator re-registers with `--no-guard` before it starts `oneoff-builder` subagents (they

@@ -23,9 +23,23 @@ into the profile.
 
 ## Paths
 
-- `<plugin>` = `${CLAUDE_PLUGIN_ROOT}` (scripts are in `<plugin>/scripts/`).
-- `<session>` = `${CLAUDE_SESSION_ID}` (this session's id, for registration).
+- `<plugin>` = `${CLAUDE_PLUGIN_ROOT}` on Claude Code, or the plugin folder containing `skills/coordinator/SKILL.md` (`~/.gemini/config/plugins/coordinator`) on Antigravity (scripts are in `<plugin>/scripts/`).
+- `<session>` = `${CLAUDE_SESSION_ID}` on Claude Code, or `<Conversation ID>` on Antigravity (this session's id, for registration).
 - Procedures: `references/procedures/<name>.md`, next to this file (`${CLAUDE_SKILL_DIR}`).
+
+## Dual-runtime equivalence (Claude Code & Antigravity)
+
+All output contracts — ledger files (`COORDINATION.md`, `coordination/*`), `ledger-lint.sh`, GitHub issues/branches/PRs, report formats (`PR ready:`, `Draft ready:`, `Context: <k tokens>`), merge notices (`PR #<n> merged. Next: ...`), Reviewer verdicts, and mechanical hook guards — are identical across Claude Code and Antigravity so the owner can switch tools at any point. Map host session primitives as follows:
+
+| Action | Claude Code | Antigravity |
+|---|---|---|
+| Start / staff a unit agent in its own worktree | Start session in worktree + `mcp__ccd_session_mgmt__detach_session` | `swarm(action="add", name="<unit>", workspace="share", brief="...")` |
+| Message an agent (`Next:`, findings) or coordinator | `SendMessage` / `mcp__ccd_session_mgmt__send_message` | `send_message` (or `swarm` board mention) |
+| Archive a `per-issue` agent & clean its worktree | `mcp__ccd_session_mgmt__archive_session` + `prune-worktrees.sh` | `swarm(action="kill", name="<unit>")` (deletes share workspace automatically) |
+| Measure context usage | `mcp__ccd_session_mgmt__get_usage` or `scripts/check-context.sh` | `scripts/check-context.sh [--coordinator] <session>` |
+| Run background CI watch | `Bash` with `run_in_background` | `run_command` with `WaitMsBeforeAsync: 500` |
+| Spawn `reviewer` or `oneoff-builder` | Subagent `coordinator:reviewer` / `coordinator:oneoff-builder` | `invoke_subagent(TypeName="reviewer" \| "oneoff-builder")` |
+| `auto_archive_on_pr_close` / `set_session_title` | Check/set via `mcp__ccd_settings__*` / `mcp__ccd_session_mgmt__*` | N/A on Antigravity (record `N/A (Antigravity)` in `PROFILE.md` if needed; use `swarm(action="title")` for swarm title) |
 
 ## The owner speaks plain language
 

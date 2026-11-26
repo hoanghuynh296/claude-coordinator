@@ -1,0 +1,10 @@
+{
+  "name": "coordinator",
+  "displayName": "Coordinator",
+  "version": "0.12.0",
+  "description": "Run a software project with several agent sessions in any shape (one repo with lanes, several repos, one small repo): core principles + a per-project profile, a standard ledger, task issues, review and release commands, a ledger lint, and guards that keep the coordinator out of product code and agents off merged branches.",
+  "author": {
+    "name": "hoanghuynh296"
+  },
+  "repository": "https://github.com/hoanghuynh296/claude-coordinator"
+}

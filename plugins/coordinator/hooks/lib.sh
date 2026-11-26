@@ -12,7 +12,7 @@ have_jq() { [[ -z "${COORDINATOR_NO_JQ:-}" ]] && command -v jq >/dev/null 2>&1; 
 json_get() {
   local json="$1" field="$2"
   if have_jq; then
-    printf '%s' "$json" | jq -r --arg f "$field" 'getpath($f | split(".")) // "" | tostring' 2>/dev/null
+    printf '%s' "$json" | jq -r --arg f "$field" 'getpath($f | split(".") | map(tonumber? // .)) // "" | tostring' 2>/dev/null
   elif command -v python3 >/dev/null 2>&1; then
     printf '%s' "$json" | python3 -I -c '
 import json, sys
@@ -20,7 +20,12 @@ f = sys.argv[1].split(".")
 try:
     v = json.load(sys.stdin)
     for k in f:
-        v = v.get(k) if isinstance(v, dict) else None
+        if isinstance(v, dict):
+            v = v.get(k)
+        elif isinstance(v, list) and k.isdigit() and int(k) < len(v):
+            v = v[int(k)]
+        else:
+            v = None
     if v is None:
         print("")
     elif isinstance(v, (bool, dict, list)):
@@ -43,6 +48,20 @@ json_string() {
   else
     printf '%s' "$1" | python3 -I -c 'import json,sys; print(json.dumps(sys.stdin.read()))'
   fi
+}
+
+# is_antigravity <json> -> 0 when the hook input is an Antigravity payload (has conversationId)
+is_antigravity() {
+  [[ -n "$(json_get "$1" conversationId)" ]]
+}
+
+# hook_sid <json> -> session_id (Claude Code) or conversationId (Antigravity)
+hook_sid() {
+  local s
+  s="$(json_get "$1" session_id)"
+  [[ -n "$s" ]] || s="$(json_get "$1" conversationId)"
+  [[ -n "$s" ]] || return 1
+  printf '%s' "$s"
 }
 
 # registration_file <session_id> -> path if the session is a registered coordinator

@@ -12,15 +12,18 @@ set -u
 
 plugin="$(cd "$(dirname "$0")/.." && pwd -P)"
 input="$(cat)"
-sid="$(json_get "$input" session_id)" || exit 0
-registration_file "$sid" >/dev/null || exit 0
+sid="$(hook_sid "$input")" || exit 0
+ag=0; is_antigravity "$input" && ag=1
+silent() { (( ag )) && printf '{"decision":"stop"}\n'; exit 0; }
+registration_file "$sid" >/dev/null || silent
 pending="$(pending_keys "$sid")"
-[[ -n "$pending" ]] || exit 0
+[[ -n "$pending" ]] || silent
 
-d="$(state_dir "$sid")" || exit 0
+d="$(state_dir "$sid")" || silent
 max="${COORDINATOR_NEXT_MAX_BLOCKS:-3}"
 [[ "$max" =~ ^[0-9]+$ ]] || max=3
 active="$(json_get "$input" stop_hook_active)"
+[[ -z "$active" ]] && active="$(json_get "$input" continuationActive)"
 count=0
 if [[ "$active" == "true" && -f "$d/stop-blocks" ]]; then
   count="$(cat "$d/stop-blocks" 2>/dev/null)"; [[ "$count" =~ ^[0-9]+$ ]] || count=0
@@ -37,9 +40,17 @@ prs="${prs%, }"
 if (( count >= max )); then
   rm -f "$d/stop-blocks"
   msg="Coordinator: ${prs} merged without a Next message to the author; the agent is waiting and will stay idle. Stop allowed after ${max} blocks. Send it next turn, or clear it with scripts/next-clear.sh and a reason."
-  printf '{"systemMessage":%s}\n' "$(json_string "$msg")"
+  if (( ag )); then
+    printf '{"decision":"stop","reason":%s}\n' "$(json_string "$msg")"
+  else
+    printf '{"systemMessage":%s}\n' "$(json_string "$msg")"
+  fi
   exit 0
 fi
 echo $((count + 1)) >"$d/stop-blocks"
-reason="Coordinator: merged PR(s) ${prs} still need the author told what is next (review-merge.md, step 9). The agent waits after \"PR ready\" and runs only when a message arrives.${lines} Read the author's context first (mcp__ccd_session_mgmt__get_usage): at or past the soft limit, Next: handover; a per-issue agent, Next: done (then archive it); otherwise the next issue, or stand by. Send it with SendMessage to the author's session by name. If the author can no longer receive a message (session archived or deleted), clear it with a reason the ledger keeps: bash \"${plugin}/scripts/next-clear.sh\" ${sid} <owner/repo#N> \"<reason>\"."
-printf '{"decision":"block","reason":%s}\n' "$(json_string "$reason")"
+reason="Coordinator: merged PR(s) ${prs} still need the author told what is next (review-merge.md, step 9). The agent waits after \"PR ready\" and runs only when a message arrives.${lines} Read the author's context first (mcp__ccd_session_mgmt__get_usage or scripts/check-context.sh): at or past the soft limit, Next: handover; a per-issue agent, Next: done (then archive it); otherwise the next issue, or stand by. Send it with SendMessage (or send_message / swarm) to the author's session by name. If the author can no longer receive a message (session archived or deleted), clear it with a reason the ledger keeps: bash \"${plugin}/scripts/next-clear.sh\" ${sid} <owner/repo#N> \"<reason>\"."
+if (( ag )); then
+  printf '{"decision":"continue","reason":%s}\n' "$(json_string "$reason")"
+else
+  printf '{"decision":"block","reason":%s}\n' "$(json_string "$reason")"
+fi

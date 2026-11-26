@@ -69,5 +69,14 @@ expect "bad number is refused"       fail "not a token count" bash "$script" --s
 expect "inf is refused"              fail "not a token count" bash "$script" --soft inf s-mid
 expect "unknown option is refused"   fail "unknown option" bash "$script" --rotate 1 s-mid
 
+mkdir -p "$w/ag-brain/ag-conv-1/.system_generated/logs"
+{
+  printf '{"step_index":0,"source":"USER_EXPLICIT","type":"USER_INPUT","content":"hi"}\n'
+  printf '{"step_index":1,"source":"MODEL","type":"PLANNER_RESPONSE","input_tokens":50000,"cache_read_tokens":210000,"output_tokens":300}\n'
+} >"$w/ag-brain/ag-conv-1/.system_generated/logs/transcript.jsonl"
+export ANTIGRAVITY_BRAIN_DIR="$w/ag-brain"
+expect "Antigravity conversation id" ok   "ag-conv-1   260k  SOFT" bash "$script" ag-conv-1
+expect "Antigravity transcript path" ok   "ag-conv-1   260k  ok"   bash "$script" --coordinator "$w/ag-brain/ag-conv-1/.system_generated/logs/transcript.jsonl"
+
 echo "$pass passed, $failn failed"
 [[ $failn -eq 0 ]]

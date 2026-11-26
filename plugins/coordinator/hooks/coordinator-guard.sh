@@ -14,22 +14,34 @@ set -u
 . "$(dirname "$0")/lib.sh"
 
 input="$(cat)"
-sid="$(json_get "$input" session_id)" || exit 0
-reg="$(registration_file "$sid")" || exit 0
-[[ "$(reg_value "$reg" guard)" == "off" ]] && exit 0
+sid="$(hook_sid "$input")" || exit 0
+ag=0; is_antigravity "$input" && ag=1
+allow() {
+  (( ag )) && printf '{"decision":"allow"}\n'
+  exit 0
+}
+reg="$(registration_file "$sid")" || allow
+[[ "$(reg_value "$reg" guard)" == "off" ]] && allow
 
 path="$(json_get "$input" tool_input.file_path)"
 [[ -z "$path" ]] && path="$(json_get "$input" tool_input.notebook_path)"
-[[ -z "$path" ]] && exit 0
+[[ -z "$path" ]] && path="$(json_get "$input" toolCall.args.Path)"
+[[ -z "$path" ]] && path="$(json_get "$input" toolCall.args.TargetFile)"
+[[ -z "$path" ]] && allow
 
 cwd="$(json_get "$input" cwd)"
 scratch="$(json_get "$input" scratchpad_dir)"
+[[ -z "$scratch" ]] && scratch="$(json_get "$input" artifactDirectoryPath)"
 [[ "$path" != /* ]] && path="${cwd:-$PWD}/$path"
 
 deny() {
   local reason="$1"
-  printf '{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":%s}}\n' \
-    "$(json_string "$reason")"
+  if (( ag )); then
+    printf '{"decision":"deny","reason":%s}\n' "$(json_string "$reason")"
+  else
+    printf '{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":%s}}\n' \
+      "$(json_string "$reason")"
+  fi
   exit 0
 }
 
@@ -80,20 +92,20 @@ if [[ ${#units[@]} -gt 0 ]]; then
   for unit in "${units[@]}"; do
     if under "$path" "$unit"; then
       rel="${path#"${unit%/}"/}"
-      allowed_rel "$rel" && exit 0
-      deny "Coordinator guard: this session is registered as the coordinator and may not edit $path (inside unit $unit). $delegate Allowed inside units: $allow_text. Allowed elsewhere: the ledger repo ($ledger), ~/.claude/**, the scratchpad and temp dirs."
+      allowed_rel "$rel" && allow
+      deny "Coordinator guard: this session is registered as the coordinator and may not edit $path (inside unit $unit). $delegate Allowed inside units: $allow_text. Allowed elsewhere: the ledger repo ($ledger), ~/.claude/**, ~/.gemini/**, the scratchpad and temp dirs."
     fi
   done
 fi
 
 # 2. Ledger repo, memory/config, scratchpad and temp dirs.
-for dir in "$ledger" "$HOME/.claude" "$scratch" "${TMPDIR:-}" /tmp /private/tmp /private/var/folders; do
-  under "$path" "$dir" && exit 0
+for dir in "$ledger" "$HOME/.claude" "$HOME/.gemini" "$scratch" "${TMPDIR:-}" /tmp /private/tmp /private/var/folders; do
+  under "$path" "$dir" && allow
 done
 
 # 3. No unit recorded: the allowed planning files anywhere.
 if [[ ${#units[@]} -eq 0 ]] && allowed_rel "${path#/}"; then
-  exit 0
+  allow
 fi
 
-deny "Coordinator guard: this session is registered as the coordinator and may not edit $path. $delegate Allowed: the ledger repo ($ledger), inside units only $allow_text, ~/.claude/**, the scratchpad and temp dirs."
+deny "Coordinator guard: this session is registered as the coordinator and may not edit $path. $delegate Allowed: the ledger repo ($ledger), inside units only $allow_text, ~/.claude/**, ~/.gemini/**, the scratchpad and temp dirs."

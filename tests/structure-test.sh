@@ -53,9 +53,13 @@ python3 -I - "$plugin" "$root" <<'PY' && ok "plugin.json and marketplace.json ag
 import json, os, sys
 plugin, root = sys.argv[1:3]
 p = json.load(open(os.path.join(plugin, ".claude-plugin", "plugin.json")))
+ag_p = json.load(open(os.path.join(plugin, "plugin.json")))
+ag_h = json.load(open(os.path.join(plugin, "hooks.json")))
 m = json.load(open(os.path.join(root, ".claude-plugin", "marketplace.json")))
 entry = m["plugins"][0]
-assert entry["name"] == p["name"], "entry name and manifest name differ"
+assert entry["name"] == p["name"] == ag_p["name"], "entry name and manifest names differ"
+assert p["version"] == ag_p["version"], "Claude and Antigravity plugin.json versions differ"
+assert "coordinator-hooks" in ag_h, "Antigravity root hooks.json missing coordinator-hooks"
 assert os.path.isdir(os.path.join(root, entry["source"])), "plugin source path missing"
 assert p["version"].count(".") == 2, "version is not x.y.z"
 PY
@@ -246,8 +250,16 @@ assert any("ci-watch-reminder.sh" in x["command"] for e in h["UserPromptSubmit"]
 m = [e["matcher"] for e in h["PostToolUse"] if any("ci-watch-reminder.sh" in x["command"] for x in e["hooks"])]
 assert m and "ReadNotifications" in m[0] and "FetchInboxMessage" in m[0]
 PY3
-grep -q '^- \*\*0\.11\.0\*\*' "$root/README.md" && grep -q '^- \*\*0\.11\.1\*\*' "$root/README.md" && grep -q '"version": "0.11.1"' "$plugin/.claude-plugin/plugin.json" \
-  && ok "README changelog and plugin.json at 0.11.1" || bad "0.11.1 missing from README or plugin.json"
+grep -q '^- \*\*0\.11\.0\*\*' "$root/README.md" && grep -q '^- \*\*0\.11\.1\*\*' "$root/README.md" && grep -q '^- \*\*0\.12\.0\*\*' "$root/README.md" && grep -q '"version": "0.12.0"' "$plugin/.claude-plugin/plugin.json" \
+  && ok "README changelog and plugin.json at 0.12.0" || bad "0.12.0 missing from README or plugin.json"
+# Agents keep their Claude Code frontmatter (#40): Claude tool names, read-only Reviewer, model.
+python3 -I - "$plugin" <<'PY4' && ok "agents keep Claude Code frontmatter" || bad "agent frontmatter lost its Claude Code tools or model"
+import os, sys
+fm = lambda n: open(os.path.join(sys.argv[1], "agents", n)).read().split("---")[1]
+r, b = fm("reviewer.md"), fm("oneoff-builder.md")
+assert "tools: Read, Grep, Glob, Bash" in r and "disallowedTools: Edit, Write" in r and "model: opus" in r
+assert "\ntools:" not in b and "model: sonnet" in b
+PY4
 # Same-session next issue (0.9.0): the strict conditions are stated where the coordinator and the agent read them.
 for f in SKILL.md references/workflow.md references/profile.md references/pitfalls.md references/procedures/review-merge.md references/templates/PROFILE.md references/templates/unit-brief.md; do
   has "$f" '(same session)' && ok "$f gives the same-session Next" || bad "$f lacks the same-session Next"

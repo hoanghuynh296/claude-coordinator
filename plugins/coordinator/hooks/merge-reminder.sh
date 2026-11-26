@@ -30,17 +30,26 @@ set -u
 
 plugin="$(cd "$(dirname "$0")/.." && pwd -P)"
 input="$(cat)"
-sid="$(json_get "$input" session_id)" || exit 0
-registration_file "$sid" >/dev/null || exit 0
+sid="$(hook_sid "$input")" || exit 0
+ag=0; is_antigravity "$input" && ag=1
+silent() { (( ag )) && printf '{}\n'; exit 0; }
+registration_file "$sid" >/dev/null || silent
 
 cmd="$(json_get "$input" tool_input.command)"
-[[ "$cmd" =~ gh[[:space:]].*pr[[:space:]]+merge ]] || exit 0
+[[ -z "$cmd" ]] && cmd="$(json_get "$input" toolCall.args.CommandLine)"
+[[ "$cmd" =~ gh[[:space:]].*pr[[:space:]]+merge ]] || silent
 # The exit code is not read: a merge can succeed and a later `&& git pull` or --delete-branch
 # fail, so every outcome goes through `gh pr view` below (and an interrupted command too).
 cwd="$(json_get "$input" cwd)"
 
 generic="Coordinator: a PR may have been merged. If so, send its author \"PR #<N> merged. Next: <issue | handover | stand by | done>\" in this turn (review-merge.md, step 9); for a per-issue agent, archive its session afterwards (mcp__ccd_session_mgmt__archive_session); a standing session is archived only on rotation."
-emit() { printf '{"hookSpecificOutput":{"hookEventName":"PostToolUse","additionalContext":%s}}\n' "$(json_string "$1")"; }
+emit() {
+  if (( ag )); then
+    printf '{}\n'
+  else
+    printf '{"hookSpecificOutput":{"hookEventName":"PostToolUse","additionalContext":%s}}\n' "$(json_string "$1")"
+  fi
+}
 
 if ! command -v python3 >/dev/null 2>&1; then emit "$generic (python3 missing: the merge was not recorded.)"; exit 0; fi
 
@@ -253,6 +262,6 @@ if [[ ${#recorded[@]} -gt 0 ]]; then
 elif [[ -n "$notes" ]]; then
   msg="${generic}${notes}"
 else
-  exit 0
+  silent
 fi
 emit "$msg"
