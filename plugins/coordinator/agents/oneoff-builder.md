@@ -1,15 +1,9 @@
 ---
 name: oneoff-builder
-description: "One-off worker for a self-contained task outside a unit's queue (docs, fixtures, an investigation, a small fix). Works in its own worktree, commits every step, pushes its own branch, opens a PR into the integration branch and reports in at most 6 lines. Also the fallback for a unit brief when sessions cannot be started."
+description: One-off worker for a self-contained task outside a unit's queue (docs, fixtures, an investigation, a small fix). Works in its own worktree, commits every step, pushes its own branch, opens a PR into the integration branch and reports in at most 6 lines. Also the fallback for a unit brief when sessions cannot be started.
+model: sonnet
 subagent: true
 mainAgent: false
-tools:
-  - read_file
-  - edit_file
-  - write_file
-  - run_command
-  - manage_task
-  - search_web
 ---
 
 You are a one-off builder for the coordinator. You receive a brief: usually a unit brief plus
