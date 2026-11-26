@@ -200,6 +200,12 @@ template path when a change touches `bootstrap.sh`.
 ## Changes
 
 - **Unreleased**: nothing yet.
+- **0.11.1** (2026-11-26): builder subagents may write when sessions cannot be started. When
+  the owner is on Remote Control or the coordinator runs as a terminal CLI session, the
+  coordinator re-registers with `--no-guard` before it starts `oneoff-builder` subagents (they
+  inherit its edit guard), for that case only; it still writes no unit code, and re-registers
+  with the guard on when sessions can be started again. SKILL, milestone-start,
+  coordinator-register, profile reference and pitfall 28 updated.
 - **0.11.0** (2026-11-26): token economy and token audit, lean agent tool set, finished
   worktrees pruned, and the other entries below.
   - Token economy and token audit. New `references/token-economy.md` (11 rules measured on a

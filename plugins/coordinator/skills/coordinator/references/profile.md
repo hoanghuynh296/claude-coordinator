@@ -97,7 +97,7 @@ None is mandatory. Add a role when its trigger is true; remove it when it stops 
 | Platform (sole owner of shared and root files: CI, build files, infra) | several units edit the same root files and their PRs conflict |
 | QA (acceptance tests from exit criteria, verdict on staging) | the product has user-facing flows, a staging environment, and milestones with exit criteria |
 | Reviewer (independent, read-only subagent) | always available; the profile lists the risk areas and size limits that make it mandatory |
-| One-off builder (subagent with its own branch and PR) | small self-contained tasks outside any unit's queue, or when sessions cannot be started |
+| One-off builder (subagent with its own branch and PR) | small self-contained tasks outside any unit's queue, or when sessions cannot be started (then the coordinator registers with `--no-guard`: subagents inherit its edit guard) |
 
 ### 4. Flow
 
