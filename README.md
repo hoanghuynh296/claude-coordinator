@@ -199,7 +199,9 @@ template path when a change touches `bootstrap.sh`.
 
 ## Changes
 
-- **Unreleased**:
+- **Unreleased**: nothing yet.
+- **0.11.0** (2026-11-26): token economy and token audit, lean agent tool set, finished
+  worktrees pruned, and the other entries below.
   - Token economy and token audit. New `references/token-economy.md` (11 rules measured on a
     real release: fewer, bigger calls; summaries instead of logs and screenshots; local gate =
     affected tests; never idle past the prompt cache; a "Known" section in every brief;

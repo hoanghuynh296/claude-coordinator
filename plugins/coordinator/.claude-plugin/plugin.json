@@ -1,7 +1,7 @@
 {
   "name": "coordinator",
   "displayName": "Coordinator",
-  "version": "0.10.0",
+  "version": "0.11.0",
   "description": "Run a software project with several Claude sessions in any shape (one repo with lanes, several repos, one small repo): core principles + a per-project profile, a standard ledger, task issues, review and release commands, a ledger lint, and guards that keep the coordinator out of product code and agents off merged branches.",
   "author": {
     "name": "hoanghuynh296"
