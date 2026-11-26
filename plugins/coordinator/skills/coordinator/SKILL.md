@@ -44,6 +44,7 @@ pick the procedure, read its file and follow it. Answer in the owner's language.
 | "release it", "chuẩn bị release", "close M1" | `milestone-close.md` |
 | "this session is getting long", "I'm moving to another machine", a session is `SOFT` or `HARD` | `handover.md` |
 | "clean up", "is everything in order?", the ledger looks wrong, or a working day starts | `audit.md` |
+| "why so many tokens?", "tối ưu token", a usage limit was hit, or a release / milestone just closed | `token-audit.md` |
 
 Rules for this:
 
@@ -245,6 +246,8 @@ release that needs a huge review). Log the change in `DECISIONS.md`.
 
 - `references/principles.md`, `references/profile.md`, `references/workflow.md`,
   `references/roles.md`, `references/state-files.md`, `references/review-checklist.md`
+- `references/token-economy.md`: how to spend fewer tokens without losing quality (calls,
+  outputs, local tests, cache, briefs, models, reviews); measured with `token-audit.md`.
 - `references/pitfalls.md`: read before starting a stretch of work.
 - `references/procedures/`: one file per procedure in the table above.
 - `references/packs/`: `saas-multitenant.md`, `artifact-contracts.md`, `ui-product.md`. Use the

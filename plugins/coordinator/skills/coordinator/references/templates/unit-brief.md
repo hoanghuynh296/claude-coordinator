@@ -83,7 +83,15 @@ unit.
     re-run, traps), report "blocked: rotate". No new step. <`per-issue` units: no handover file.
     At soft just finish the issue; at hard write the same sections into the PR (or the issue
     if there is no PR yet) instead.>
+13. Tokens (`references/token-economy.md`): run only the affected tests locally (CI runs the
+    full suite); return summaries, never full logs or dumps; wait for a long command inside one
+    call, never in a poll loop; mechanical edits across many files are a script.
 <Pack rules that apply to this unit, one line each.>
+
+## Known (from the profile, section 8)
+
+<Flaky tests and how to treat them; tool limits (e.g. `gh` cannot upload images: put numbers
+and local paths in the PR); ports; accounts; the local test commands.>
 
 ## Prompt (per round)
 

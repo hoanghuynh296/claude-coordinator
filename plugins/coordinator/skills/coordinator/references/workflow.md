@@ -163,5 +163,7 @@ After a release, clear the unit's verification debt items that the release cover
 
 - Context is measured with the session tools (`get_usage`, `scripts/check-context.sh`); an
   agent's self-report is a hint, never the measure.
+- Token spend is measured with `scripts/token-report.py` (procedure `token-audit.md`) at every
+  release or milestone close; rules in `references/token-economy.md`.
 - A cross-project item lives in the producer's ledger; the consumer's ledger writes
   "waits on <project>#N" and nothing more.
