@@ -217,8 +217,12 @@ for an agent what that agent's permissions denied: take it to the owner.
   integration branch with a clean tree and reports as usual. `Next: build #<n> (same session)`
   after an approved UI draft is the same issue's build, not a next issue: these conditions do not apply.
 - Sessions are found by name ("Agent: <unit>"), never by id. Ids do not go into the ledger.
-- If sessions cannot be started (the owner is on Remote Control, or the tool is unavailable),
-  run the same brief as a background subagent with its own worktree.
+- If sessions cannot be started (the owner is on Remote Control, the coordinator runs as a
+  terminal CLI session, or the tool is unavailable), run the same brief as a background
+  `oneoff-builder` subagent with its own worktree. The subagents run inside the coordinator's session and inherit its edit guard, so first
+  re-register with `--no-guard` (procedure `coordinator-register.md`), and only in this case.
+  The coordinator itself still edits no unit code: it tickets, briefs, reviews and merges.
+  When sessions can be started again, re-register with the guard on.
 - Two thresholds (profile "Budgets"; defaults for agents 250k soft, 400k hard; for the
   coordinator 300k soft, 450k hard on any model and window, C-015: `check-context.sh
   --coordinator`). Past **soft**: send no
@@ -232,8 +236,9 @@ for an agent what that agent's permissions denied: take it to the owner.
   archive the old one. `per-issue` sessions are archived by the coordinator after their PR
   merges and write no handover file: at soft they just finish the issue; at hard they write done, left, commands
   to re-run and traps into the PR (or the issue if there is no PR yet).
-- One-off work that writes files runs as its own session, not as a subagent of the
-  coordinator: subagents inherit the coordinator's edit guard.
+- One-off work that writes files runs as its own session when sessions can be started:
+  subagents inherit the coordinator's edit guard. When they cannot, see the subagent rule above
+  (`--no-guard` for that case only).
 - A usage limit stops every agent at once. The ledger says who was doing what.
 
 ## Changing how the project works

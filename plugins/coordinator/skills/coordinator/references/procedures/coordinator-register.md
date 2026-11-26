@@ -17,7 +17,10 @@ Register this session as coordinator. Input: the ledger folder and, optionally, 
      `--allow` the defaults apply: `docs/PLAN.md`, `docs/adr/*`, `docs/contracts/README.md`,
      `AGENTS.md`.
    - `--allow-none` when the profile lets the coordinator edit nothing inside units.
-   - `--no-guard` only when the profile says the coordinator may write code.
+   - `--no-guard` only when the profile says the coordinator may write code, or when sessions
+     cannot be started and builder subagents must write in their worktrees (they inherit this
+     session's guard). In that second case the coordinator still writes no unit code itself,
+     and re-registers with the guard on once sessions can be started again.
 3. Follow the read order in `coordination/README.md` and load the `coordinator` skill.
 4. Make sure this session sits at the top level of the sidebar: if it nests under the session
    that started it, detach yourself (`mcp__ccd_session_mgmt__detach_session` with `self`), or
