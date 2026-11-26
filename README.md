@@ -153,6 +153,7 @@ id and must register again.
 | `register.sh <session> <ledger> [unit...] [--allow glob]... [--allow-none] [--no-guard]` | register or `--unregister` a coordinator session |
 | `prune-worktrees.sh <root>... (--sessions <file> \| --no-session-check) [--apply] [--min-age-hours N] [--discard <glob>]...` | remove finished agent worktrees (`.claude/worktrees/*`) under the roots: only a registered, unlocked worktree with no change for N hours (default 6), a clean `git status` (or only changes matching `--discard`), HEAD in a remote branch, and (`--sessions`: the `list_sessions` JSON) no live session in it or on its branch and no open PR for its branch (`gh`; a failed lookup keeps it). `git worktree remove`, branches kept, stray folders reported and kept; prints the space freed. Dry run unless `--apply` |
 | `check-context.sh [--coordinator] [--soft N] [--hard N] [--window N] [session...]` | context size per session from its transcript, with a level: `ok`, `SOFT` (finish the current issue, then rotate; default 250k) or `HARD` (rotate now; default 400k). `--coordinator`: 300k / 450k. `--window` caps soft at 50% and hard at 75% of the context window. Also `SOFT_AT`, `HARD_AT`, `CONTEXT_WINDOW`; one run per model group |
+| `token-report.py <transcript dir \| session.jsonl> [--top N] [--json]` | where a session and its subagents spent tokens: calls, input, cache writes and reads, output, a weighted share, tool calls by tool, largest tool results; read-only (procedure `token-audit.md`) |
 | `bootstrap.sh <owner/repo> <dir> ...` | the single-repo SaaS starting point: repo from a template (default `hoanghuynh296/agent-project-template`, which is private: pass `--template <your repo>`), placeholders, `develop`, labels, ledger, branch protection. `--ledger-only` creates just the ledger; `--dry-run` prints every action |
 
 ## Layout
@@ -162,7 +163,8 @@ id and must register again.
 plugins/coordinator/
   .claude-plugin/plugin.json
   skills/coordinator/SKILL.md
-  skills/coordinator/references/{principles,profile,workflow,roles,state-files,review-checklist,pitfalls}.md
+  skills/token-audit/SKILL.md
+  skills/coordinator/references/{principles,profile,workflow,roles,state-files,review-checklist,pitfalls,token-economy}.md
   skills/coordinator/references/procedures/*.md            (one per command; the skill routes to them)
   skills/coordinator/references/packs/{saas-multitenant,artifact-contracts,ui-product}.md
   skills/coordinator/references/templates/*.md
@@ -180,6 +182,7 @@ tests/{hooks,ci-watch,ledger-lint,pre-push-guard,structure,bootstrap,exec-bits,c
 bash tests/hooks-test.sh           # edit guard, SessionStart, merge/Next/Stop hooks, CI watch reminder, jq and python3 paths, multi-unit workspace
 bash tests/ci-watch-test.sh        # ci-watch.sh with a fake gh: green, red, stale and moved head, no checks, timeout, errors
 bash tests/ledger-lint-test.sh     # every lint rule; a fresh ledger passes
+bash tests/token-report-test.sh    # token-report.py on a fixture session with a subagent
 bash tests/pre-push-guard-test.sh  # merged, closed and open PRs with a fake gh; install-guards
 bash tests/bootstrap-test.sh [template-dir]   # full bootstrap against local bare repos and a fake gh
 bash tests/structure-test.sh       # commands, procedures and the skill agree; listing text fits the cap; key rules present
@@ -197,6 +200,18 @@ template path when a change touches `bootstrap.sh`.
 ## Changes
 
 - **Unreleased**:
+  - Token economy and token audit. New `references/token-economy.md` (11 rules measured on a
+    real release: fewer, bigger calls; summaries instead of logs and screenshots; local gate =
+    affected tests; never idle past the prompt cache; a "Known" section in every brief;
+    pre-flight before fan-out; codemods for mechanical work; model per task type; review where
+    it pays; rotate the coordinator early; measure and improve). New procedure and command
+    `token-audit` and a `token-audit` skill: measure → find the causes → general rule into this
+    plugin → project rule into the profile → report. New `scripts/token-report.py` (read-only,
+    python3 standard library): tokens, calls, cache reads and rewrites, tool calls and largest
+    tool results per session and subagent from Claude Code transcripts. PROFILE template
+    section 8 gets a "Token economy" block, the unit brief a rule 13 and a "Known" section,
+    `review-merge.md` lets the coordinator check small fix commits outside risk areas from the
+    diff. Test `tests/token-report-test.sh`.
   - Lean agent tool set (#27, owner decision C-018). `install-guards.sh --tools "<groups>"`
     merges into the unit repo's `.claude/settings.json` the rules that turn off every optional
     tool group of the new `scripts/agent-tools.json` not kept: `permissions.deny` for whole MCP

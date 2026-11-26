@@ -103,6 +103,14 @@ Everything else goes through an issue for the owning unit.
 - No ack-only or status-ping messages. One batched message per agent per round. The merge
   notice `PR #<n> merged. Next: ...` is not a ping: it is the only thing that starts an
   agent's next step.
+- Token economy (`references/token-economy.md`; measured with the token audit):
+  - Models per task type: <strong model> for behaviour, layout, contracts; <cheaper model> for
+    re-reviews of small fix commits, release bumps, generated docs, codemods, probes.
+  - Local gate per issue: <fast gate command> plus the tests of what changed
+    (<how to run one spec>); the full suite is CI's job.
+  - Known (copied into every brief): <flaky tests and how to treat them>, <tool limits>,
+    <ports>, <accounts>.
+  - Token audit: at every release or milestone close.
 
 ## 9. Deploy
 

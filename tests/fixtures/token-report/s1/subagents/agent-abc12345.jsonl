@@ -1,0 +1,2 @@
+{"message":{"id":"a1","role":"assistant","usage":{"input_tokens":2,"cache_creation_input_tokens":100,"cache_read_input_tokens":300,"output_tokens":5},"content":[{"type":"tool_use","id":"ta1","name":"Read","input":{}}]}}
+{"message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"x","content":"yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy"}]}}

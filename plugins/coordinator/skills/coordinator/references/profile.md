@@ -152,6 +152,12 @@ only under it; section 3). A Budgets line overrides it.
 `check-context.sh --soft <n> --hard <n> [--window <n>]` reports `ok`, `SOFT` or `HARD`. One
 run applies one set of thresholds: run it once per model group when they differ.
 
+**Token economy.** The general rules are in `references/token-economy.md`. The profile adds
+what is specific: the model per task type, the local test commands and scope, and the
+"Known" list every brief carries (flaky tests, tool limits, ports, accounts). The token
+audit (`procedures/token-audit.md`) measures and updates both: general findings go into the
+plugin, project findings into this section.
+
 ### 9. Deploy
 
 Where prod runs, which checkout and branch is deployed, and who deploys (the coordinator never
