@@ -126,7 +126,7 @@ After a release, clear the unit's verification debt items that the release cover
 
 ## 7. Keep state (continuous)
 
-- Ledger: update, lint, commit and push after every merge, decision, release, session change
+- Ledger: update, then `ledger-commit.sh` (lint, commit, rebase, push) after every merge, decision, release, session change
   and owner answer.
 - Decisions: one row in `DECISIONS.md`; the bound units add their one-line entry.
 - Contexts: measure on every owner message. `SOFT`: no new issue for that session; replace it

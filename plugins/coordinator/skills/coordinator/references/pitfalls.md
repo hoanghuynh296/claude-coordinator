@@ -6,7 +6,7 @@ Read before starting a stretch of work. Each entry: what went wrong, then the fi
 
 1. **The ledger became a log.** It was meant to hold live state; after four days it was 231
    lines of per-PR history, with tables two days stale. → Live state only, a size budget,
-   `ledger-lint.sh` before every commit. History is in git.
+   `ledger-commit.sh` (lint included) for every commit. History is in git.
 2. **A stale delegation stayed in the ledger.** "The owner is asleep and delegated all
    decisions" was still there days later; a new coordinator could read it as valid. → Every
    delegation carries its date and is deleted when the session ends.

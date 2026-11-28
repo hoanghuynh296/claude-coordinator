@@ -88,8 +88,8 @@ Review and merge the named pull request. Read the unit's row and the
      Check `mcp__ccd_pr__get_status`, unbind (`mcp__ccd_pr__unbind_pr`) every merged PR bound to you,
      and ask the owner again to turn the setting off.
 7. **Ledger.** Update the unit's row in `COORDINATION.md` (in progress, "integration ahead
-   by"); remove the issue from `ROADMAP.md`. Do not add a line about the merged PR. Lint,
-   then commit and push once at the end of your turn, together with every other ledger change
+   by"); remove the issue from `ROADMAP.md`. Do not add a line about the merged PR. Commit
+   once (`ledger-commit.sh`) at the end of your turn, together with every other ledger change
    of that turn (several merges in one turn: one commit).
 8. **Group and ceiling.** Check the unit's open release group in `ROADMAP.md`: all its issues
    merged and its debt rows verifiable → the next thing for that unit is `milestone-close`

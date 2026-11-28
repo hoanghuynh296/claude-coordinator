@@ -30,6 +30,6 @@ Create one task issue for the unit and goal that were given.
    uses milestones).
 5. Add `<owner/repo>#<n> <title>` under its group, at the right position, in
    `coordination/ROADMAP.md`. Anything it needs from the owner also goes into the owner queue
-   in `COORDINATION.md`. Lint, commit and push the ledger.
+   in `COORDINATION.md`. Commit the ledger (`ledger-commit.sh`).
 6. Reply with the issue link only. Hand it to the agent in your next batched message to that
    unit, not as a separate ping.

@@ -132,8 +132,10 @@ Batch questions into one message, decisions first. Never send status pings.
 | Why | `coordination/DECISIONS.md` (append-only) |
 | What a session had in flight | `coordination/handover/<role>.md` |
 
-Details and the ledger layout: `references/state-files.md`. Run
-`bash "<plugin>/scripts/ledger-lint.sh" <ledger>` before every ledger commit.
+Details and the ledger layout: `references/state-files.md`. Commit every ledger change with
+`bash "<plugin>/scripts/ledger-commit.sh" <ledger> "<message>" [path...]`: it lints, commits the
+ledger paths only (`references/state-files.md`), rebases, pushes and prints one line (or the lint
+errors); no separate lint, add, pull or push calls.
 
 ## The loop
 

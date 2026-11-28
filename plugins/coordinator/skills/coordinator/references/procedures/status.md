@@ -12,4 +12,4 @@ Give the owner a status in at most 10 lines.
 4. Output, decisions first: what the owner must decide or do; then per unit one line
    (released, integration ahead by against its ceiling and its open release group, in progress, blocked on); PRs waiting
    for review; sessions at `SOFT` or `HARD`; verification debt count.
-5. If the ledger disagrees with GitHub, fix the ledger, lint, commit and push.
+5. If the ledger disagrees with GitHub, fix the ledger and commit it (`ledger-commit.sh`).
