@@ -9,7 +9,9 @@
 #   --values FILE       KEY=VALUE lines for the template placeholders ({{KEY}}); required
 #                       while TEMPLATE.md still exists in the repo
 #   --plan FILE         approved plan, copied to docs/PLAN.md
-#   --check NAME        extra required status check (repeatable); "changes" is always required
+#   --check NAME        extra required status check (repeatable). By default the required checks
+#                       are the jobs of the new repo's .github/workflows/ci.yml (the lanes left
+#                       after unused ones are removed); after removing a lane, rerun to update them
 #   --lanes "a b c"     lane labels to create (default: "api web integrations ai platform qa")
 #   --milestones "M0 M1" milestone labels + GitHub milestones (default: "M0 M1")
 #   --template REPO     template repo (default: hoanghuynh296/agent-project-template)
@@ -25,7 +27,7 @@ usage() { sed -n '2,23p' "$0" | sed 's/^# \{0,1\}//'; exit 2; }
 
 [[ $# -ge 2 ]] || usage
 repo="$1"; local_dir="$2"; shift 2
-values=""; plan=""; checks=("changes"); protect=1; ledger_only=0; dry=0
+values=""; plan=""; extra_checks=(); protect=1; ledger_only=0; dry=0
 lanes="api web integrations ai platform qa"
 milestones="M0 M1"
 template="hoanghuynh296/agent-project-template"
@@ -33,7 +35,7 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --values) values="$2"; shift 2 ;;
     --plan) plan="$2"; shift 2 ;;
-    --check) checks+=("$2"); shift 2 ;;
+    --check) extra_checks+=("$2"); shift 2 ;;
     --lanes) lanes="$2"; shift 2 ;;
     --milestones) milestones="$2"; shift 2 ;;
     --template) template="$2"; shift 2 ;;
@@ -276,19 +278,78 @@ else
 fi
 
 # ---------------------------------------------------------------- 9. branch protection
-step "9/9 branch protection (required checks: ${checks[*]})"
+# Required checks: every job of the repo's ci.yml (each lane job always reports a status, even
+# when it skips; group standard ci-runners.md "Fast CI") plus --check names. Read from the
+# workflow, not a fixed list, so a removed lane is never required.
+ci_jobs() {
+  python3 -I - "$1" <<'PY3'
+import re, sys
+lines = open(sys.argv[1], encoding="utf-8").read().splitlines()
+out, in_jobs, indent, job, job_indent = [], False, None, None, None
+for line in lines:
+    if not line.strip() or line.lstrip().startswith("#"):
+        continue
+    if not in_jobs:
+        in_jobs = re.match(r"jobs:\s*(#.*)?$", line) is not None
+        continue
+    lead = len(line) - len(line.lstrip(" "))
+    if lead == 0:
+        break
+    if indent is None:
+        indent = lead
+    m = re.match(r"([A-Za-z0-9_-]+):\s*(#.*)?$", line[lead:])
+    if lead == indent and m:
+        job, job_indent = [m.group(1), None, False], None
+        out.append(job)
+    elif job and lead > indent:
+        job_indent = job_indent or lead
+        if lead != job_indent:
+            continue
+        n = re.match(r"name:\s*(.+?)\s*(#.*)?$", line[lead:])
+        if n:
+            job[1] = n.group(1).strip("'\"")
+        if re.match(r"strategy:", line[lead:]):
+            job[2] = True
+for jid, name, matrix in out:
+    if matrix or (name and "${{" in name):
+        # GitHub names these checks per matrix value ("job (x)"): not derivable here.
+        print(f"skipped job {jid} (matrix or expression name): add its checks with --check", file=sys.stderr)
+        continue
+    print(name or jid)
+PY3
+}
+checks=()
+ci_file="$local_dir/.github/workflows/ci.yml"
+if [[ $protect -eq 1 ]]; then
+  if [[ -f "$ci_file" ]]; then
+    skipped_log="$(mktemp)"
+    jobs_out="$(ci_jobs "$ci_file" 2>"$skipped_log")" || { cat "$skipped_log" >&2; rm -f "$skipped_log"; fail "read jobs from $ci_file"; }
+    while IFS= read -r c; do [[ -n "$c" ]] && warn "$c"; done < "$skipped_log"
+    rm -f "$skipped_log"
+    while IFS= read -r c; do [[ -n "$c" ]] && checks+=("$c"); done <<< "$jobs_out"
+    [[ ${#checks[@]} -gt 0 ]] || warn "no jobs found in $ci_file"
+  elif [[ $dry -eq 1 ]]; then
+    printf '    would require the jobs of %s (not cloned yet)\n' "$ci_file"
+  else
+    warn "$ci_file not found: requiring only --check names"
+  fi
+fi
+for c in ${extra_checks[@]+"${extra_checks[@]}"}; do
+  printf '%s\n' ${checks[@]+"${checks[@]}"} | grep -qxF -- "$c" || checks+=("$c")
+done
+step "9/9 branch protection (required checks: ${checks[*]:-none})"
 protection_skipped=""
 if [[ $protect -eq 1 ]]; then
   body="$(python3 -I -c '
 import json, sys
 print(json.dumps({
-  "required_status_checks": {"strict": False, "contexts": sys.argv[1:]},
+  "required_status_checks": {"strict": False, "contexts": sys.argv[1:]} if sys.argv[1:] else None,
   "enforce_admins": False,
   "required_pull_request_reviews": None,
   "restrictions": None,
   "allow_force_pushes": False,
   "allow_deletions": False,
-}))' "${checks[@]}")"
+}))' ${checks[@]+"${checks[@]}"})"
   for branch in develop main; do
     if [[ $dry -eq 1 ]]; then
       printf '    would run: gh api -X PUT repos/%s/branches/%s/protection --input <%s>\n' "$repo" "$branch" "$body"

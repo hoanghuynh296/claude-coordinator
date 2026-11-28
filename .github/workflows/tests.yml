@@ -29,8 +29,8 @@ jobs:
           git config --global user.email "kit-ci@users.noreply.github.com"
           git config --global init.defaultBranch main
       - name: Run tests/*-test.sh
-        # bootstrap-test.sh needs a checkout of the private agent-project-template;
-        # without one next to this repo it prints SKIP and exits 0.
+        # bootstrap-test.sh uses a checkout of the private agent-project-template when one is
+        # next to this repo; without one it runs against a minimal template with the same lanes.
         # Runs under the bash on PATH (macOS /bin/bash 3.2 on the runner), as owners without
         # Homebrew bash do; every hook must work there.
         run: |
