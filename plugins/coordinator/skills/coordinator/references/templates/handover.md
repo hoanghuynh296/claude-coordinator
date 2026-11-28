@@ -15,6 +15,8 @@ goes into the unit's own docs first; rules go into `PROFILE.md`; state goes into
 - Open PRs: #<n> <gate green or red, review pending, findings to fix>
 - Branches pushed without a PR: <branch: what it holds, what is missing>
 - Unpushed work: none <there must be none: commit and push first>
+- Background subagents (coordinator only): none <or "running: <agent>, <task>" for each one
+  still running; the replacement collects its report>
 
 ## Done in this session
 - <issue / PR: state>

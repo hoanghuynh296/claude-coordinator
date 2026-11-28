@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Print the current context size of Claude sessions on this machine, from their transcripts.
 # Usage: check-context.sh [--role coordinator|agent] [--coordinator] [--profile PROFILE.md|ledger]
-#          [--soft N] [--hard N] [--window N] <session_id|transcript.jsonl>...
+#          [--soft N] [--hard N] [--window N] [--porcelain] <session_id|transcript.jsonl>...
 #        (no sessions: the 10 most recent). N is tokens; a k or m suffix is allowed (250k, 1m).
 # Context = input + cache_read + cache_creation tokens of the last assistant turn.
 # One line per session: "<session>  <size>k / <soft|hard> <threshold>k: <level>  <title>", level is
@@ -21,6 +21,9 @@
 # --window (or CONTEXT_WINDOW) then caps soft at 50% and hard at 75% of the model's context
 # window (a 200k window gives soft 100k, hard 150k). One window applies to every session
 # listed: run once per model group.
+# --porcelain: one machine line per session instead, "<session> <tokens> <soft> <hard> <level>"
+#   (exact token counts; level ok, SOFT, HARD, or none with tokens "-" when there is no usage
+#   yet). The rotation guard hook reads it.
 set -euo pipefail
 
 usage() { sed -n '3,5p' "$0" | sed 's/^# //' >&2; exit 2; }
@@ -31,7 +34,7 @@ projects="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/projects"
 ag_brains="${ANTIGRAVITY_BRAIN_DIR:-$HOME/.gemini/antigravity/brain}"
 command -v python3 >/dev/null 2>&1 || { echo "check-context.sh needs python3" >&2; exit 1; }
 
-args=(); soft_arg=""; hard_arg=""; role="auto"; profile=""
+args=(); soft_arg=""; hard_arg=""; role="auto"; profile=""; porcelain=""
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --soft) [[ $# -ge 2 ]] || usage; soft_arg="$2"; shift 2 ;;
@@ -42,6 +45,7 @@ while [[ $# -gt 0 ]]; do
     --coordinator) role=coordinator; shift ;;
     --profile) [[ $# -ge 2 ]] || usage; profile="$2"; shift 2 ;;
     --window) [[ $# -ge 2 ]] || usage; window="$2"; shift 2 ;;
+    --porcelain) porcelain=1; shift ;;
     -h|--help) usage ;;
     -*) echo "unknown option $1" >&2; usage ;;
     *) args+=("$1"); shift ;;
@@ -72,7 +76,7 @@ else
 fi
 [[ ${#files[@]} -gt 0 ]] || { echo "no transcripts found" >&2; exit 1; }
 
-python3 -I - "$role" "$profile" "$env_soft" "$env_hard" "$soft_arg" "$hard_arg" "$window" "${files[@]}" <<'PY'
+python3 -I - "$role" "$profile" "$env_soft" "$env_hard" "$soft_arg" "$hard_arg" "$window" "$porcelain" "${files[@]}" <<'PY'
 import json, os, re, sys
 
 def tokens(text):
@@ -139,7 +143,7 @@ def profile_budgets(path):
                 found.setdefault((role, level), tokens(m.group(0).replace(" ", "")))
     return found
 
-role_arg, profile, env_soft, env_hard, soft_arg, hard_arg, window_arg = sys.argv[1:8]
+role_arg, profile, env_soft, env_hard, soft_arg, hard_arg, window_arg, porcelain = sys.argv[1:9]
 limits = {"agent": {"soft": 250000, "hard": 400000},
           "coordinator": {"soft": 300000, "hard": 450000}}
 if profile:
@@ -163,7 +167,7 @@ def k(n):
     return f"{n // 1000}k" if n % 1000 == 0 or n >= 10000 else f"{n / 1000:g}k"
 
 rows = []
-for path in sys.argv[8:]:
+for path in sys.argv[9:]:
     last, title, custom = None, "", ""
     with open(path, encoding="utf-8", errors="replace") as fh:
         for line in fh:
@@ -198,11 +202,14 @@ for r in sorted({row[2] for row in rows if row[1] is not None}):
     if limits[r]["hard"] < limits[r]["soft"]:
         sys.exit(f"check-context.sh: {r} hard threshold {limits[r]['hard']} is below soft {limits[r]['soft']}")
 for sid, last, role, title in rows:
+    soft, hard = limits[role]["soft"], limits[role]["hard"]
     if last is None:
-        print(f"{sid}  no usage yet  {title}")
+        print(f"{sid} - {soft} {hard} none" if porcelain else f"{sid}  no usage yet  {title}")
         continue
     ctx = last.get("input_tokens", 0) + last.get("cache_read_input_tokens", 0) + last.get("cache_creation_input_tokens", 0)
-    soft, hard = limits[role]["soft"], limits[role]["hard"]
+    if porcelain:
+        print(f"{sid} {ctx} {soft} {hard} {'HARD' if ctx >= hard else 'SOFT' if ctx >= soft else 'ok'}")
+        continue
     if ctx >= hard:
         level, used = "HARD", f"hard {k(hard)}"
     else:

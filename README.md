@@ -133,9 +133,21 @@ files, review checklist, pitfalls, packs, templates) and two agents: `coordinato
 | Next sent (PostToolUse hook on `SendMessage` and `send_message`) | clears a PR when any message the coordinator sends holds `PR #N merged` (or `PR owner/repo#N merged`, needed when N is pending in two repos) and a `Next:` line, whatever the recipient |
 | CI watch reminder (UserPromptSubmit hook, and PostToolUse on `ReadNotifications` / `FetchInboxMessage`) | a registered coordinator receiving "PR ready" and forgetting to start the background CI watch: it is reminded in that turn, with a ready-to-run `ci-watch.sh` command for each PR link in the message. A reminder, never a block |
 | Next guard (Stop hook) | a coordinator ending its turn while a merged PR's author has not been told `PR #N merged. Next: ...`: the stop is blocked with the PRs and the message format; at most 3 blocks per turn, then a warning. `scripts/next-clear.sh <session> <owner/repo#N> "<reason>"` clears a PR whose author cannot be messaged, logging the reason to the ledger's `coordination/next-cleared.md` |
+| Rotation guard (UserPromptSubmit and Stop hooks; Antigravity: PreInvocation and Stop) | a coordinator working on past its thresholds. It measures the registered coordinator's own context from its transcript (`check-context.sh --role coordinator --profile <ledger> --porcelain`: PROFILE Budgets, else 300k / 450k), with no tool call and no output below soft. Past soft every owner turn gets one line, `Coordinator at <k>k / soft <s>k: rotate now (procedure handover.md, then a replacement)`, which also says to wait for background subagents still running. Past hard the end of an owner-started turn is blocked until `coordination/handover/coordinator.md` is committed in this session (on Remote Control the coordinator also makes the rotation the first Owner queue item; only the handover lifts the block). Let through: a merge in flight (pending Next, or a background `ci-watch.sh`) once with the reminder (not on Antigravity, which has no turn id); running subagents after one block that names them, so the turn can end and wait for their reports; turns the owner did not start; at most 3 blocks per turn. Fails open (no python3, no transcript, unreadable profile, a failed transcript scan, any error) |
 | `scripts/ledger-lint.sh <ledger>` | a ledger out of shape: missing files, over the size budget, session ids or home paths, decision ids cited but not defined, leftover placeholders. Warns on a stale date, on history in the live ledger, on an undated delegation |
 | `scripts/pre-push-guard.sh` (git pre-push hook) | pushing to a branch whose pull request is already merged or closed; optional local protection of release branches |
 | `scripts/install-guards.sh [--settings] [--tools "<groups>"] <repo>...` | installs the pre-push guard in each clone; `--settings` turns on delete-branch-on-merge on GitHub; `--tools` merges the lean agent tool set (every optional group of `scripts/agent-tools.json` not listed is turned off) into the repo's `.claude/settings.json` |
+
+Runtimes: Claude Code runs the rotation guard from `hooks/hooks.json` (UserPromptSubmit and
+Stop, next to the CI watch reminder and the Next guard). Antigravity runs one command per event,
+so its `hooks.json` runs `hooks/ag-chain.sh`, which feeds the same input to each hook and merges
+the answers (PreInvocation: the CI watch reminder and the rotation line as `injectSteps`; Stop:
+the first block of the Next guard or the rotation guard wins). Antigravity transcripts carry no
+turn origin and no background tasks: every turn counts as the owner's, none as running a
+subagent, "this session" starts at the registration time, and a merge in flight is not let
+through (no turn id to limit it to one turn; the 3-block cap still applies). Where the hooks do not run at all,
+`coordinator-register.md` step 9 has the coordinator run `check-context.sh --role coordinator`
+once per owner turn.
 
 Limits: the edit guard covers the edit tools only; a shell redirection is not blocked. The
 pre-push guard fails open when `gh` cannot reach the repo. A forked session gets a new session
@@ -154,7 +166,7 @@ id and must register again.
 | `ci-watch.sh <owner/repo> <N> [<sha>]` | watch a PR's CI until it ends and print one line: `green` (exit 0), `red: <checks> <link>` (1, at the first failure), `error` (2), `stale-head` when the head is not or no longer the reported SHA (3), `timeout` (4, `CI_WATCH_DEADLINE`, default 90 min), `no-checks` (5, `CI_WATCH_NOCHECKS`, default 15 min), not open (6). The coordinator runs it with `run_in_background` on every "PR ready": its exit wakes the coordinator when CI ends |
 | `register.sh <session> <ledger> [unit...] [--allow glob]... [--allow-none] [--no-guard]` | register or `--unregister` a coordinator session |
 | `prune-worktrees.sh <root>... (--sessions <file> \| --no-session-check) [--apply] [--min-age-hours N] [--discard <glob>]...` | remove finished agent worktrees (`.claude/worktrees/*`) under the roots: only a registered, unlocked worktree with no change for N hours (default 6), a clean `git status` (or only changes matching `--discard`), HEAD in a remote branch, and (`--sessions`: the `list_sessions` JSON) no live session in it or on its branch and no open PR for its branch (`gh`; a failed lookup keeps it). `git worktree remove`, branches kept, stray folders reported and kept; prints the space freed. Dry run unless `--apply` |
-| `check-context.sh [--role coordinator\|agent] [--profile PROFILE.md\|ledger] [--soft N] [--hard N] [--window N] [session...]` | context size per session from its transcript, with the threshold it used and a level: `334k / soft 300k: SOFT`. `ok`, `SOFT` (finish the current issue, then rotate) or `HARD` (rotate now). Role: a session titled `Coordinator: …` is a coordinator (soft 300k, hard 450k), any other an agent (250k / 400k); `--role` (or `--coordinator`) sets it for all. `--profile` reads the thresholds from the ledger's PROFILE Budgets (values it does not give keep the defaults). `SOFT_AT`, `HARD_AT` (agents only), then `--soft`, `--hard` (everyone) win over both. `--window` / `CONTEXT_WINDOW` caps soft at 50% and hard at 75% of the context window; one run per model group |
+| `check-context.sh [--role coordinator\|agent] [--profile PROFILE.md\|ledger] [--soft N] [--hard N] [--window N] [--porcelain] [session...]` | context size per session from its transcript, with the threshold it used and a level: `334k / soft 300k: SOFT`. `ok`, `SOFT` (finish the current issue, then rotate) or `HARD` (rotate now). Role: a session titled `Coordinator: …` is a coordinator (soft 300k, hard 450k), any other an agent (250k / 400k); `--role` (or `--coordinator`) sets it for all. `--profile` reads the thresholds from the ledger's PROFILE Budgets (values it does not give keep the defaults). `SOFT_AT`, `HARD_AT` (agents only), then `--soft`, `--hard` (everyone) win over both. `--window` / `CONTEXT_WINDOW` caps soft at 50% and hard at 75% of the context window; one run per model group. `--porcelain`: `<session> <tokens> <soft> <hard> <level>` per session, for scripts |
 | `token-report.py <transcript dir \| session.jsonl> [--top N] [--json]` | where a session and its subagents spent tokens: calls, input, cache writes and reads, output, a weighted share, tool calls by tool, largest tool results; read-only (procedure `token-audit.md`) |
 | `bootstrap.sh <owner/repo> <dir> ...` | the single-repo SaaS starting point: repo from a template (default `hoanghuynh296/agent-project-template`, which is private: pass `--template <your repo>`), placeholders, `develop`, labels, ledger, branch protection that requires the jobs of the new repo's `ci.yml` (the template's lane jobs, which always report; `--check` adds more; rerun after removing a lane). `--ledger-only` creates just the ledger; `--dry-run` prints every action |
 
@@ -172,9 +184,9 @@ plugins/coordinator/
   skills/coordinator/references/templates/*.md
   commands/*.md
   agents/{reviewer,oneoff-builder}.md
-  hooks/hooks.json, hooks/{lib,coordinator-guard,session-start,merge-reminder,next-sent,next-guard,ci-watch-reminder}.sh
+  hooks/hooks.json, hooks/{lib,coordinator-guard,session-start,merge-reminder,next-sent,next-guard,ci-watch-reminder,rotation-guard,ag-chain}.sh
   scripts/{init-ledger,ledger-lint,ledger-commit,merge-pr,install-guards,pre-push-guard,register,check-context,next-clear,ci-watch,prune-worktrees,bootstrap}.sh
-tests/{hooks,ci-watch,merge-pr,ledger-lint,ledger-commit,pre-push-guard,structure,bootstrap,exec-bits,check-context,prune-worktrees}-test.sh
+tests/{hooks,ci-watch,merge-pr,ledger-lint,ledger-commit,pre-push-guard,structure,bootstrap,exec-bits,check-context,prune-worktrees,rotation-guard}-test.sh
 .github/workflows/tests.yml
 ```
 
@@ -192,7 +204,8 @@ bash tests/bootstrap-test.sh [template-dir]   # full bootstrap against local bar
 bash tests/structure-test.sh       # commands, procedures and the skill agree; listing text fits the cap; key rules present
 bash tests/exec-bits-test.sh       # every plugin *.sh is executable in git
 bash tests/agent-tools-test.sh     # install-guards --tools: merge, idempotent, groups back on, refusals, catalog spares core tools
-bash tests/check-context-test.sh   # ok / SOFT / HARD levels, roles, PROFILE Budgets, env and args, window cap
+bash tests/check-context-test.sh   # ok / SOFT / HARD levels, roles, PROFILE Budgets, env and args, window cap, --porcelain
+bash tests/rotation-guard-test.sh  # rotation guard: ok / soft / hard, Budgets, owner turns, subagents, merges in flight, handover and owner-queue escapes, fail-open, Antigravity, ag-chain
 bash tests/prune-worktrees-test.sh # dirty, unpushed, live, open PR, young, locked, stray kept; clean pushed old removed; --discard
 ```
 
@@ -203,6 +216,20 @@ lane jobs; run it locally with the template path when a change touches `bootstra
 
 ## Changes
 
+- **Unreleased**: rotation guard (#47, release group "Coordinator cost"). Coordinators spent 72%
+  of their tokens after passing soft because rotation was only a sentence. New
+  `hooks/rotation-guard.sh` (UserPromptSubmit and Stop; Antigravity PreInvocation and Stop
+  through the new `hooks/ag-chain.sh`) measures the registered coordinator's context from its
+  transcript, with the thresholds of `check-context.sh --role coordinator --profile <ledger>`
+  (new `--porcelain` output). Past soft: one line per owner turn, `Coordinator at <k>k / soft
+  <s>k: rotate now (procedure handover.md, then a replacement)`. Past hard: the end of an
+  owner-started turn is blocked until `coordination/handover/coordinator.md` is committed in this
+  session; a merge in flight is let through once; on Remote Control the coordinator also puts the
+  rotation first in the Owner queue (the handover still lifts the block). No rotation while a background subagent runs: the
+  soft line says to wait, the hard block names it once and then lets the turn end to wait (or it
+  goes into the handover as "running: <agent>, <task>"). Fails open on any error. SKILL
+  "Sessions", `token-economy.md` rule 10 and `handover.md` define a coordinator's soft (rotate at
+  the next owner desktop turn) and hard (rotate in this turn). `rotation-guard-test.sh` covers it.
 - **Unreleased**: `check-context.sh` is role- and profile-aware (#25, release group "Coordinator
   cost"). A session titled `Coordinator: …` gets the coordinator thresholds (300k / 450k) without
   `--coordinator`; `--role coordinator|agent` sets the role for every session listed

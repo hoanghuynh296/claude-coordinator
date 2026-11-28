@@ -203,6 +203,25 @@ m = [e["matcher"] for e in h["PostToolUse"] if any("next-sent.sh" in x["command"
 assert m and "SendMessage" in m[0] and "mcp__ccd_session_mgmt__send_message" in m[0]
 PY2
 
+# Rotation guard (#47): wired on both runtimes for the prompt and the Stop event, and the
+# coordinator's soft / hard meaning is stated where the rules live.
+python3 -I - "$plugin" <<'PY4' && ok "rotation guard wired: Claude UserPromptSubmit+Stop, Antigravity PreInvocation+Stop via ag-chain" || bad "rotation guard wiring"
+import json, os, sys
+p = sys.argv[1]
+h = json.load(open(os.path.join(p, "hooks", "hooks.json")))["hooks"]
+assert any("rotation-guard.sh\" prompt" in x["command"] for e in h["UserPromptSubmit"] for x in e["hooks"])
+assert any("rotation-guard.sh\" stop" in x["command"] for e in h["Stop"] for x in e["hooks"])
+a = json.load(open(os.path.join(p, "hooks.json")))["coordinator-hooks"]
+pre = " ".join(x["command"] for x in a["PreInvocation"]); st = " ".join(x["command"] for x in a["Stop"])
+assert "ag-chain.sh prompt" in pre and "ci-watch-reminder.sh" in pre and "rotation-guard.sh:prompt" in pre
+assert "ag-chain.sh stop" in st and "next-guard.sh" in st and "rotation-guard.sh:stop" in st
+PY4
+for f in SKILL.md references/token-economy.md references/procedures/handover.md; do
+  tr '\n' ' ' <"$skill/$f" | tr -s ' ' | grep -q 'next owner desktop turn' && tr '\n' ' ' <"$skill/$f" | tr -s ' ' | grep -qi 'in this turn' \
+    && ok "$f defines the coordinator's soft and hard" || bad "$f does not define coordinator soft (next owner desktop turn) / hard (in this turn)"
+done
+has references/procedures/handover.md 'running: <agent>, <task>' && ok "handover: running subagents go into the note" || bad "handover does not list running subagents"
+
 
 # Agents report on push, the coordinator owns the CI wait (0.8.0): "PR ready" goes out once the
 # PR is pushed and the local gate is green, with head SHA and CI state; agents never wait for

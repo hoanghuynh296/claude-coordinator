@@ -9,7 +9,10 @@ handover carries only what is in flight; see `references/state-files.md`.
    `bash "<plugin>/scripts/check-context.sh" --profile <ledger> <session id>`; a `Coordinator: …`
    session gets the coordinator thresholds, `--role coordinator` forces them). `SOFT`: send it no new issue and let it finish the current one; the handover is due before that PR merges. `HARD`: now.
    Either way the note must exist before the session's last PR merges, since the coordinator
-   archives a `per-issue` session right after its PR merges.
+   archives a `per-issue` session right after its PR merges. The coordinator itself: `SOFT` =
+   rotate at the next owner desktop turn, `HARD` = in this turn; the rotation guard hook
+   measures it on every owner turn and, past hard, blocks the end of the owner's turn until
+   `coordination/handover/coordinator.md` is committed.
 2. **A unit's `standing` session:** send it one message asking it to (a) at `SOFT`, finish the
    current issue first (PR, gate green; at `HARD`, stop at the next safe point), commit and push
    its work, (b) move what it learned about the code into the unit's docs (in its open PR or a
@@ -28,7 +31,12 @@ handover carries only what is in flight; see `references/state-files.md`.
    paths). Merged PRs still waiting for their Next message move with you: run
    `bash "<plugin>/scripts/next-clear.sh" <session> --handover` (it prints them as
    `owner/repo#N` and drops this session's hook state) and list them under "Pending Next" in
-   the note. Commit the ledger (`ledger-commit.sh`).
+   the note. A background subagent still running (Reviewer, builder): wait for its report
+   before you rotate, or list it under "In flight" as "running: <agent>, <task>" so the
+   replacement collects it. Commit the ledger (`ledger-commit.sh`). Owner on Remote Control (no
+   session can be started): also make the rotation the first item of the Owner queue in
+   `COORDINATION.md` ("Rotate the coordinator (<k>k, past hard): start a fresh session from the
+   handover") and commit it; the owner starts the replacement at the next desktop turn.
 4. Propose the replacement to the owner in at most 4 lines: a fresh session with the same
    name, first prompt "Read `coordination/README.md` in <ledger> and continue as <role>". It is
    never started by the session it replaces: an agent's replacement is started by the
