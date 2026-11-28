@@ -67,7 +67,7 @@ check "ws traversal into unit"    deny  "$(ev coord-2 Write file_path "$WS/coord
 echo "--- builder subagents (#64): Claude Code agent_id/agent_type, own worktree under <unit>/.claude/worktrees/builder-*"
 P="$(cd "$tmp/proj" && pwd -P)"
 git -C "$P" init -q && git -C "$P" -c user.name=t -c user.email=t@t commit -q --allow-empty -m init
-for w in builder-a builder-b 42-agent-session; do git -C "$P" worktree add -q "$P/.claude/worktrees/$w" -b "$w"; done
+for w in builder-a builder-b builder-c 42-agent-session; do git -C "$P" worktree add -q "$P/.claude/worktrees/$w" -b "$w"; done
 mkdir -p "$P/.claude/worktrees/builder-plain/.git" "$P/.claude/worktrees/builder-a/src"
 ln -s "$P/src" "$P/.claude/worktrees/builder-b/escape"
 ln -s "$P/.claude/worktrees/builder-a" "$P/.claude/worktrees/builder-link"
@@ -94,6 +94,13 @@ for mode in jq python3; do
   check "builder outside its worktree (unit src)"  deny  "$(evs coord-1 a1 coordinator:oneoff-builder "$P/src/app.ts")"
   check "builder in another builder's worktree"    deny  "$(evs coord-1 a1 coordinator:oneoff-builder "$WT/builder-b/README.md")"
   check "second builder in a claimed worktree"     deny  "$(evs coord-1 c1 coordinator:oneoff-builder "$WT/builder-a/src/app.ts")"
+  if [[ $mode == jq ]]; then  # #69: the refusal leaves no agent claim behind
+    if [[ ! -e "$CL/agent-c1" ]]; then pass=$((pass+1)); echo "PASS refused builder holds no agent claim"; else failn=$((failn+1)); echo "FAIL refused builder kept agent-c1: $(cat "$CL/agent-c1")"; fi
+  fi
+  check "refused builder, then its own new worktree" allow "$(evs coord-1 c1 coordinator:oneoff-builder "$WT/builder-c/src/app.ts")"
+  check "coordinator itself in that new worktree"  deny  "$(ev coord-1 Write file_path "$WT/builder-c/src/app.ts")"
+  check "bound builder in a third worktree"        deny  "$(evs coord-1 a1 coordinator:oneoff-builder "$WT/builder-c/src/app.ts")"
+  check "refused builder back in the claimed one"  deny  "$(evs coord-1 c1 coordinator:oneoff-builder "$WT/builder-a/src/app.ts")"
   check "builder in a session's worktree"          deny  "$(evs coord-1 d1 coordinator:oneoff-builder "$WT/42-agent-session/x.ts")"
   check "builder in a non-worktree builder-* dir"  deny  "$(evs coord-1 e1 coordinator:oneoff-builder "$WT/builder-plain/x.ts")"
   check "builder through a symlink out"            deny  "$(evs coord-1 b1 oneoff-builder "$WT/builder-b/escape/app.ts")"
@@ -122,8 +129,10 @@ expect_has "$c" "$(ev coord-1 Edit file_path "$COORDINATOR_HOME/STATE/coord-1/Bu
 expect_has "$c" "$(ev coord-1 Write file_path "$CL" | bash "$hooks/coordinator-guard.sh")" "(dir itself)"
 ln -s "$CL" "$tmp/claims-link"
 expect_has "$c" "$(ev coord-1 Write file_path "$tmp/claims-link/agent-c1" | bash "$hooks/coordinator-guard.sh")" "(symlink)"
-owners="$(cat "$CL"/wt-* | sort | tr '\n' ' ')"  # a refused builder may hold an agent- file, never a worktree
-if [[ "$owners" == "a1 b1 " ]]; then pass=$((pass+1)); echo "PASS worktree claims: a1 and b1 only"; else failn=$((failn+1)); echo "FAIL worktree claims: $owners"; fi
+owners="$(cat "$CL"/wt-* | sort | tr '\n' ' ')"  # a refused builder holds no claim (#69)
+if [[ "$owners" == "a1 b1 c1 " ]]; then pass=$((pass+1)); echo "PASS worktree claims: a1, b1 and c1 only"; else failn=$((failn+1)); echo "FAIL worktree claims: $owners"; fi
+agents="$(cd "$CL" && ls agent-* | tr '\n' ' ')"
+if [[ "$agents" == "agent-a1 agent-b1 agent-c1 " ]]; then pass=$((pass+1)); echo "PASS agent claims: a1, b1 and c1 only"; else failn=$((failn+1)); echo "FAIL agent claims: $agents"; fi
 ag_b() { printf '{"conversationId":"coord-1","agentId":"a1","agentType":"coordinator:oneoff-builder","cwd":"%s","hookEventName":"PreToolUse","toolCall":{"id":"t1","name":"write_to_file","args":{"TargetFile":"%s","CodeContent":"x"}}}' "$L" "$1" | bash "$hooks/coordinator-guard.sh"; }
 out="$(ag_b "$WT/builder-a/src/app.ts")"
 if [[ "$out" == '{"decision":"deny",'* ]]; then pass=$((pass+1)); echo "PASS AG: builder worktree stays guarded (no subagent fields)"; else failn=$((failn+1)); echo "FAIL AG builder: $out"; fi

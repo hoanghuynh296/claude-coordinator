@@ -147,8 +147,13 @@ builder_ok() {
     [[ "$rest" == */* && "$rest" != "$name/.git" && "$name" =~ ^builder-[A-Za-z0-9._-]+$ ]] || return 1
     key="$(worktree_key "${unit%/}" "$name" "$path")" && [[ "$key" =~ ^[0-9]+-[0-9]+$ ]] || return 1
     d="$(state_dir "$sid")" || return 1; d="$d/builders"; mkdir -p "$d" || return 1
-    claim "$d/agent-$aid" "$key" && claim "$d/wt-$key" "$aid"
-    return
+    # Bind the agent, then the worktree; when the worktree is another builder's, undo an agent
+    # claim this call created, so a refused builder is not locked out of its own worktree (#69).
+    local fresh=1; [[ -e "$d/agent-$aid" ]] && fresh=0
+    claim "$d/agent-$aid" "$key" || return 1
+    claim "$d/wt-$key" "$aid" && return 0
+    (( fresh )) && rm -f "$d/agent-$aid"
+    return 1
   done
   return 1
 }
