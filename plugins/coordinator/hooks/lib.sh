@@ -142,3 +142,11 @@ pending_resolve() {
   [[ "$n" -gt 1 ]] && return 2
   printf '%s' "$keys"
 }
+
+# next_exempt <head branch> <author login>: 0 when a merged PR needs no Next message - heads
+# release/*, backmerge/*, coordinator/* (the coordinator's own branches), or a PR by
+# $COORDINATOR_GH_LOGIN. The same rule as merge-reminder.sh; used by scripts/merge-pr.sh.
+next_exempt() {
+  case "$1" in release/*|backmerge/*|coordinator/*) return 0 ;; esac
+  [[ -n "${COORDINATOR_GH_LOGIN:-}" && -n "$2" && "$2" == "$COORDINATOR_GH_LOGIN" ]]
+}

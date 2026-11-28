@@ -6,7 +6,8 @@ Review and merge the named pull request. Read the unit's row and the
 "Review" section of `coordination/PROFILE.md` first.
 
 1. `gh pr view <n> --repo <repo> --json title,state,baseRefName,headRefName,headRefOid,mergeable,statusCheckRollup,files,additions,deletions,closingIssuesReferences,body`
-   - Already merged or closed → stop and say so.
+   - Already merged or closed → stop and say so. (`merge-pr.sh`, step 6, checks state, head and
+     CI again right before it merges; this view is for the review.)
    - Base is not the integration branch (a stacked PR) → `gh pr edit <n> --base <integration>`
      before merging anything under it.
 2. **Start the CI watch, in this turn.** Agents report "PR ready" on push, with the local gate
@@ -58,12 +59,21 @@ Review and merge the named pull request. Read the unit's row and the
    what you checked. Not done → the merge is allowed only if the profile defers that check to
    release time; then add a row to "Verification debt" in `ROADMAP.md`.
 6. **Merge** only when CI is green on the reported head (step 2) and the review passed
-   (steps 3 to 5), with the profile's method, deleting the branch:
+   (steps 3 to 5), in one call:
+   `bash "<plugin>/scripts/merge-pr.sh" <owner/repo> <n> <head sha> --session <session> --ledger <ledger> [--next "<text>"] [--per-issue "<author session name>" --repo-dir <local clone>]`
+   It refuses (one line, no merge) when the PR is not open, the head is not the reviewed SHA, or
+   CI there is red, pending or has none. Otherwise it merges with the profile's method,
+   `--delete-branch` and `--match-head-commit`, closes the linked issues when the base is not the
+   default branch, records the PR as pending its Next (so the Stop guard holds the turn on both
+   runtimes), and for a `per-issue` author prints the session to archive and removes its
+   worktree as below. It prints at most 6 lines, among them the exact
+   `PR #<n> merged. Next: <text>` to send in step 9 (`--next`, default `done`): decide the Next
+   first. It does not touch the ledger (step 7). Fallback when the script cannot run, by hand:
    `gh pr merge <n> --repo <repo> --merge --delete-branch --match-head-commit <head sha>`
    (or `--squash`). Pass a literal PR number; `--match-head-commit` refuses the merge if the
    head moved after what you reviewed. With `--auto` the merge may only be queued: the hook records the PR only once it
    is MERGED, so see step 9.
-   - **Close the linked issue.** "Closes #N" fires only when a PR merges into the default
+   - **Close the linked issue** (`merge-pr.sh` does it). "Closes #N" fires only when a PR merges into the default
      branch, so after merging into an integration branch other than it (`develop`) run
      `gh issue close <N> --repo <repo> --comment "Merged in #<n>"`. Release PRs
      (`release/*`), back-merge PRs (`backmerge/*`) and PRs you opened yourself get no `Next:`
@@ -77,7 +87,7 @@ Review and merge the named pull request. Read the unit's row and the
      rewritten input, then rename "<name> (old)" and add it to the one owner line "Archive finished
      sessions: <names>"). Its
      work is in the PR; anything left for a next session is in the PR or the issue.
-     Then check that its worktree is gone (`git -C <repo> worktree list`: the PR's head branch,
+     Then check that its worktree is gone (`merge-pr.sh --per-issue ... --repo-dir` does it) (`git -C <repo> worktree list`: the PR's head branch,
      under `<repo>/.claude/worktrees/`). If the app kept it, remove that one worktree, never the
      whole repo with age 0 (another live agent's clean, pushed worktree would go too):
      `bash "<plugin>/scripts/prune-worktrees.sh" <worktree path> --no-session-check --min-age-hours 0 --apply`
@@ -88,7 +98,8 @@ Review and merge the named pull request. Read the unit's row and the
      Check `mcp__ccd_pr__get_status`, unbind (`mcp__ccd_pr__unbind_pr`) every merged PR bound to you,
      and ask the owner again to turn the setting off.
 7. **Ledger.** Update the unit's row in `COORDINATION.md` (in progress, "integration ahead
-   by"); remove the issue from `ROADMAP.md`. Do not add a line about the merged PR. Commit
+   by"); remove the issue from `ROADMAP.md`. Do not add a line about the merged PR; `merge-pr.sh`
+   leaves the ledger to you. Commit
    once (`ledger-commit.sh`) at the end of your turn, together with every other ledger change
    of that turn (several merges in one turn: one commit).
 8. **Group and ceiling.** Check the unit's open release group in `ROADMAP.md`: all its issues

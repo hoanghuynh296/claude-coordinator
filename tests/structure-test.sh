@@ -330,5 +330,14 @@ else ok "no separate lint-before-commit step left"; fi
 has references/procedures/audit.md 'install-guards.sh' && ok "audit installs the missing pre-commit hook" \
   || bad "audit does not install the pre-commit hook"
 [[ -x "$plugin/scripts/ledger-commit.sh" ]] && ok "scripts/ledger-commit.sh exists" || bad "scripts/ledger-commit.sh missing"
+# Merge in one call (#49): review-merge uses merge-pr.sh and keeps the manual fallback; the
+# script keeps the merge contract.
+has references/procedures/review-merge.md 'merge-pr.sh' && has references/procedures/review-merge.md 'Fallback when the script cannot run' \
+  && ok "review-merge uses merge-pr.sh with the manual fallback" || bad "review-merge lacks merge-pr.sh or the fallback"
+mp="$plugin/scripts/merge-pr.sh"
+[[ -x "$mp" ]] && ok "scripts/merge-pr.sh exists" || bad "scripts/merge-pr.sh missing"
+for word in '--delete-branch' '--match-head-commit' 'merged. Next:' 'pending_add' 'next_exempt'; do
+  grep -q -- "$word" "$mp" && ok "merge-pr.sh has $word" || bad "merge-pr.sh lacks $word"
+done
 echo "passed $pass, failed $failn"
 [[ $failn -eq 0 ]]
