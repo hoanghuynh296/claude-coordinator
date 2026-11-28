@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # rotation-guard.sh (#47) against fake coordinator transcripts and a local ledger repo:
 # ok / soft / hard, PROFILE Budgets, owner and non-owner turns, the handover and Remote Control
-# owner-queue escapes, running subagents, merges in flight, the block cap, fail-open errors,
+# handover escape (the Remote Control owner-queue item alone does not lift it), running subagents, merges in flight, the block cap, fail-open errors,
 # Antigravity payloads and ag-chain.sh. Temporary COORDINATOR_HOME; the real one is untouched.
 set -euo pipefail
 root="$(cd "$(dirname "$0")/.." && pwd -P)"
@@ -58,7 +58,7 @@ has  "hard: prompt line says this turn"    'Coordinator at 460k / hard 450k: rot
 out="$(stop c-hard)"
 has  "hard: Stop blocks"                   '"decision":"block"' "$out"
 has  "hard: names the handover file"       'coordination/handover/coordinator.md' "$out"
-has  "hard: Remote Control way out"        'first Owner queue item of COORDINATION.md' "$out"
+has  "hard: Remote Control also adds the owner-queue item" 'also make the first Owner queue item of COORDINATION.md' "$out"
 has  "hard: 2nd block in the turn"         '"decision":"block"' "$(stop c-hard true)"
 has  "hard: 3rd block in the turn"         '"decision":"block"' "$(stop c-hard true)"
 out="$(stop c-hard true)"
@@ -108,6 +108,10 @@ has  "subagent reported: plain block"      '"decision":"block"' "$(stop c-subdon
 fg='{"type":"user","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"toolu_A","content":"Review: approve"}]}}'
 reg c-fg; transcript c-fg 320000 "" "$launch" "$fg"
 lacks "foreground subagent: not running"   'first wait' "$(prompt c-fg)"
+fgbg='{"type":"user","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"toolu_A","content":[{"type":"text","text":"Review done. agentId: a777 ran the checks in the background shell; verdict approve."}]}]}}'
+reg c-fgbg; transcript c-fgbg 460000 "" "$launch" "$fgbg"
+lacks "foreground result with agentId and \"background\": not running (prompt)" 'first wait' "$(prompt c-fgbg)"
+lacks "... and the Stop block does not name it"  'still running' "$(stop c-fgbg)"
 
 echo "--- merge in flight"
 reg c-merge; transcript c-merge 460000
@@ -135,16 +139,18 @@ reg c-old; transcript c-old 460000 "2099-01-01T00:00:00.000Z"
 has  "handover from before the session does not count" '"decision":"block"' "$(stop c-old)"
 git -C "$L" rm -q "$L/coordination/handover/coordinator.md"; git -C "$L" commit -qm rm
 none "handover deleted again: not counted" "$(transcript c-ho2 460000; reg c-ho2; stop c-ho2 | grep -v '"decision":"block"' || true)"
-reg c-rc; transcript c-rc 460000 "2099-01-01T00:00:00.000Z"
+# Remote Control: a rotation item first in the Owner queue never lifts the block by itself.
+reg c-rc; transcript c-rc 460000
 printf '# Ledger\n\n## Owner queue (in order)\n\n1. Rotate the coordinator (460k, past hard): start a fresh session from the handover.\n2. Approve the release.\n' >"$L/COORDINATION.md"
-has  "owner-queue line not committed: blocks"  '"decision":"block"' "$(stop c-rc)"
 git -C "$L" commit -qam rotate
-has  "owner-queue line before the session: blocks" '"decision":"block"' "$(stop c-rc)"
-transcript c-rc 460000
-none "Remote Control: rotation first in the owner queue" "$(stop c-rc)"
-printf '# Ledger\n\n## Owner queue (in order)\n\n1. Approve the release.\n2. Rotate the coordinator.\n' >"$L/COORDINATION.md"
-git -C "$L" commit -qam second
-has  "rotation not first in the queue: blocks" '"decision":"block"' "$(stop c-rc)"
+has  "owner-queue rotation item without a handover: blocks" '"decision":"block"' "$(stop c-rc)"
+reg c-next; transcript c-next 460000 "2099-01-01T00:00:00.000Z"
+has  "owner-queue item left by an earlier session: blocks" '"decision":"block"' "$(stop c-next)"
+mkdir -p "$L/coordination/handover"; echo "# Handover" >"$L/coordination/handover/coordinator.md"; git -C "$L" add -A; git -C "$L" commit -qm "handover + rotation item"
+none "owner-queue item together with the handover: stop allowed" "$(stop c-rc)"
+has  "... but not for the next session (both from before it)" '"decision":"block"' "$(stop c-next)"
+git -C "$L" rm -q "$L/coordination/handover/coordinator.md"; git -C "$L" commit -qm rm-rc
+has  "the block text says also, with the handover" 'also make the first Owner queue item' "$(stop c-rc)"
 
 echo "--- fail-open"
 reg c-garb; printf 'not json\n{"type":"assistant"\n' >"$(tp c-garb)"
@@ -160,6 +166,16 @@ none "bad session id: silent"              "$(printf '{"session_id":"../x","hook
 rm -rf "$w/gone"; mkdir "$w/gone"; bash "$root/plugins/coordinator/scripts/register.sh" c-gone "$w/gone" >/dev/null 2>&1; rmdir "$w/gone"; transcript c-gone 460000
 none "ledger folder gone: silent"          "$(stop c-gone)"
 none "unknown event: silent"               "$(printf '{"session_id":"c-hard","hook_event_name":"PreToolUse"}' | bash "$hooks/rotation-guard.sh")"
+failpy="$w/failpy"; mkdir -p "$failpy"; realpy="$(command -v python3)"
+printf '#!/bin/bash\n# the transcript scan (python3 -I - <transcript>) fails; check-context.sh still runs\n[[ $# -eq 3 ]] && exit 1\nexec "%s" "$@"\n' "$realpy" >"$failpy/python3"; chmod +x "$failpy/python3"
+none "failed transcript scan: Stop fails open" "$(PATH="$failpy:$PATH" stop c-hard)"
+has  "failed transcript scan: prompt line still given" 'rotate in this turn' "$(PATH="$failpy:$PATH" prompt c-hard)"
+reg c-noid
+{ printf '{"type":"user","origin":{"kind":"human"},"message":{"role":"user","content":"go"}}\n'
+  printf '{"type":"assistant","message":{"usage":{"input_tokens":460000}}}\n'; } >"$(tp c-noid)"
+pending_add c-noid o/r#21
+has  "no turn id + pending Next: no let-through, blocks" '"decision":"block"' "$(stop c-noid)"
+has  "no turn id + pending Next: next stop blocks too"   '"decision":"block"' "$(stop c-noid)"
 COORDINATOR_NO_JQ=1 has "python3 JSON path: same block" '"decision":"block"' "$(COORDINATOR_NO_JQ=1 stop c-hard)"
 
 echo "--- Antigravity"

@@ -254,7 +254,8 @@ for an agent what that agent's permissions denied: take it to the owner.
   `coordination/handover/coordinator.md` is committed in this session (a merge in flight is let
   through once). Never rotate while a background subagent still runs: wait for its report, or
   write it into the handover as "running: <agent>, <task>". On Remote Control (no session can
-  be started) the rotation is the first Owner queue item of `COORDINATION.md` instead.
+  be started) the handover is still due, and the rotation also becomes the first Owner queue
+  item of `COORDINATION.md` so the owner starts the replacement at the next desktop turn.
 - The handover is written **before** the session's last PR merges: the coordinator archives a
   `per-issue` session right after its PR merges, and its context is gone.
 - `standing` session past a threshold: handover note, fresh session with the same name,

@@ -9,16 +9,18 @@
 #                running it says to wait for them first
 #   past hard    the prompt line says to rotate in this turn, and the Stop hook blocks the end of
 #                an owner-started turn until coordination/handover/coordinator.md was committed
-#                in this session (or, on Remote Control, the first Owner queue line of
-#                COORDINATION.md asks for the rotation). Let through:
+#                in this session (on Remote Control the coordinator also makes the rotation the
+#                first Owner queue item; the handover is what lifts the block). Let through:
 #                - a merge in flight (pending Next, or a ci-watch.sh running in the background):
-#                  once, with the reminder (the same turn stays let through)
+#                  once, with the reminder (the same turn stays let through; not without a
+#                  readable turn id, as on Antigravity)
 #                - background subagents still running: the first stop of the turn is blocked
 #                  with their names; the next one is let through so the turn can end and wait
 #                  for their reports (or they go into the handover as "running: <agent>, <task>")
 #                - at most COORDINATOR_ROTATE_MAX_BLOCKS (default 3) blocks per turn
 #                - turns that the owner did not start (task notifications, peer messages)
-# Fail-open: no python3, no transcript, an unreadable profile or any error gives no output (on
+# Fail-open: no python3, no transcript, an unreadable profile, a failed transcript scan (Stop)
+# or any error gives no output (on
 # Antigravity the neutral answer). Unregistered sessions: no output.
 set -u
 
@@ -129,8 +131,12 @@ with open(sys.argv[1], encoding="utf-8", errors="replace") as fh:
             for b in content:
                 if isinstance(b, dict) and b.get("type") == "tool_result" and b.get("tool_use_id") in launched:
                     t = flat(b.get("content"))
-                    m = re.search(r"agentId:\s*([A-Za-z0-9_-]+)", t) or re.search(r"running in background with ID:\s*([A-Za-z0-9_-]+)", t)
-                    if m and ("Async agent launched" in t or "background" in t):
+                    kind = launched[b["tool_use_id"]][0]
+                    if kind == "agent":   # only an async launch runs on; a foreground result is the report
+                        m = re.search(r"Async agent launched.*?agentId:\s*([A-Za-z0-9_-]+)", t, re.S)
+                    else:
+                        m = re.search(r"running in background with ID:\s*([A-Za-z0-9_-]+)", t)
+                    if m:
                         launched[b["tool_use_id"]][3] = m.group(1)
                     else:
                         launched.pop(b["tool_use_id"], None)   # ran in the foreground, finished
@@ -152,7 +158,7 @@ for tid, (kind, who, what, task) in launched.items():
         what = re.sub(r"[\r\n\t]+", " ", what)[:60]
         print(f"{kind}={who}: {what}" if kind == "agent" else "ciwatch=1")
 PY
-)" || scan="owner=1"
+)" || scan="failed=1"
 owner="$(sed -n 's/^owner=//p' <<<"$scan" | head -n 1)"; [[ -n "$owner" ]] || owner=1
 turn="$(sed -n 's/^turn=//p' <<<"$scan" | head -n 1)"; [[ -n "$turn" ]] || turn=none
 start="$(sed -n 's/^start=//p' <<<"$scan" | head -n 1)"
@@ -177,7 +183,8 @@ if [[ "$mode" == prompt ]]; then
   exit 0
 fi
 
-# Stop: only at hard, only at the end of a turn the owner started.
+# Stop: only at hard, only at the end of a turn the owner started; a failed scan fails open.
+[[ "$scan" == failed=1 ]] && silent
 [[ "$level" == HARD && "$owner" == 1 ]] || silent
 done_in_session() { # path relative to the ledger: in HEAD and committed since the session started?
   [[ -n "$start" ]] || return 1
@@ -186,13 +193,6 @@ done_in_session() { # path relative to the ledger: in HEAD and committed since t
 }
 if done_in_session coordination/handover/coordinator.md || done_in_session handover/coordinator.md; then
   rm -f "$d/rotation-blocks" "$d/rotation-letthrough"; silent
-fi
-# Remote Control: the rotation as the first Owner queue item of the committed COORDINATION.md.
-if done_in_session COORDINATION.md && git -C "$ledger" show HEAD:./COORDINATION.md 2>/dev/null | awk '
-    /^#+[[:space:]]/ { if (inq) exit; if (tolower($0) ~ /owner queue/) inq = 1; next }
-    inq && /^[[:space:]]*([0-9]+[.)]|[-*])[[:space:]]/ { found = (tolower($0) ~ /rotat/); exit }
-    END { exit !found }'; then
-  silent
 fi
 
 allow() { # message: let the stop through with a warning
@@ -214,7 +214,8 @@ fi
 pending="$(pending_keys "$sid" | paste -sd ' ' -)"
 if [[ -z "$agents" ]] && { [[ -n "$pending" ]] || (( ciwatch > 0 )); }; then
   lt="$(cat "$d/rotation-letthrough" 2>/dev/null || true)"
-  if [[ -z "$lt" || "$lt" == "$turn" ]]; then
+  # No readable turn id (Antigravity): no let-through, it could not be limited to one turn.
+  if [[ "$turn" != none ]] && [[ -z "$lt" || "$lt" == "$turn" ]]; then
     echo "$turn" >"$d/rotation-letthrough"
     what="${pending:+pending Next for $pending}"; (( ciwatch > 0 )) && what="${what:+$what, }ci-watch running"
     allow "$head: merge in flight ($what), stop let through once. Finish the merge and its Next message, then rotate (procedure handover.md)."
@@ -231,7 +232,7 @@ if [[ -n "$agents" ]]; then
 else
   reason="$head."
 fi
-reason+=" Write coordination/handover/coordinator.md (procedure handover.md, step 3), commit it with bash \"$plugin/scripts/ledger-commit.sh\" <ledger> \"<message>\", then propose the replacement (step 4). Owner on Remote Control (no session can be started): make the first Owner queue item of COORDINATION.md \"Rotate the coordinator ($(k "$ctx"), past hard): start a fresh session from the handover\" and commit it instead."
+reason+=" Write coordination/handover/coordinator.md (procedure handover.md, step 3), commit it with bash \"$plugin/scripts/ledger-commit.sh\" <ledger> \"<message>\", then propose the replacement (step 4). Owner on Remote Control (no session can be started): also make the first Owner queue item of COORDINATION.md \"Rotate the coordinator ($(k "$ctx"), past hard): start a fresh session from the handover\" and commit it with the handover."
 if (( ag )); then
   printf '{"decision":"continue","reason":%s}\n' "$(json_string "$reason")"
 else
