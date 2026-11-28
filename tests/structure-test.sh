@@ -299,7 +299,7 @@ done
 has references/profile.md 'Same-session cap: 175k' && has references/templates/PROFILE.md 'Same-session cap' \
   && ok "same-session cap in profile Budgets" || bad "same-session cap missing from profile Budgets"
 for f in SKILL.md references/workflow.md references/profile.md references/pitfalls.md references/procedures/review-merge.md references/templates/PROFILE.md; do
-  ! grep -q '50% of \(the unit.s \)\?soft' "$skill/$f" && ok "$f has no 50%-of-soft rule" || bad "$f still has the 50%-of-soft rule"
+  [ -f "$skill/$f" ] && ! grep -q '50% of \(the unit.s \)\?soft' "$skill/$f" && ok "$f has no 50%-of-soft rule" || bad "$f is missing or still has the 50%-of-soft rule"
 done
 # C-015 / C-017 defaults (#24): coordinator 300k/450k, Reviewer size trigger, one ledger commit per turn.
 for f in SKILL.md references/profile.md references/templates/PROFILE.md; do
@@ -314,11 +314,15 @@ for f in references/state-files.md references/procedures/review-merge.md; do
   has "$f" 'one ledger commit\|one commit' && ok "$f batches ledger commits per turn" || bad "$f lacks one ledger commit per turn"
 done
 # Archive fallback: two calls, then rename "(old)" and one batched owner line.
-for f in references/sessions.md references/procedures/review-merge.md references/procedures/handover.md; do
+for f in references/sessions.md references/procedures/review-merge.md; do
   has "$f" '(old)' && has "$f" 'Archive finished sessions: <names>' \
     && ok "$f gives the archive fallback (rename (old), one owner line)" \
     || bad "$f does not give the archive fallback (rename \"(old)\", one line \"Archive finished sessions: <names>\")"
 done
+# handover links the archive procedure in sessions.md instead of restating it (one home).
+has references/procedures/handover.md 'archive procedure in' && has references/procedures/handover.md 'references/sessions.md' \
+  && ! grep -q 'Archive finished sessions' "$skill/references/procedures/handover.md" \
+  && ok "handover links the archive procedure, no restated fallback" || bad "handover restates or lacks the archive procedure link"
 has references/procedures/audit.md 'Archive finished sessions' && has references/procedures/audit.md '(old)' \
   && ok "audit checks the archive line and (old) sessions" || bad "audit does not check the archive line and (old) sessions"
 has references/pitfalls.md 'Archive finished sessions: <names>' && ok "pitfalls records the archive fallback" \

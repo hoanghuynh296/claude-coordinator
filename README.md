@@ -216,6 +216,14 @@ lane jobs; run it locally with the template path when a change touches `bootstra
 
 ## Changes
 
+- **Unreleased**: builder lockout fix (#69, release group "Coordinator cost", patch batch).
+  `coordinator-guard.sh`: when a `coordinator:oneoff-builder` is refused in a worktree another
+  builder claimed, the agent claim that call created is removed, so the builder can still write
+  in its own new `builder-<name>` worktree (before, it was locked out for the session). The
+  coordinator itself and Antigravity stay guarded as before. Ride-alongs from the #60 Reviewer:
+  `merge-pr.sh` reads a bold `**Merge method:** squash` label (the strip now skips whitespace);
+  `structure-test.sh`'s 50%-of-soft check fails on a missing file; `procedures/handover.md`
+  links the archive procedure in `references/sessions.md` instead of restating it.
 - **Unreleased**: `archive_session` goes alone in its own message (#52, patch, rides with
   v0.13.0). 108 of 248 archive calls were refused in a week, 67 because the app's hook rewrites
   the archive input, which voids auto mode's verdict on every call sent in the same response.
