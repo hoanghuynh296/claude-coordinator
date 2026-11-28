@@ -37,6 +37,32 @@ Or from a shell: `claude plugin marketplace add hoanghuynh296/claude-coordinator
 `/reload-plugins`) after installing. Requirements: `gh` (authenticated for your own repos),
 `git`, `python3`; `jq` is used when present.
 
+### Antigravity
+
+Antigravity reads the plugin from `~/.gemini/config/plugins/coordinator`. That must be a link to
+a checkout of the latest **release tag**, never a working copy on a branch (a branch drifts:
+until #55 the Mac mini ran a feature branch that lacked eight later commits). One script does
+it:
+
+```sh
+bash plugins/coordinator/scripts/ag-install.sh            # clone to ~/.gemini/coordinator-kit (first run) or fetch, check out the newest tag, repoint the link
+bash plugins/coordinator/scripts/ag-install.sh --check    # changes nothing: "ok" (exit 0) or "STALE" (exit 1) with what the link points at
+```
+
+It refuses a clone with local changes, a tag whose two manifests do not both give its version,
+and a real folder at the link (move it aside). The checkout the link pointed at before is left
+as it was. `--tag vX.Y.Z` installs an older release, `--dry-run` only says what it would do.
+Start a new Antigravity conversation afterwards: hooks and the skill are read at its start.
+
+### Releasing the kit
+
+1. Both manifests (`plugins/coordinator/plugin.json` for Antigravity,
+   `plugins/coordinator/.claude-plugin/plugin.json` for Claude Code) get the new version
+   (`structure-test.sh` fails when they differ); README "Changes" names the release.
+2. Tag `vX.Y.Z` on `main` and publish the GitHub release.
+3. On the Mac mini: `claude plugin marketplace update coordinator-marketplace`, then
+   `bash plugins/coordinator/scripts/ag-install.sh` and `ag-install.sh --check` (must say `ok`).
+
 ## For the owner: you only talk
 
 You never have to type a command or learn the kit's words. Say what you want in your own
@@ -140,7 +166,9 @@ files, review checklist, pitfalls, packs, templates) and two agents: `coordinato
 | `scripts/pre-push-guard.sh` (git pre-push hook) | pushing to a branch whose pull request is already merged or closed; optional local protection of release branches |
 | `scripts/install-guards.sh [--settings] [--tools "<groups>"] <repo>...` | installs the pre-push guard in each clone; `--settings` turns on delete-branch-on-merge on GitHub; `--tools` merges the lean agent tool set (every optional group of `scripts/agent-tools.json` not listed is turned off) into the repo's `.claude/settings.json` |
 
-Runtimes: Claude Code runs the rotation guard from `hooks/hooks.json` (UserPromptSubmit and
+Runtimes: what each one enforces is listed in SKILL.md "Two runtimes" and pinned by
+`tests/parity-test.sh` (every hook gets an Antigravity payload and must give its answer or its
+documented silence). Claude Code runs the rotation guard from `hooks/hooks.json` (UserPromptSubmit and
 Stop, next to the CI watch reminder and the Next guard). Antigravity runs one command per event,
 so its `hooks.json` runs `hooks/ag-chain.sh`, which feeds the same input to each hook and merges
 the answers (PreInvocation: the CI watch reminder and the rotation line as `injectSteps`; Stop:
@@ -166,6 +194,7 @@ id and must register again.
 | `next-clear.sh <session> <owner/repo#N> <reason>` | clear a merged PR the Stop hook waits on, when its author cannot get the Next message; the reason is appended to `coordination/next-cleared.md` in the ledger. `--list` shows what is pending; `--handover` prints it and drops the session's state (written into the handover note); `--add <owner/repo#N>...` lets the replacement take it over |
 | `merge-pr.sh <owner/repo> <N> <head sha> [--session] [--ledger] [--next] [--per-issue <name> --repo-dir <clone>] [--owner-approved]` | the mechanical part of review-merge in one call, at most 6 lines: refuses (exit 1, no merge) when the PR is not open, the head moved, CI is red, pending or absent, or the base is a branch the profile's `Owner approves merges into:` names and `--owner-approved` is not given; merges with the profile method, `--delete-branch`, `--match-head-commit`; closes linked issues off the default branch; records the pending Next for the Stop guard (heads `release/*`, `backmerge/*`, `coordinator/*` exempt); prints the exact `PR #<n> merged. Next: ...` line, and for a per-issue author the session to archive and its worktree removed (`prune-worktrees.sh`) |
 | `ci-watch.sh <owner/repo> <N> [<sha>]` | watch a PR's CI until it ends and print one line: `green` (exit 0), `red: <checks> <link>` (1, at the first failure), `error` (2), `stale-head` when the head is not or no longer the reported SHA (3), `timeout` (4, `CI_WATCH_DEADLINE`, default 90 min), `no-checks` (5, `CI_WATCH_NOCHECKS`, default 15 min), not open (6). The coordinator runs it with `run_in_background` on every "PR ready": its exit wakes the coordinator when CI ends |
+| `ag-install.sh [--tag vX.Y.Z] [--dir] [--link] [--dry-run] \| --check` | point Antigravity at a release: a clone checked out at the newest (or the given) tag, `~/.gemini/config/plugins/coordinator` linked to it; `--check` reports `ok` or `STALE` and changes nothing (see "Antigravity" above) |
 | `register.sh <session> <ledger> [unit...] [--allow glob]... [--allow-none] [--no-guard]` | register or `--unregister` a coordinator session |
 | `prune-worktrees.sh <root>... (--sessions <file> \| --no-session-check) [--apply] [--min-age-hours N] [--discard <glob>]...` | remove finished agent worktrees (`.claude/worktrees/*`) under the roots: only a registered, unlocked worktree with no change for N hours (default 6), a clean `git status` (or only changes matching `--discard`), HEAD in a remote branch, and (`--sessions`: the `list_sessions` JSON) no live session in it or on its branch and no open PR for its branch (`gh`; a failed lookup keeps it). `git worktree remove`, branches kept, stray folders reported and kept; prints the space freed. Dry run unless `--apply` |
 | `check-context.sh [--role coordinator\|agent] [--profile PROFILE.md\|ledger] [--soft N] [--hard N] [--window N] [--porcelain] [session...]` | context size per session from its transcript, with the threshold it used and a level: `334k / soft 300k: SOFT`. `ok`, `SOFT` (finish the current issue, then rotate) or `HARD` (rotate now). Role: a session titled `Coordinator: …` is a coordinator (soft 300k, hard 450k), any other an agent (250k / 400k); `--role` (or `--coordinator`) sets it for all. `--profile` reads the thresholds from the ledger's PROFILE Budgets (values it does not give keep the defaults). `SOFT_AT`, `HARD_AT` (agents only), then `--soft`, `--hard` (everyone) win over both. `--window` / `CONTEXT_WINDOW` caps soft at 50% and hard at 75% of the context window; one run per model group. `--porcelain`: `<session> <tokens> <soft> <hard> <level>` per session, for scripts |
@@ -187,8 +216,8 @@ plugins/coordinator/
   commands/*.md
   agents/{reviewer,oneoff-builder}.md
   hooks/hooks.json, hooks/{lib,coordinator-guard,session-start,merge-reminder,next-sent,next-guard,ci-watch-reminder,rotation-guard,ag-chain}.sh
-  scripts/{init-ledger,ledger-lint,ledger-commit,merge-pr,install-guards,pre-push-guard,register,check-context,next-clear,ci-watch,prune-worktrees,bootstrap}.sh
-tests/{hooks,ci-watch,merge-pr,ledger-lint,ledger-commit,pre-push-guard,structure,bootstrap,exec-bits,check-context,prune-worktrees,rotation-guard}-test.sh
+  scripts/{ag-install,init-ledger,ledger-lint,ledger-commit,merge-pr,install-guards,pre-push-guard,register,check-context,next-clear,ci-watch,prune-worktrees,bootstrap}.sh
+tests/{hooks,parity,ag-install,ci-watch,merge-pr,ledger-lint,ledger-commit,pre-push-guard,structure,bootstrap,exec-bits,check-context,prune-worktrees,rotation-guard}-test.sh
 .github/workflows/tests.yml
 ```
 
@@ -196,6 +225,8 @@ tests/{hooks,ci-watch,merge-pr,ledger-lint,ledger-commit,pre-push-guard,structur
 
 ```sh
 bash tests/hooks-test.sh           # edit guard, SessionStart, merge/Next/Stop hooks, CI watch reminder, jq and python3 paths, multi-unit workspace
+bash tests/parity-test.sh          # every hook with an Antigravity payload: one line of JSON, its answer or documented silence; both hooks.json name the same hooks
+bash tests/ag-install-test.sh      # ag-install.sh against a local origin: newest tag, --tag, a new release, --check ok / STALE, refusals, --dry-run
 bash tests/ci-watch-test.sh        # ci-watch.sh with a fake gh: green, red, stale and moved head, no checks, timeout, errors
 bash tests/merge-pr-test.sh        # merge-pr.sh with a fake gh: refusals, flags, issue close, pending Next + Stop guard, exempt heads, worktree
 bash tests/ledger-lint-test.sh     # every lint rule; a fresh ledger passes
@@ -244,6 +275,21 @@ lane jobs; run it locally with the template path when a change touches `bootstra
   **Upgrade (each project):** add `- Owner approves merges into: none.` under `PROFILE.md`
   "Flow" (or the branches the owner names, with a `DECISIONS.md` row), and write every unit's
   and the coordinator's model as `Claude: <model>, <effort>; Antigravity: <model>`.
+- **Unreleased**: Antigravity runs the released kit (#55, release group "Upgrades and parity",
+  v0.14.0). The Mac mini's Antigravity plugin was a link to a working copy on
+  `feat/antigravity-dual-runtime` (equal to an old `main`, eight commits behind, manifests
+  0.10.0 and 0.11.1), and SKILL claimed identical hook guards on both runtimes. New
+  `scripts/ag-install.sh`: a clone checked out at the newest release tag, the plugin link
+  repointed; `--check` reports `ok` / `STALE`. README "Antigravity" and "Releasing the kit"
+  (the release runs it on the Mac mini). SKILL "Two runtimes" lists what Antigravity does not
+  enforce: the merge reminder and the Next-sent note are silent (the merge is still recorded and
+  the Stop guard still blocks), no builder exemption in the edit guard, no merge let-through in
+  the rotation guard, and whether PreInvocation hooks run there is `UNVERIFIED` (none of 227
+  local Antigravity transcripts, 8 of them registered coordinators, shows any hook output), so
+  the coordinator starts the CI watch and measures its context unprompted. New
+  `tests/parity-test.sh` (every hook with an Antigravity payload; a hook without a case fails)
+  and `tests/ag-install-test.sh`; `structure-test.sh` checks the SKILL and README text (it
+  already fails when the two manifest versions differ, since 0.12.0).
 - **Unreleased**: staffing caps (#53, release group "Coordinator cost", patch, v0.13.0). In a
   week the app refused 21 starts over its caps and 16 cards for another repo's agent. New
   `references/sessions.md` "Staffing caps" (one home): on Claude Code at most 5 agents working
