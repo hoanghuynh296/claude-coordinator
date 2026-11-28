@@ -49,7 +49,5 @@ handover carries only what is in flight; see `references/state-files.md`.
    it (archiving a parent archives its side sessions). A fresh coordinator then follows the `coordinator-register`
    procedure, records the note's "Pending Next" PRs
    (`bash "<plugin>/scripts/next-clear.sh" <session> --add <owner/repo#N>...`) and sends their
-   messages. Archive the old session after the new one has started (archive procedure in `references/sessions.md`:
-   `archive_session`; if refused with a rewritten input, call once more with exactly that input;
-   if still refused, rename it "<name> (old)" and add it to the one owner line "Archive finished
-   sessions: <names>"); never message it again.
+   messages. Archive the old session after the new one has started (the archive procedure in
+   `references/sessions.md`); never message it again.
