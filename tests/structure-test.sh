@@ -417,6 +417,14 @@ has references/procedures/review-merge.md 'findings only' && has ../../agents/on
   && ok "fix rounds on a subagent PR: resume, else fresh builder with PR + findings" || bad "subagent fix rounds missing"
 has SKILL.md 'invoke_subagent' && has SKILL.md 'split: `references/sessions.md`' \
   && ok "SKILL runtime map links the split for both runtimes" || bad "SKILL runtime map lacks the split link"
+# No project decision ids in kit text (#51): an id like C-015 means another rule in another
+# ledger. Skill (except templates/), agents, commands, hooks and check-context.sh say the rule or
+# its reason instead; ledger-lint.sh's C-123 is its documented example, the README changelog
+# keeps its history.
+ids=$(cd "$plugin" && grep -rnE 'C-[0-9]{3}' skills agents commands hooks scripts/check-context.sh 2>/dev/null \
+  | grep -v '^skills/coordinator/references/templates/' || true)
+[ -z "$ids" ] && ok "kit text cites no project decision id (C-0xx)" \
+  || { bad "kit text cites a project decision id"; echo "$ids" | sed 's/^/  /'; }
 n=$(python3 -I -c 'import sys; print(len(open(sys.argv[1], encoding="utf-8").read()))' "$skill/SKILL.md")
 [ "$n" -le 12000 ] && ok "SKILL.md is $n characters (budget 12,000)" || bad "SKILL.md is $n characters, over the 12,000 budget"
 echo "passed $pass, failed $failn"

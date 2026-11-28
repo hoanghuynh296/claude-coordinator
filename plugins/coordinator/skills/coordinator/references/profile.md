@@ -55,7 +55,7 @@ coordinator watches before merging; they may be the same checks.
 **Tools.** The optional tool groups each unit's agents keep (`scripts/agent-tools.json`:
 `browser`, `ios-simulator`, `semi-design`, `chrome`, `computer-use`, `cloudflare`, `office`,
 `docs`, `artifacts`, `desktop-extras`, `connectors`); everything else is off, which cuts the start cost
-of every agent call (owner decision C-018 in Semi Group). Default `none`; a UI unit keeps
+of every agent call (every enabled tool's schema is loaded into each call). Default `none`; a UI unit keeps
 `browser semi-design` (`ios-simulator` for an iOS app), a unit that deploys to Cloudflare keeps
 `cloudflare`. `install-guards.sh --tools "<groups>" <unit-dir>` merges the rules into the repo's
 `.claude/settings.json` (other keys kept, idempotent; what it adds is recorded in
@@ -110,7 +110,7 @@ the test or CI job that checks it (see `packs/artifact-contracts.md`). Omit with
 
 - Risk areas where the Reviewer is mandatory. Typical: auth, permissions, money, data
   deletion, tenancy, secrets, contract changes, anything that controls hardware.
-- Size limits above which the Reviewer is mandatory. Default (C-017): over 400 changed lines or
+- Size limits above which the Reviewer is mandatory. Default (large diffs are where a single reader misses bugs): over 400 changed lines or
   over 25 hand-written files. Not counted: `CHANGELOG.md`, `VERSION`, `package*.json`,
   lockfiles, `public/**` mirrors and `**/vendor/**`; the profile may add to that list. A
   release PR is exempt when every feature PR in it passed review.
@@ -126,7 +126,7 @@ write code; then say so in the profile and register without the guard.
 
 Context thresholds for rotation, report length, model per role, ledger size budget. Defaults:
 agents soft 250k, hard 400k (or 75% of the model's context window, whichever is lower); the
-coordinator soft 300k, hard 450k on any model and window (C-015; `check-context.sh` uses them for a
+coordinator soft 300k, hard 450k on any model and window (a coordinator's context grows with every merge and message, so it rotates on tokens, not on window size; `check-context.sh` uses them for a
 `Coordinator: …` session or `--role coordinator`; this replaces the old Opus 1M coordinator's 400k / 700k); reports in 6
 lines, `COORDINATION.md` at most 80 lines. Thresholds may differ per model. For a small
 window, soft is capped at 50% and hard at 75% of it (a 200k window: soft 100k, hard 150k).

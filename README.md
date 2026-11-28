@@ -216,6 +216,13 @@ lane jobs; run it locally with the template path when a change touches `bootstra
 
 ## Changes
 
+- **Unreleased**: kit text cites no project decision ids (#51, release group "Coordinator
+  cost", v0.13.0). Ids such as C-015 named Semi Group decisions but mean other rules in other
+  ledgers. SKILL references (`sessions.md`, `profile.md`, `state-files.md`, `pitfalls.md`,
+  `review-merge.md`, `packs/ui-product.md`) and `check-context.sh` now give the rule's reason
+  in a few words instead; `state-files.md` no longer cites a wrong id for one ledger commit per
+  turn. `structure-test.sh` fails on `C-[0-9]{3}` in skills (outside `templates/`), agents,
+  commands, hooks and `check-context.sh`. Changelog entries below keep their history.
 - **Unreleased**: delegation split (#63, release group "Coordinator cost", v0.13.0). The kit
   now says when the coordinator gives a task to a background `oneoff-builder` subagent and when
   to an agent session, instead of using the subagent only as the no-sessions fallback. Home:
