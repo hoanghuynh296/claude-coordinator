@@ -45,7 +45,7 @@ merge, sends the author `PR #<n> merged. Next: <issue | handover | stand by | do
 | Platform | <yes or no> | <unit and what it owns, or why not needed> |
 | QA | <yes or no> | <per milestone, or why not needed> |
 | Reviewer | yes | subagent `coordinator:reviewer`; mandatory for the risk areas in section 6 |
-| One-off builder | yes | subagent `coordinator:oneoff-builder` for small tasks outside a unit's queue |
+| One-off builder | yes | subagent `coordinator:oneoff-builder` per the kit's delegation split (`references/sessions.md`): self-contained one-round work outside the risk areas; every brief while sessions cannot be started |
 
 ## 4. Flow
 
@@ -96,6 +96,7 @@ Everything else goes through an issue for the owning unit.
 - <Agents per model, if they differ. A small window caps an agent's soft at 50% and hard at 75%
   of it: a 200k window gives soft 100k, hard 150k.>
 - Same-session cap (`per-issue` units): <175k>. A same-session next issue only under it.
+- Delegation: <the kit's default split | <unit>: sessions only | <unit>: subagent for <kinds>>.
 - Reports: at most <6> lines. Reviewer: at most 15 lines.
 - `COORDINATION.md`: at most <80> lines.
 - No ack-only or status-ping messages. One batched message per agent per round. The merge

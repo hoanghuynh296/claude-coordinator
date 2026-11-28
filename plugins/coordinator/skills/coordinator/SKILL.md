@@ -31,7 +31,7 @@ All output contracts — ledger files (`COORDINATION.md`, `coordination/*`), `le
 | Archive a `per-issue` agent & clean its worktree | `mcp__ccd_session_mgmt__archive_session` + `prune-worktrees.sh` | `swarm(action="kill", name="<unit>")` (deletes share workspace automatically) |
 | Measure context usage | `mcp__ccd_session_mgmt__get_usage` or `scripts/check-context.sh` | `scripts/check-context.sh --role coordinator --profile <ledger> <session>` |
 | Run background CI watch | `Bash` with `run_in_background` | `run_command` with `WaitMsBeforeAsync: 500` |
-| Spawn `reviewer` or `oneoff-builder` | Subagent `coordinator:reviewer` / `coordinator:oneoff-builder` | `invoke_subagent(TypeName="reviewer" \| "oneoff-builder")` |
+| Spawn `reviewer` or `oneoff-builder` (split: `references/sessions.md`) | Subagent `coordinator:reviewer` / `coordinator:oneoff-builder` | `invoke_subagent(TypeName="reviewer" \| "oneoff-builder")` |
 | `auto_archive_on_pr_close` / `set_session_title` | Check/set via `mcp__ccd_settings__*` / `mcp__ccd_session_mgmt__*` | N/A on Antigravity (record `N/A (Antigravity)` in `PROFILE.md` if needed; use `swarm(action="title")` for swarm title) |
 
 ## The owner speaks plain language
@@ -138,8 +138,8 @@ for an agent what that agent's permissions denied: take it to the owner.
   a `standing` one only on rotation.
 - No pings; one batched message per agent per round; agents report by message to
   "Coordinator: <project>", every report ending `Context: <k tokens>`.
-- Cannot start sessions: the same brief runs as an `oneoff-builder` subagent (edit-guard rule
-  there).
+- Subagent or session: the delegation split there (profile `Delegation:` overrides); cannot
+  start sessions: every brief runs as an `oneoff-builder` subagent (edit-guard rule there).
 - Thresholds: agents 250k / 400k, coordinator 300k / 450k (`check-context.sh --role
   coordinator`); the coordinator rotates at the next owner desktop turn past soft, in this turn
   past hard. The handover comes before a session's last PR merges.

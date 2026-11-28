@@ -89,7 +89,7 @@ None is mandatory. Add a role when its trigger is true; remove it when it stops 
 | Platform (sole owner of shared and root files: CI, build files, infra) | several units edit the same root files and their PRs conflict |
 | QA (acceptance tests from exit criteria, verdict on staging) | the product has user-facing flows, a staging environment, and milestones with exit criteria |
 | Reviewer (independent, read-only subagent) | always available; the profile lists the risk areas and size limits that make it mandatory |
-| One-off builder (subagent with its own branch and PR) | small self-contained tasks outside any unit's queue, or when sessions cannot be started (on Claude Code the guard lets the builder write in its own worktree `<unit>/.claude/worktrees/builder-<name>/`; on Antigravity the coordinator registers with `--no-guard`) |
+| One-off builder (subagent with its own branch and PR) | the default for self-contained one-round work and for every brief while sessions cannot be started (delegation split in `references/sessions.md`; a unit may override it, Budgets) (on Claude Code the guard lets the builder write in its own worktree `<unit>/.claude/worktrees/builder-<name>/`; on Antigravity the coordinator registers with `--no-guard`) |
 
 ### 4. Flow
 
@@ -132,6 +132,9 @@ lines, `COORDINATION.md` at most 80 lines. Thresholds may differ per model. For 
 window, soft is capped at 50% and hard at 75% of it (a 200k window: soft 100k, hard 150k).
 Same-session cap: 175k by default (a `per-issue` agent takes a next issue in the same session
 only under it; section 3). A Budgets line overrides it.
+Delegation: the default split between subagent and session is in `references/sessions.md`
+("Subagent or session"); one line per unit overrides it, in the unit table's Session column or
+here (`Delegation: <unit>: sessions only` or `subagent for <kinds>`).
 
 - **Soft:** do not stop mid-task. The session finishes its current issue (PR, gate green),
   takes no new one, writes its handover, and is replaced after that PR. The coordinator sends

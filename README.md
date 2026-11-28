@@ -216,6 +216,22 @@ lane jobs; run it locally with the template path when a change touches `bootstra
 
 ## Changes
 
+- **Unreleased**: delegation split (#63, release group "Coordinator cost", v0.13.0). The kit
+  now says when the coordinator gives a task to a background `oneoff-builder` subagent and when
+  to an agent session, instead of using the subagent only as the no-sessions fallback. Home:
+  `references/sessions.md` "Subagent or session (delegation split)". Subagent: self-contained
+  one-round work (docs, fixtures, investigations, audits, version bumps, codemods, small fixes)
+  outside every Reviewer-mandatory risk area, expected under about 150k context, and every
+  brief while sessions cannot be started. Session: product feature issues, risk areas,
+  `Draft: required` UI, work likely to need review rounds, work longer than the coordinator's
+  session. The profile may override it per unit (`Delegation:` line in Budgets or the unit
+  table). A builder that finds the work too large stops, pushes and reports
+  `blocked: needs a session`; the coordinator starts a session on that PR. Fix rounds on a
+  subagent PR resume the same subagent by its agent id, else a fresh builder gets the PR and
+  the findings only. Both runtimes are mapped (Agent tool / `invoke_subagent`; start session /
+  `swarm`). `profile.md`, the PROFILE template, `milestone-start.md`, `review-merge.md`,
+  `oneoff-builder` and the SKILL runtime map link to it (SKILL.md 11,953 characters).
+  `structure-test.sh` checks the home, the links, the override and the one-home phrases.
 - **Unreleased**: one home per rule (#60, release group "Coordinator cost"). SKILL.md, loaded on
   every coordinator call, goes from 21.6k to 11.8k characters (budget 12,000); no rule's meaning
   changes. New `references/sessions.md` is the one home for placing, naming, messaging,
