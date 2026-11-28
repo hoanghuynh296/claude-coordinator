@@ -88,7 +88,12 @@ copied from somewhere else. Units in `per-issue` mode have no handover file.
 and line-length budgets, session ids and home paths, decision ids that are cited but not
 defined (`<project>:C-NNN` points at another ledger and is allowed), decisions written as bullets,
 a missing or old `Updated:` date, or one a day behind the last commit. Table rows are exempt from
-the line-length budget. It exits nonzero on errors, and `install-guards.sh <ledger-repo>` installs a
+the line-length budget. Finished work in `COORDINATION.md` (a list item or table row saying
+merged, released or done) is a warning while new and an error once older than 7 days
+(`FINISHED_DAYS`; 0 turns the error off): the line's date is its last commit (`git blame`; an
+uncommitted line is new), or the `Updated:` date outside git. A handover note over 150 lines or
+10k characters (`HANDOVER_MAX_LINES`, `HANDOVER_MAX_CHARS`) is a warning: knowledge goes to the
+unit's docs. Budgets are set in the environment or in `<ledger>/.ledger-lint` (`KEY=VALUE`). It exits nonzero on errors, and `install-guards.sh <ledger-repo>` installs a
 pre-commit hook that runs a copy of it, so a broken ledger is not committed (re-run
 `install-guards.sh` after upgrading the plugin; without python3 the hook warns and lets the commit through). Procedure `audit.md`
 runs it together with the checks that need judgement and installs the hook where it is missing.

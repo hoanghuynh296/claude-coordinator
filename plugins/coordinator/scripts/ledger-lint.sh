@@ -11,11 +11,17 @@
 #     (a reference written <project>:C-123 with a lowercase project name points at another ledger and is allowed)
 #   - a decision in DECISIONS.md written as a bullet instead of a table row
 #   - a template placeholder ({{NAME}}) is left in a ledger file
+#   - a COORDINATION.md list item or table row that describes finished work (merged, released,
+#     done) is older than FINISHED_DAYS (default 7; 0 turns this error off; prose is not checked). A line's date is its last commit (git
+#     blame committer date; an uncommitted line is new); outside git, or for an untracked file,
+#     the "Updated:" date. Newer finished lines are only counted in the HISTORY_MAX warning.
 # Warnings (exit 0):
 #   - "Updated:" is older than STALE_DAYS (default 7), or more than a day older than the last
 #     commit that touched COORDINATION.md
 #   - COORDINATION.md looks like a log (more than HISTORY_MAX lines that describe finished work)
 #   - a "delegat..." line in COORDINATION.md carries no date
+#   - a coordination/handover/*.md note is over HANDOVER_MAX_LINES (default 150) lines or
+#     HANDOVER_MAX_CHARS (default 10000) characters: knowledge goes to the unit's docs
 #   - PROFILE.md still has unfilled <...> fields
 #   - a COORDINATION.md table row that mentions PRs/ahead says "since YYYY-MM-DD" and that date is more than CEILING_DAYS
 #     (default 14, the group standard's safety ceiling) ago: the ceiling is passed, so no new
@@ -26,18 +32,22 @@
 # without group headings stay valid (no error, no warning).
 #
 # Budgets can be set in the environment or in <ledger-dir>/.ledger-lint (KEY=VALUE lines):
-#   MAX_LINES, MAX_LINE_LEN, STALE_DAYS, HISTORY_MAX, CEILING_DAYS
+#   MAX_LINES, MAX_LINE_LEN, STALE_DAYS, HISTORY_MAX, CEILING_DAYS, FINISHED_DAYS,
+#   HANDOVER_MAX_LINES, HANDOVER_MAX_CHARS
 set -euo pipefail
 
 dir="${1:-.}"
 [[ -d "$dir" ]] || { echo "ledger dir not found: $dir" >&2; exit 2; }
 command -v python3 >/dev/null 2>&1 || { echo "ledger-lint.sh needs python3" >&2; exit 2; }
 
-python3 -I - "$dir" "${MAX_LINES:-}" "${MAX_LINE_LEN:-}" "${STALE_DAYS:-}" "${HISTORY_MAX:-}" "${CEILING_DAYS:-}" <<'PY'
+python3 -I - "$dir" "${MAX_LINES:-}" "${MAX_LINE_LEN:-}" "${STALE_DAYS:-}" "${HISTORY_MAX:-}" "${CEILING_DAYS:-}" \
+  "${FINISHED_DAYS:-}" "${HANDOVER_MAX_LINES:-}" "${HANDOVER_MAX_CHARS:-}" <<'PY'
 import datetime, os, re, subprocess, sys
 
 root = os.path.abspath(sys.argv[1])
-cfg = {"MAX_LINES": 80, "MAX_LINE_LEN": 240, "STALE_DAYS": 7, "HISTORY_MAX": 5, "CEILING_DAYS": 14}
+cfg = {"MAX_LINES": 80, "MAX_LINE_LEN": 240, "STALE_DAYS": 7, "HISTORY_MAX": 5, "CEILING_DAYS": 14,
+       "FINISHED_DAYS": 7, "HANDOVER_MAX_LINES": 150, "HANDOVER_MAX_CHARS": 10000}
+keys = list(cfg)
 rc_file = os.path.join(root, ".ledger-lint")
 if os.path.isfile(rc_file):
     with open(rc_file, encoding="utf-8") as fh:
@@ -47,7 +57,7 @@ if os.path.isfile(rc_file):
                 k, v = line.split("=", 1)
                 if k.strip() in cfg and v.strip().isdigit():
                     cfg[k.strip()] = int(v.strip())
-for key, arg in zip(("MAX_LINES", "MAX_LINE_LEN", "STALE_DAYS", "HISTORY_MAX", "CEILING_DAYS"), sys.argv[2:7]):
+for key, arg in zip(keys, sys.argv[2:2 + len(keys)]):
     if arg.isdigit():
         cfg[key] = int(arg)
 
@@ -127,6 +137,41 @@ if ledger is not None:
     if len(hits) > cfg["HISTORY_MAX"]:
         warn(f"COORDINATION.md: {len(hits)} lines describe finished work (lines {', '.join(map(str, hits[:8]))}...); "
              "the ledger holds live state only")
+    if hits and cfg["FINISHED_DAYS"] > 0:
+        # Each line's date: its last commit (git blame), else the "Updated:" date.
+        line_date = {}
+        try:
+            r = subprocess.run(["git", "-C", root, "blame", "--line-porcelain", "--", "COORDINATION.md"],
+                               capture_output=True, text=True, timeout=10)
+            if r.returncode == 0:
+                n, when = 0, None
+                for bl in r.stdout.splitlines():
+                    if bl.startswith("committer-time "):
+                        when = datetime.date.fromtimestamp(int(bl.split()[1]))
+                    elif bl.startswith("\t"):
+                        n += 1
+                        if when is not None:
+                            line_date[n] = when
+                        when = None
+        except (OSError, ValueError, subprocess.SubprocessError):
+            line_date = {}
+        fallback = None
+        if not line_date and updated:
+            try:
+                fallback = datetime.date.fromisoformat(updated)
+            except ValueError:
+                pass
+        for i in hits:
+            if not re.match(r"\s*(([-*+]|\d+[.)])\s|\|)", ledger[i - 1]):
+                continue  # prose (the template's own "Finished items are deleted ... merged PRs")
+            d = line_date.get(i, fallback)
+            if d is None:
+                continue
+            age = (datetime.date.today() - d).days
+            if age > cfg["FINISHED_DAYS"]:
+                src = "last commit" if i in line_date else "Updated:"
+                err(f"COORDINATION.md:{i}: finished work {age} days old ({src} {d.isoformat()}, budget "
+                    f"FINISHED_DAYS {cfg['FINISHED_DAYS']}); delete it, history is in git and the merged PRs")
     today = datetime.date.today()
     for i, line in enumerate(ledger, 1):
         m = re.match(r"\s*\|", line)
@@ -143,6 +188,19 @@ if ledger is not None:
         if re.search(r"delegat", line, re.I) and not line.lstrip().startswith("#") \
            and not re.search(r"\d{4}-\d{2}-\d{2}", line) and not re.search(r"\bnone\b", line, re.I):
             warn(f"COORDINATION.md:{i}: a delegation without a date")
+
+for rel in files:
+    if not rel.startswith(os.path.join("coordination", "handover") + os.sep):
+        continue
+    try:
+        with open(os.path.join(root, rel), encoding="utf-8", errors="replace") as fh:
+            text = fh.read()
+    except OSError:
+        continue
+    nl, nc = len(text.splitlines()), len(text)
+    if nl > cfg["HANDOVER_MAX_LINES"] or nc > cfg["HANDOVER_MAX_CHARS"]:
+        warn(f"{rel}: {nl} lines, {nc} characters, budget {cfg['HANDOVER_MAX_LINES']} lines / "
+             f"{cfg['HANDOVER_MAX_CHARS']} characters; knowledge goes to the unit's docs, the note keeps what is in flight")
 
 decisions = read("coordination/DECISIONS.md")
 if decisions is not None:
