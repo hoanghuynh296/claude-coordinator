@@ -275,7 +275,7 @@ for f in SKILL.md references/workflow.md references/profile.md references/pitfal
 done
 # C-015 / C-017 defaults (#24): coordinator 300k/450k, Reviewer size trigger, one ledger commit per turn.
 for f in SKILL.md references/profile.md references/templates/PROFILE.md; do
-  has "$f" '300k' && has "$f" '450k' && has "$f" '--coordinator' && ok "$f gives the coordinator 300k / 450k" || bad "$f lacks the coordinator 300k / 450k"
+  has "$f" '300k' && has "$f" '450k' && has "$f" '--role coordinator' && ok "$f gives the coordinator 300k / 450k" || bad "$f lacks the coordinator 300k / 450k"
 done
 ! grep -rq 'soft 400k, hard 700k' "$skill" && ok "no 400k / 700k coordinator default left" || bad "an old 700k coordinator default is left"
 for f in references/procedures/review-merge.md references/profile.md references/templates/PROFILE.md; do
