@@ -11,14 +11,16 @@
 #     (a reference written <project>:C-123 with a lowercase project name points at another ledger and is allowed)
 #   - a decision in DECISIONS.md written as a bullet instead of a table row
 #   - a template placeholder ({{NAME}}) is left in a ledger file
-#   - a COORDINATION.md list item or table row that describes finished work (merged, released,
-#     done) is older than FINISHED_DAYS (default 7; 0 turns this error off; prose is not checked). A line's date is its last commit (git
-#     blame committer date; an uncommitted line is new); outside git, or for an untracked file,
-#     the "Updated:" date. Newer finished lines are only counted in the HISTORY_MAX warning.
+#   - only when FINISHED_DAYS is set above 0 (default 0, off): a finished-work list item older
+#     than FINISHED_DAYS days. Never checked: prose, table rows, the Owner queue, and items with a
+#     live marker after the finished word (waits, open, needs, until, check, UNVERIFIED, a #ref)
+#     or a "not" before it. An item's date is its newest line's last commit (git blame committer
+#     date; an uncommitted line is new); outside git, or for an untracked file, "Updated:".
 # Warnings (exit 0):
 #   - "Updated:" is older than STALE_DAYS (default 7), or more than a day older than the last
 #     commit that touched COORDINATION.md
-#   - COORDINATION.md looks like a log (more than HISTORY_MAX lines that describe finished work)
+#   - COORDINATION.md looks like a log (more than HISTORY_MAX lines that describe finished work);
+#     the warning lists them oldest first with each line's age in days (same dating as above)
 #   - a "delegat..." line in COORDINATION.md carries no date
 #   - a coordination/handover/*.md note is over HANDOVER_MAX_LINES (default 150) lines or
 #     HANDOVER_MAX_CHARS (default 10000) characters: knowledge goes to the unit's docs
@@ -46,7 +48,7 @@ import datetime, os, re, subprocess, sys
 
 root = os.path.abspath(sys.argv[1])
 cfg = {"MAX_LINES": 80, "MAX_LINE_LEN": 240, "STALE_DAYS": 7, "HISTORY_MAX": 5, "CEILING_DAYS": 14,
-       "FINISHED_DAYS": 7, "HANDOVER_MAX_LINES": 150, "HANDOVER_MAX_CHARS": 10000}
+       "FINISHED_DAYS": 0, "HANDOVER_MAX_LINES": 150, "HANDOVER_MAX_CHARS": 10000}
 keys = list(cfg)
 rc_file = os.path.join(root, ".ledger-lint")
 if os.path.isfile(rc_file):
@@ -134,12 +136,9 @@ if ledger is not None:
             err(f"COORDINATION.md: 'Updated: {updated}' is not a date")
     history = re.compile(r"\b(merged|released|RELEASED|DONE|done)\b")
     hits = [i for i, line in enumerate(ledger, 1) if history.search(line) and not line.lstrip().startswith("|---")]
-    if len(hits) > cfg["HISTORY_MAX"]:
-        warn(f"COORDINATION.md: {len(hits)} lines describe finished work (lines {', '.join(map(str, hits[:8]))}...); "
-             "the ledger holds live state only")
-    if hits and cfg["FINISHED_DAYS"] > 0:
-        # Each line's date: its last commit (git blame), else the "Updated:" date.
-        line_date = {}
+    # Each line's date: its last commit (git blame; an uncommitted line is new), else "Updated:".
+    line_date = {}
+    if hits:
         try:
             r = subprocess.run(["git", "-C", root, "blame", "--line-porcelain", "--", "COORDINATION.md"],
                                capture_output=True, text=True, timeout=10)
@@ -155,24 +154,53 @@ if ledger is not None:
                         when = None
         except (OSError, ValueError, subprocess.SubprocessError):
             line_date = {}
-        fallback = None
-        if not line_date and updated:
-            try:
-                fallback = datetime.date.fromisoformat(updated)
-            except ValueError:
-                pass
-        for i in hits:
-            if not re.match(r"\s*(([-*+]|\d+[.)])\s|\|)", ledger[i - 1]):
-                continue  # prose (the template's own "Finished items are deleted ... merged PRs")
-            d = line_date.get(i, fallback)
-            if d is None:
-                continue
-            age = (datetime.date.today() - d).days
-            if age > cfg["FINISHED_DAYS"]:
-                src = "last commit" if i in line_date else "Updated:"
-                err(f"COORDINATION.md:{i}: finished work {age} days old ({src} {d.isoformat()}, budget "
-                    f"FINISHED_DAYS {cfg['FINISHED_DAYS']}); delete it, history is in git and the merged PRs")
+    fallback = None
+    if not line_date and updated:
+        try:
+            fallback = datetime.date.fromisoformat(updated)
+        except ValueError:
+            pass
     today = datetime.date.today()
+    def age_of(nums):
+        ds = [d for d in (line_date.get(n, fallback) for n in nums) if d is not None]
+        return (today - max(ds)).days if ds else None
+    if len(hits) > cfg["HISTORY_MAX"]:
+        aged = sorted(((age_of([i]), i) for i in hits), key=lambda t: (-(t[0] if t[0] is not None else -1), t[1]))
+        listed = ", ".join(f"line {i} ({a} days)" if a is not None else f"line {i}" for a, i in aged[:8])
+        more = "..." if len(aged) > 8 else ""
+        warn(f"COORDINATION.md: {len(hits)} lines describe finished work, oldest first: {listed}{more}; "
+             "the ledger holds live state only")
+    if hits and cfg["FINISHED_DAYS"] > 0:
+        item_re = re.compile(r"\s*([-*+]|\d+[.)])\s")
+        live = re.compile(r"\b(waits?|waiting|open|needs?|until|check\w*|UNVERIFIED)\b|#\d+")
+        section, sect_of = "", {}
+        for i, line in enumerate(ledger, 1):
+            h = re.match(r"\s*#+\s*(.*)", line)
+            if h:
+                section = h.group(1).strip().lower()
+            sect_of[i] = section
+        def cont(n):  # a continuation line of a multi-line item: indented, not blank, not an item
+            l = ledger[n - 1]
+            return bool(l.strip()) and l[:1] in " \t" and not item_re.match(l)
+        seen_items = set()
+        for i in hits:
+            k = i
+            while k > 1 and cont(k):
+                k -= 1
+            if k in seen_items or not item_re.match(ledger[k - 1]) or sect_of[k].startswith("owner queue"):
+                continue  # prose, table rows and the Owner queue are live state
+            seen_items.add(k)
+            nums = [k]
+            while nums[-1] < len(ledger) and cont(nums[-1] + 1):
+                nums.append(nums[-1] + 1)
+            text = " ".join(ledger[n - 1] for n in nums)
+            m = history.search(text)
+            if re.search(r"\bnot\s+(yet\s+)?$", text[:m.start()]) or live.search(text[m.end():]):
+                continue  # "not done", or something still waits on it
+            a = age_of(nums)
+            if a is not None and a > cfg["FINISHED_DAYS"]:
+                err(f"COORDINATION.md:{k}: finished work {a} days old (FINISHED_DAYS {cfg['FINISHED_DAYS']}); "
+                    "delete it (history is in git), or set FINISHED_DAYS=0 in .ledger-lint to turn this check off")
     for i, line in enumerate(ledger, 1):
         m = re.match(r"\s*\|", line)
         s = re.search(r"since\s+(\d{4}-\d{2}-\d{2})", line) if m and re.search(r"ahead|PRs?\b", line) else None

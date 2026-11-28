@@ -219,14 +219,14 @@ lane jobs; run it locally with the template path when a change touches `bootstra
 - **Unreleased**: ledger lint budgets (#57, release group "Upgrades and parity", v0.14.0).
   `ledger-lint.sh` warns when a `coordination/handover/*.md` note is over 150 lines or 10k
   characters ("knowledge goes to the unit's docs"; `HANDOVER_MAX_LINES`,
-  `HANDOVER_MAX_CHARS`). A `COORDINATION.md` list item or table row describing finished work
-  (merged, released, done) becomes an error once older than 7 days (`FINISHED_DAYS`; 0 turns it
-  off). Its date is the line's last commit (`git blame`, an uncommitted line is new), else the
-  `Updated:` date outside git; newer ones stay in the existing count warning and prose (the
-  template's own intro) is not checked. Upgrading: a ledger that lints green today fails only on
-  finished lines older than 7 days; delete them (history is in git) or set `FINISHED_DAYS=0` in
-  `<ledger>/.ledger-lint` until you do. `state-files.md` documents the date rule;
-  `ledger-lint-test.sh` covers both rules and their budgets.
+  `HANDOVER_MAX_CHARS`). The finished-work warning now lists the lines oldest first with each
+  one's age in days (the line's last commit by `git blame`, an uncommitted line is new; outside
+  git the `Updated:` date). Making old finished work an error is opt-in: `FINISHED_DAYS=<n>` in
+  `<ledger>/.ledger-lint` (default 0, off) fails a list item older than n days, dated by its
+  newest line, and the error names the `FINISHED_DAYS=0` escape. Prose, table rows, the Owner
+  queue and items still live ("not done", or waits / open / needs / until / check /
+  `UNVERIFIED` / a `#ref` after the finished word) never error. Upgrading changes no ledger's
+  exit code. `state-files.md` documents the rule; `ledger-lint-test.sh` covers both rules.
 - **Unreleased**: staffing caps (#53, release group "Coordinator cost", patch, v0.13.0). In a
   week the app refused 21 starts over its caps and 16 cards for another repo's agent. New
   `references/sessions.md` "Staffing caps" (one home): on Claude Code at most 5 agents working
