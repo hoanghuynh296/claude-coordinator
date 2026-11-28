@@ -94,7 +94,8 @@ Everything else goes through an issue for the owning unit.
   gate green), writes its handover before that PR merges, and is replaced.
 - Context, hard: <400k, or 75% of the model's context window if lower>. Past it a session
   stops at the next safe point (commit, push), writes a full handover, reports "blocked: rotate".
-- Coordinator: soft <300k>, hard <450k>, on any model and window (`check-context.sh --coordinator`).
+- Coordinator: soft <300k>, hard <450k>, on any model and window (`check-context.sh --profile
+  <ledger>` reads this section; a `Coordinator: …` session or `--role coordinator` gets these).
 - <Agents per model, if they differ. A small window caps an agent's soft at 50% and hard at 75%
   of it: a 200k window gives soft 100k, hard 150k.>
 - Same-session cap (`per-issue` units): <175k>. A same-session next issue only under it.

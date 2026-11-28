@@ -134,8 +134,8 @@ write code; then say so in the profile and register without the guard.
 
 Context thresholds for rotation, report length, model per role, ledger size budget. Defaults:
 agents soft 250k, hard 400k (or 75% of the model's context window, whichever is lower); the
-coordinator soft 300k, hard 450k on any model and window (C-015; `check-context.sh
---coordinator`; this replaces the old Opus 1M coordinator's 400k / 700k); reports in 6
+coordinator soft 300k, hard 450k on any model and window (C-015; `check-context.sh` uses them for a
+`Coordinator: …` session or `--role coordinator`; this replaces the old Opus 1M coordinator's 400k / 700k); reports in 6
 lines, `COORDINATION.md` at most 80 lines. Thresholds may differ per model. For a small
 window, soft is capped at 50% and hard at 75% of it (a 200k window: soft 100k, hard 150k).
 Same-session cap: 175k by default (a `per-issue` agent takes a next issue in the same session
@@ -149,8 +149,12 @@ only under it; section 3). A Budgets line overrides it.
 - Why two: one threshold that stops a session mid-task makes the fresh session re-read
   everything, which costs more than it saves. The hard one is the safety margin.
 
-`check-context.sh --soft <n> --hard <n> [--window <n>]` reports `ok`, `SOFT` or `HARD`. One
-run applies one set of thresholds: run it once per model group when they differ.
+`check-context.sh --profile <ledger>` reads soft and hard per role from this section (a
+coordinator is a `Coordinator: …` session or `--role coordinator`) and reports `ok`, `SOFT` or
+`HARD` with the threshold it used (`334k / soft 300k: SOFT`). Write each value as a number with
+a `k` or `m` suffix after the word `soft` or `hard`, and name the role (`Coordinator: soft 300k,
+hard 450k`); a bullet without a role word is about agents. `--soft <n> --hard <n> [--window
+<n>]` override it. One run applies one window: run it once per model group when they differ.
 
 **Token economy.** The general rules are in `references/token-economy.md`. The profile adds
 what is specific: the model per task type, the local test commands and scope, and the

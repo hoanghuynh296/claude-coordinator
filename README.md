@@ -152,7 +152,7 @@ id and must register again.
 | `ci-watch.sh <owner/repo> <N> [<sha>]` | watch a PR's CI until it ends and print one line: `green` (exit 0), `red: <checks> <link>` (1, at the first failure), `error` (2), `stale-head` when the head is not or no longer the reported SHA (3), `timeout` (4, `CI_WATCH_DEADLINE`, default 90 min), `no-checks` (5, `CI_WATCH_NOCHECKS`, default 15 min), not open (6). The coordinator runs it with `run_in_background` on every "PR ready": its exit wakes the coordinator when CI ends |
 | `register.sh <session> <ledger> [unit...] [--allow glob]... [--allow-none] [--no-guard]` | register or `--unregister` a coordinator session |
 | `prune-worktrees.sh <root>... (--sessions <file> \| --no-session-check) [--apply] [--min-age-hours N] [--discard <glob>]...` | remove finished agent worktrees (`.claude/worktrees/*`) under the roots: only a registered, unlocked worktree with no change for N hours (default 6), a clean `git status` (or only changes matching `--discard`), HEAD in a remote branch, and (`--sessions`: the `list_sessions` JSON) no live session in it or on its branch and no open PR for its branch (`gh`; a failed lookup keeps it). `git worktree remove`, branches kept, stray folders reported and kept; prints the space freed. Dry run unless `--apply` |
-| `check-context.sh [--coordinator] [--soft N] [--hard N] [--window N] [session...]` | context size per session from its transcript, with a level: `ok`, `SOFT` (finish the current issue, then rotate; default 250k) or `HARD` (rotate now; default 400k). `--coordinator`: 300k / 450k. `--window` caps soft at 50% and hard at 75% of the context window. Also `SOFT_AT`, `HARD_AT`, `CONTEXT_WINDOW`; one run per model group |
+| `check-context.sh [--role coordinator\|agent] [--profile PROFILE.md\|ledger] [--soft N] [--hard N] [--window N] [session...]` | context size per session from its transcript, with the threshold it used and a level: `334k / soft 300k: SOFT`. `ok`, `SOFT` (finish the current issue, then rotate) or `HARD` (rotate now). Role: a session titled `Coordinator: …` is a coordinator (soft 300k, hard 450k), any other an agent (250k / 400k); `--role` (or `--coordinator`) sets it for all. `--profile` reads the thresholds from the ledger's PROFILE Budgets (values it does not give keep the defaults). `SOFT_AT`, `HARD_AT` (agents only), then `--soft`, `--hard` (everyone) win over both. `--window` / `CONTEXT_WINDOW` caps soft at 50% and hard at 75% of the context window; one run per model group |
 | `token-report.py <transcript dir \| session.jsonl> [--top N] [--json]` | where a session and its subagents spent tokens: calls, input, cache writes and reads, output, a weighted share, tool calls by tool, largest tool results; read-only (procedure `token-audit.md`) |
 | `bootstrap.sh <owner/repo> <dir> ...` | the single-repo SaaS starting point: repo from a template (default `hoanghuynh296/agent-project-template`, which is private: pass `--template <your repo>`), placeholders, `develop`, labels, ledger, branch protection that requires the jobs of the new repo's `ci.yml` (the template's lane jobs, which always report; `--check` adds more; rerun after removing a lane). `--ledger-only` creates just the ledger; `--dry-run` prints every action |
 
@@ -188,7 +188,7 @@ bash tests/bootstrap-test.sh [template-dir]   # full bootstrap against local bar
 bash tests/structure-test.sh       # commands, procedures and the skill agree; listing text fits the cap; key rules present
 bash tests/exec-bits-test.sh       # every plugin *.sh is executable in git
 bash tests/agent-tools-test.sh     # install-guards --tools: merge, idempotent, groups back on, refusals, catalog spares core tools
-bash tests/check-context-test.sh   # ok / SOFT / HARD levels, thresholds from env and args, window cap
+bash tests/check-context-test.sh   # ok / SOFT / HARD levels, roles, PROFILE Budgets, env and args, window cap
 bash tests/prune-worktrees-test.sh # dirty, unpushed, live, open PR, young, locked, stray kept; clean pushed old removed; --discard
 ```
 
@@ -199,7 +199,17 @@ lane jobs; run it locally with the template path when a change touches `bootstra
 
 ## Changes
 
-- **Unreleased**: `bootstrap.sh` no longer requires a `changes` check (#45). The template's fast CI
+- **Unreleased**: `check-context.sh` is role- and profile-aware (#25, release group "Coordinator
+  cost"). A session titled `Coordinator: …` gets the coordinator thresholds (300k / 450k) without
+  `--coordinator`; `--role coordinator|agent` sets the role for every session listed
+  (`--coordinator` stays as its short form). `--profile <PROFILE.md | ledger>` reads soft and hard
+  per role from the profile's Budgets section, in the wordings the Semi Group ledgers use; a value
+  it does not give keeps the kit default. Each line now names the threshold it used:
+  `<session>  334k / soft 300k: SOFT  <title>` (was `334k  SOFT`); HARD lines name the hard
+  threshold. `SOFT_AT` / `HARD_AT` apply to agents only, as before. Same output on Claude Code and
+  Antigravity transcripts. `check-context-test.sh` covers both roles, the title rule and PROFILE
+  overrides.
+- `bootstrap.sh` no longer requires a `changes` check (#45). The template's fast CI
   (agent-project-template#4, C-045) has no `changes` job; each lane job decides in its first step
   and always reports. Branch protection now requires the jobs of the new repo's
   `.github/workflows/ci.yml` (so a removed lane is never required; rerun after removing one) plus any
