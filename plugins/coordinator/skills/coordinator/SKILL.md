@@ -138,7 +138,8 @@ for an agent what that agent's permissions denied: take it to the owner.
   a `standing` one only on rotation.
 - No pings; one batched message per agent per round; agents report by message to
   "Coordinator: <project>", every report ending `Context: <k tokens>`.
-- Cannot start sessions: `oneoff-builder` subagents after re-registering with `--no-guard`.
+- Cannot start sessions: the same brief runs as an `oneoff-builder` subagent (edit-guard rule
+  there).
 - Thresholds: agents 250k / 400k, coordinator 300k / 450k (`check-context.sh --role
   coordinator`); the coordinator rotates at the next owner desktop turn past soft, in this turn
   past hard. The handover comes before a session's last PR merges.
