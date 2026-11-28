@@ -32,15 +32,8 @@ verification gate, who may release it, and its release rule (groups + safety cei
 | `standing` | one long-lived session "Agent: <unit>", rotated past the soft context threshold (after its current issue) with a handover note | the unit has a steady queue and work in flight carries context (a long build, a multi-PR feature) |
 | `per-issue` | a fresh session for each issue, archived by the coordinator after its PR merges (unless the coordinator sends a same-session Next, below); no handover notes | work is intermittent or each task is self-contained; the unit's docs are good enough to start cold |
 
-A `per-issue` session may take the next issue of its unit in the same session only when the
-coordinator sends `PR #<n> merged. Next: #<m> (same session)`, which it does only if `#m` is in
-the same unit, the agent's context (measured, not self-reported) is under the same-session cap
-(default 175k, Budgets), the coordinator cannot start a session in this turn (Remote Control, an
-automated turn, a refused start), `#m` is not in a Reviewer-mandatory risk area, and the session
-has done fewer than 3 issues in a row. Otherwise it gets `Next: done` and the next issue starts fresh. The session
-stays `per-issue`: it never becomes `standing` by repetition.
-`Next: build #<n> (same session)` after an owner-approved UI draft (`packs/ui-product.md`) is
-the same issue's build phase, not a next issue: these conditions do not apply to it.
+A `per-issue` session takes a next issue in the same session only under the strict
+same-session rule (`procedures/review-merge.md` step 9; its cap is the Budgets line below).
 
 `per-issue` only works if the unit's `AGENTS.md` and docs carry everything a cold start needs.
 If a per-issue agent keeps asking the same questions, fix the docs, not the mode.
@@ -51,9 +44,8 @@ for CI), review and CI fixes, then it waits for the coordinator's
 `PR #<n> merged. Next: <issue | handover | stand by | done>`. Never hand out a queue. The
 coordinator owns the CI wait: a background `scripts/ci-watch.sh` per "PR ready".
 
-In either mode every session sits at the top level of the sidebar: whoever starts it detaches
-it right away, and it reports by message to "Coordinator: <project>". This is not a profile
-choice; nested sessions are archived with their parent and lose their reports at rotation.
+In either mode sessions are top-level peers that report by message (`references/sessions.md`);
+this is not a profile choice.
 
 **Gate.** The command (or CI job) that must be green before a PR may merge, plus any manual
 check that CI cannot do (for example a browser pass for UI). Write the exact command. Name

@@ -32,24 +32,12 @@ the issues on either side of it start.
 
 Hand out ONE issue per agent, never a queue of two or three. The agent takes that issue
 through its full lifecycle (section 4) and waits; the next issue goes out in the coordinator's
-message after the merge (`PR #<n> merged. Next: <issue>`). Units in `per-issue` mode get a
-fresh session per issue instead (brief: `templates/unit-brief.md` plus the issue link), unless
-the coordinator sends the strict same-session form `PR #<n> merged. Next: #<m> (same session)`
-(`review-merge.md` step 9: same unit, context under 175k (or the profile's same-session cap)
-measured with the session tools, no session can be started in this turn (Remote Control, an
-automated turn, a refused start), no mandatory-Reviewer risk area, fewer than 3 issues in a row
-in that session). When a session can be started, the next issue always goes to a fresh one. After the 3rd
-issue, or when any condition fails, the next issue goes to a fresh session.
+message after the merge (the merge notice, `review-merge.md` step 9). Units in `per-issue` mode
+get a fresh session per issue instead (brief: `templates/unit-brief.md` plus the issue link),
+except under the strict same-session rule of `review-merge.md` step 9.
 
-Sessions can only be started in a turn the owner started from the desktop app. Start every
-session the stretch needs in that one turn. If sessions cannot be started (the owner is on
-Remote Control, or the tool is unavailable), run the same brief as a background subagent with
-its own worktree and convert later.
-
-Every session sits at the top level of the sidebar; none nests under another. Start each agent
-in its own worktree and detach it right away (`mcp__ccd_session_mgmt__detach_session`). A
-nested session builds a chain on every rotation and is archived with its parent. A detached
-agent sends no turn-end note to the coordinator, so it reports by message (section 4).
+Starting, placing (top-level peers, each in its own worktree) and naming sessions, and the
+subagent fallback when none can be started: `references/sessions.md`.
 
 Never leave a unit idle while its `ROADMAP.md` list has an item that is not blocked.
 
@@ -67,8 +55,8 @@ wait (section 5). Before every push the agent checks that
 the branch's PR is not already merged.
 
 Then the agent waits. It fixes review findings or a red CI when told or woken by Auto-fix
-(same branch, reports "PR ready" again with the new head SHA, waits again) and starts nothing new until the coordinator's message `PR #<n> merged. Next: <issue |
-handover | stand by | done>`. Sessions run only when a message arrives: an agent that reports
+(same branch, reports "PR ready" again with the new head SHA, waits again) and starts nothing new until the coordinator's merge notice
+(`review-merge.md` step 9). Sessions run only when a message arrives: an agent that reports
 "PR ready, next #50" and ends its turn, and a coordinator that merges and says nothing, leave
 both waiting forever. So the coordinator always sends that message in the same turn as the
 merge (`review-merge.md`, step 9), and the plugin's Stop hook does not let it end the turn
@@ -93,15 +81,11 @@ until it has.
    If a manual check is skipped, the merge note says `UNVERIFIED: <what>` and the item goes on
    the verification debt list in `ROADMAP.md`.
 5. A stacked PR is retargeted to the integration branch before its base merges.
-6. Merge with the profile's method. After merging a `per-issue` agent's PR, archive that
-   agent's session (`mcp__ccd_session_mgmt__archive_session`; if refused, call once more with the
-   rewritten input, then rename it "<name> (old)" and add it to the one owner line "Archive
-   finished sessions: <names>"); a `standing` session is archived only on rotation. Fallback only while the app setting `auto_archive_on_pr_close` is still
-   on: check `mcp__ccd_pr__get_status` and unbind (`mcp__ccd_pr__unbind_pr`) any PR bound to you.
-   Update the ledger (remove the item; adjust "ahead by"). In the same turn, read the author's
-   context (`mcp__ccd_session_mgmt__get_usage`) and send it `PR #<n> merged. Next: <issue |
-   handover | stand by | done>` (`review-merge.md`, step 9). Without `(same session)` a
-   `per-issue` agent gets `Next: done` and is archived.
+6. Merge with the profile's method (`merge-pr.sh`). After merging a `per-issue` agent's PR,
+   archive that agent's session (archive procedure in `references/sessions.md`); a `standing`
+   session is archived only on rotation. Update the ledger (remove the item; adjust "ahead
+   by"). In the same turn, read the author's context and send it the merge notice
+   (`review-merge.md`, step 9).
 7. Check the unit's open release group and its safety ceiling. Group complete: go to step 6
    of this workflow for that group. Ceiling reached (default 2 weeks or 15 PRs): stop handing
    out feature issues for that unit; split the group and release what is complete and
@@ -145,7 +129,7 @@ After a release, clear the unit's verification debt items that the release cover
   next safe point (commit, push), writes a full handover (done, left in order, decisions,
   commands to re-run, traps) and reports "blocked: rotate". No new step.
 - Then a fresh session with the same name starts from that note. It is never started by the
-  session it replaces: the coordinator starts it and detaches it to the top level. The old
+  session it replaces: the coordinator starts it and detaches it (`references/sessions.md`). The old
   session is renamed "<name> (old)" or archived before the new one takes the name. Archive the old session;
   never message it again.
 - `per-issue` sessions write no handover file: at soft they just finish the issue; at hard

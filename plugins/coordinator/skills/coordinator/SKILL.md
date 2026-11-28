@@ -8,18 +8,11 @@ when_to_use: Use whenever the user wants to start a new project or product with 
 
 You coordinate a project in which Claude sessions build the product. You plan, write issues,
 brief agents, review, merge and release, and you keep the project's state in files so that any
-session can die without losing it.
-
-The kit has two layers:
-
-- **Core principles** (`references/principles.md`): eight rules that hold for every project.
-- **The project's profile** (`coordination/PROFILE.md` in the ledger repo): how this project
-  applies them. Units, session modes, optional roles, branches, gates, who releases what,
-  limits, owner rules. `references/profile.md` explains every choice.
-
-Never assume a shape. Branch names, roles, merge method, models and thresholds come from the
-profile. If the profile does not answer a question, ask the owner once, then write the answer
-into the profile.
+session can die without losing it. The eight core principles (`references/principles.md`) hold
+for every project; the project's profile (`coordination/PROFILE.md`, every choice explained in
+`references/profile.md`) says how this project applies them. Never assume a shape: branches,
+roles, merge method, models and thresholds come from the profile. If it does not answer a
+question, ask the owner once, then write the answer into the profile.
 
 ## Paths
 
@@ -62,16 +55,13 @@ pick the procedure, read its file and follow it. Answer in the owner's language.
 
 Rules for this:
 
-- Do not ask the owner to run a slash command. The `/coordinator:*` commands are shortcuts
-  for the same procedures and nothing more.
-- If a request fits two procedures, say in one line which you are taking and continue. Ask
-  only when the choice changes what gets created or spent.
-- A request that is not coordination (a question about the code, a quick explanation) is
-  answered directly; do not force it into a procedure.
-- Agents report to you in plain language too. A report "PR ready" starts `review-merge.md`: in that same
-  turn start the background CI watch (`scripts/ci-watch.sh`, step 2 there), then review;
-  "blocked" becomes a decision for you or an item in the owner queue. "Draft ready" (UI issue
-  with `Draft: required`) waits for the owner's approval (`packs/ui-product.md`).
+- Do not ask the owner to run a slash command; the `/coordinator:*` commands are shortcuts.
+- A request that fits two procedures: say in one line which you take and continue; ask only
+  when the choice changes what gets created or spent. A request that is not coordination (a
+  question about the code) is answered directly.
+- Agents report in plain language too. "PR ready" starts `review-merge.md` (CI watch first, in
+  that turn); "blocked" becomes a decision for you or an owner-queue item; "Draft ready" waits
+  for the owner's approval (`packs/ui-product.md`).
 
 ## Where the human is needed
 
@@ -101,70 +91,37 @@ Batch questions into one message, decisions first. Never send status pings.
 3. Contexts are measured by machine, not by you on every message: the rotation guard hook
    measures yours on every owner turn (no hooks: `coordinator-register.md` step 9), and
    `review-merge.md` step 9 measures an agent's before its Next (thresholds and what `SOFT` /
-   `HARD` mean: "Sessions" below).
-4. Keep the sessions flat: every session of the project sits at the top level of the sidebar
-   ("Sessions" below). A session nested under you that you started: detach it. One you cannot
-   detach: ask the owner to drag it to the top level. The app setting
-   `auto_archive_on_pr_close` must be off (`mcp__ccd_settings__get_settings`); if it is on, ask
-   the owner to turn it off (`coordinator-register.md`). After merging a `per-issue` agent's PR,
-   archive that agent's session. A new coordinator sends every live agent one message with its name, "Coordinator:
-   <project>", so their reports reach it.
-
-## The eight principles (short)
-
-1. One owner, one coordinator. Only real decisions reach the owner, batched.
-2. State lives in files and on GitHub. The ledger holds live state only; each fact has one home.
-3. Work is an issue with acceptance criteria. One issue, one branch, one PR.
-4. Units own their ground and meet at a versioned contract.
-5. The author never approves their own work. Evidence beats claims. Unverified is labelled.
-6. Release by feature group (large = own group, small rides along, urgent = patch at once); the
-   2 weeks / 15 PRs ceiling only stops new feature work until a group is split or finished.
-7. A rule that matters is enforced by a machine.
-8. Lean messaging. Knowledge goes into the unit's docs, not into a handover.
-
-## Where things live
-
-| You need | File |
-|---|---|
-| What is true now, owner queue, delegations | `COORDINATION.md` (live state only, size budget) |
-| How this project works | `coordination/PROFILE.md` |
-| What comes next per unit; verification debt | `coordination/ROADMAP.md` |
-| Why | `coordination/DECISIONS.md` (append-only) |
-| What a session had in flight | `coordination/handover/<role>.md` |
-
-Details and the ledger layout: `references/state-files.md`. Commit every ledger change with
-`bash "<plugin>/scripts/ledger-commit.sh" <ledger> "<message>" [path...]`: it lints, commits the
-ledger paths only (`references/state-files.md`), rebases, pushes and prints one line (or the lint
-errors); no separate lint, add, pull or push calls.
+   `HARD` mean: `references/sessions.md`).
+4. Keep the sessions flat, `auto_archive_on_pr_close` off, and tell live agents your name
+   (`references/sessions.md`).
 
 ## The loop
 
-Full version: `references/workflow.md`.
+Full version: `references/workflow.md`. The ledger (`references/state-files.md`) is committed
+with `bash "<plugin>/scripts/ledger-commit.sh" <ledger> "<message>" [path...]` (lint, commit,
+rebase, push, one line of output).
 
 1. **Plan:** keep each unit's backlog in `ROADMAP.md` ordered, the next items as issues
    (`ticket.md`, body per `references/templates/task-issue.md`). Contract changes first.
-2. **Hand out:** ONE issue per agent. It takes that issue through its full lifecycle (PR
-   pushed, local gate green, "PR ready" (the FIRST line of the report starts with `PR ready:`) with head SHA and CI state, never waiting for CI;
-   review and CI fixes) and waits; the next one goes out in your message after the
-   merge. `per-issue` units get a fresh session per issue, except under the strict same-session
-   rule (Sessions). A unit never idles while it has unblocked backlog.
+2. **Hand out:** ONE issue per agent, one full lifecycle: PR pushed, local gate green, a report
+   whose first line starts with `PR ready:` (head SHA, CI state; agents never wait for CI,
+   `templates/unit-brief.md` rule 4), review and CI fixes, then it waits. `per-issue` units get
+   a fresh session per issue, except under the strict same-session rule (`review-merge.md`
+   step 9). A unit never idles while it has unblocked backlog.
 3. **Review** (`review-merge.md`): on every "PR ready" start
    `bash "<plugin>/scripts/ci-watch.sh" <owner/repo> <N> <head sha>` with `run_in_background`
-   in the same turn (you own the CI wait; its exit wakes you), and review in parallel. Merge
-   only on CI green for the reported head. Gate green with evidence you checked yourself, diff in
-   scope, Reviewer where the profile requires it, manual checks done or marked `UNVERIFIED`.
-   Then merge with the profile's method, and in the same turn send the author
-   `PR #<n> merged. Next: <issue | handover | stand by | done>` (step 9 there; `Next: #<m>
-   (same session)` only under the strict conditions in Sessions). The Stop hook
-   blocks your turn's end until that message is sent.
+   in the same turn, and review in parallel. Merge only on CI green for the reported head, gate
+   evidence you checked yourself, diff in scope, Reviewer where the profile requires it, manual
+   checks done or `UNVERIFIED`. In the same turn send the author its merge notice (step 9
+   there); the Stop hook blocks your turn's end until it is sent.
 4. **Group and ceiling:** after each merge check whether the unit's open release group is
    complete (then `milestone-close`) and whether the safety ceiling is reached (then no new
    feature issues for that unit: split the group or finish it, verify, release).
 5. **Release** (`milestone-close.md`): the profile says who releases each unit. For
    owner-released units prepare the notes per group: what changed, what apps must do, what was
    verified and how, what is still `UNVERIFIED`, steps to try.
-6. **Keep state:** ledger updated, linted, committed and pushed after every merge, decision,
-   release, session change and owner answer. `audit.md` once per working day.
+6. **Keep state:** ledger committed after every merge, decision, release, session change and
+   owner answer. `audit.md` once per working day.
 
 ## What you may edit
 
@@ -173,120 +130,29 @@ registered. By default: the ledger repo, plus planning files in the units. Every
 an issue for the owning unit. Do not route around the hook with shell redirections. Never do
 for an agent what that agent's permissions denied: take it to the owner.
 
-## Messages and tokens
+## Sessions and messages (summary; rules in `references/sessions.md`)
 
-- No ack-only or status-ping messages, either way. An agent is either working on the issue it
-  was given or waiting on the coordinator: after "PR ready" it waits for your findings or for
-  `PR #<n> merged. Next: <issue | handover | stand by | done>`. It never starts a next issue
-  on its own, so a merge without that message leaves it idle for good.
-- One batched message per agent per round: findings or answers, or the merge notice with the
-  next step, sent once.
-- Every agent report ends with `Context: <k tokens>`.
-- Reports within the profile's length. Your own status to the owner: short, decisions first.
-- Agents report by message to the coordinator session by name ("Coordinator: <project>"), for
-  every outcome: PR ready (on push: local gate green, head SHA, CI state), blocked or decision needed, handover written. Sessions
-  are top-level peers, so no turn-end note reaches the coordinator; a report not sent as a
-  message is lost.
-- Agents do their own git plumbing (branch, push, PR, worktree clean-up).
-- Never subscribe to idle notices. Never message an archived session.
-
-## Sessions
-
-- **All sessions are top-level peers.** Whoever starts a session (the coordinator starting an
-  agent or its own replacement) detaches it to the top level right away
-  (`mcp__ccd_session_mgmt__detach_session`, the sidebar's "Detach to top level"). Nested
-  sessions build a chain on every rotation, and archiving a parent archives everything under it.
-  Start each agent in its own worktree: a side session that shares another's worktree cannot be
-  detached.
-- A replacement is never started by the session it replaces. An agent's replacement is started
-  by the coordinator; a coordinator's by the old coordinator (then detached) or by the owner
-  from the sidebar.
-- Reports go by name, so a name belongs to one live session. Before a replacement takes it,
-  rename the old session "<name> (old)" or archive it. A coordinator names itself
-  "Coordinator: <project>" when it registers (`coordinator-register.md`).
-- A session the starter could not detach detaches itself (`detach_session` with `self`); if
-  that is refused too, ask the owner to drag it to the top level.
-- The app binds every PR a session touches with `gh` (create, view, review, merge), and with
-  its setting `auto_archive_on_pr_close` on it archives the session when that PR closes. The
-  setting stays off for every project run with this kit (`coordinator-register.md` checks it).
-  Sessions are then archived by the coordinator: after merging a `per-issue` agent's PR, it
-  archives that agent's session (`mcp__ccd_session_mgmt__archive_session`); a `standing`
-  session is archived only when it is replaced. Fallback while the setting is still on: after
-  each merge, `mcp__ccd_pr__get_status` and `mcp__ccd_pr__unbind_pr` for any PR bound to you.
-- **Archive procedure** (used wherever this kit says "archive"): call `archive_session`; if it is
-  refused with a rewritten input (the app's hook rewrites it, and auto mode then refuses the first
-  call), call once more with exactly that input; if it is still refused, rename the session
-  "<name> (old)" (`set_session_title`) and add it to ONE owner-queue line "Archive finished
-  sessions: <names>" (one line for all, never one item each). `audit` checks that line.
-- **Same-session next issue (`per-issue` units only).** A `per-issue` agent stops after the
-  merge notice, unless the notice is `PR #<n> merged. Next: #<m> (same session)`. Send that form
-  only when ALL hold: (1) `#m` is in the same unit; (2) the agent's context, measured with
-  `mcp__ccd_session_mgmt__get_usage` or `scripts/check-context.sh` (never self-reported), is
-  under the same-session cap (default 175k; the profile's Budgets may override it); (3) the
-  coordinator cannot start a session in this turn (the owner is on Remote Control, an automated
-  turn, or a start was refused); (4) `#m` is not in a risk area where the profile makes
-  the Reviewer mandatory; (5) the session has done fewer than 3 issues in a row (this one
-  included; kept in the ledger unit row "issue k/3", an unknown count fails it). Otherwise `#m` goes to a fresh session and the old one gets `Next: done` and is
-  archived. Why (C-016): a fresh session costs one start (~78k plus ~40k of doc reads); reuse
-  adds 60-120k to each of the ~70 calls of an issue, 5-8x dearer. Reuse only pays when it
-  avoids a stalled start. On `(same session)` the agent renames itself "Agent: <unit> #<m>", branches from the
-  integration branch with a clean tree and reports as usual. `Next: build #<n> (same session)`
-  after an approved UI draft is the same issue's build, not a next issue: these conditions do not apply.
-- Sessions are found by name ("Agent: <unit>"), never by id. Ids do not go into the ledger.
-- If sessions cannot be started (the owner is on Remote Control, the coordinator runs as a
-  terminal CLI session, or the tool is unavailable), run the same brief as a background
-  `oneoff-builder` subagent with its own worktree `<unit>/.claude/worktrees/builder-<name>`.
-  The subagents run inside the coordinator's session and share its edit guard; on Claude Code
-  the guard lets a `coordinator:oneoff-builder` write inside its own worktree (hook fields
-  `agent_id` / `agent_type`), so the guard stays on. On Antigravity (its hook input names no
-  subagent), or if a builder still reports a guard refusal in its worktree, re-register with
-  `--no-guard` first (procedure `coordinator-register.md`), only in this case, and with the
-  guard on again when sessions can be started. The coordinator itself still edits no unit
-  code: it tickets, briefs, reviews and merges.
-- Two thresholds (profile "Budgets"; defaults for agents 250k soft, 400k hard; for the
-  coordinator 300k soft, 450k hard on any model and window, C-015: `check-context.sh
-  --profile <ledger>` applies the role's pair; each line names the threshold it used). Past **soft**: send no
-  new issue; the session finishes its current issue (PR, gate green), writes its handover and
-  is replaced. Past **hard**: it stops at the next safe point (commit, push), writes a full
-  handover, reports "blocked: rotate". Never stop a session mid-task at soft: a fresh one
-  re-reads everything.
-- **The coordinator** has no current issue, so its two thresholds mean: past **soft**, rotate at
-  the next owner desktop turn (handover, then a replacement); past **hard**, rotate in this
-  turn. The rotation guard hook measures the coordinator's own context on every owner turn (no
-  tool call): past soft each owner turn gets one line `Coordinator at <k>k / soft <s>k: rotate
-  now (...)`; past hard the Stop hook blocks the end of an owner-started turn until
-  `coordination/handover/coordinator.md` is committed in this session (a merge in flight is let
-  through once). Never rotate while a background subagent still runs: wait for its report, or
-  write it into the handover as "running: <agent>, <task>". On Remote Control (no session can
-  be started) the handover is still due, and the rotation also becomes the first Owner queue
-  item of `COORDINATION.md` so the owner starts the replacement at the next desktop turn.
-- The handover is written **before** the session's last PR merges: the coordinator archives a
-  `per-issue` session right after its PR merges, and its context is gone.
-- `standing` session past a threshold: handover note, fresh session with the same name,
-  archive the old one. `per-issue` sessions are archived by the coordinator after their PR
-  merges and write no handover file: at soft they just finish the issue; at hard they write done, left, commands
-  to re-run and traps into the PR (or the issue if there is no PR yet).
-- One-off work that writes files runs as its own session when sessions can be started. When
-  they cannot, see the subagent rule above (Claude Code: guard on; `--no-guard` only where the
-  builder's worktree writes are refused).
-- A usage limit stops every agent at once. The ledger says who was doing what.
+- Every session is a top-level peer in its own worktree; the starter detaches it; a replacement
+  is never started by the session it replaces; names are unique ("<name> (old)" first).
+- The coordinator archives a `per-issue` agent after its PR merges (archive procedure there);
+  a `standing` one only on rotation.
+- No pings; one batched message per agent per round; agents report by message to
+  "Coordinator: <project>", every report ending `Context: <k tokens>`.
+- Cannot start sessions: `oneoff-builder` subagents after re-registering with `--no-guard`.
+- Thresholds: agents 250k / 400k, coordinator 300k / 450k (`check-context.sh --role
+  coordinator`); the coordinator rotates at the next owner desktop turn past soft, in this turn
+  past hard. The handover comes before a session's last PR merges.
 
 ## Changing how the project works
 
 When the same problem shows twice, change the profile or add a guard; do not add a reminder.
-`references/profile.md` lists the usual triggers (an idle agent, shared-file conflicts, a
-release that needs a huge review). Log the change in `DECISIONS.md`.
+`references/profile.md` lists the usual triggers. Log the change in `DECISIONS.md`.
 
 ## Reference
 
-- `references/principles.md`, `references/profile.md`, `references/workflow.md`,
-  `references/roles.md`, `references/state-files.md`, `references/review-checklist.md`
-- `references/token-economy.md`: how to spend fewer tokens without losing quality (calls,
-  outputs, local tests, cache, briefs, models, reviews); measured with `token-audit.md`.
-- `references/pitfalls.md`: read before starting a stretch of work.
-- `references/procedures/`: one file per procedure in the table above.
-- `references/packs/`: `saas-multitenant.md`, `artifact-contracts.md`, `ui-product.md`. Use the
-  packs the profile lists.
-- `references/templates/`: `PROFILE.md`, `COORDINATION.md`, `ROADMAP.md`, `DECISIONS.md`,
-  `README.md`, `handover.md`, `unit-brief.md`, `platform-brief.md`, `qa-brief.md`, `ops-brief.md`,
-  `task-issue.md`.
+`references/`: `principles.md`, `profile.md`, `workflow.md`, `sessions.md`, `roles.md`,
+`state-files.md`, `review-checklist.md`, `token-economy.md` (spend fewer tokens; measured with
+`token-audit.md`), `pitfalls.md` (read before a stretch of work), `procedures/` (one per
+procedure above), `packs/` (the ones the profile lists), `templates/` (`PROFILE.md`,
+`COORDINATION.md`, `ROADMAP.md`, `DECISIONS.md`, `README.md`, `handover.md`, `unit-brief.md`,
+`platform-brief.md`, `qa-brief.md`, `ops-brief.md`, `task-issue.md`).

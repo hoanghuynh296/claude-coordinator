@@ -168,7 +168,9 @@ expect "state lookup fails -> state unknown" 4 "merge state unknown (gh pr merge
 
 # Merge method: only the value after the colon; a placeholder is unset
 for pv in 'Merge method: <merge commit or squash>.:merge' 'Merge method: merge (never squash).:merge' \
-          'Merge method: Squash.:squash' 'Merge method: rebase:rebase'; do
+          'Merge method: Squash.:squash' 'Merge method: rebase:rebase' \
+          'Merge method: `squash`.:squash' 'Merge method: "squash":squash' "Merge method: 'rebase'.:rebase" \
+          'Merge method: **squash**:squash' 'Merge method: `<merge commit or squash>`.:merge'; do
   case_; printf -- '- Integration branch: develop. %s\n' "${pv%:*}" >"$tmp/ledger/coordination/PROFILE.md"
   run o/r 7 abcdef1 --session $SID --ledger "$tmp/ledger"
   expect "profile '${pv%:*}' -> ${pv##*:}" 0 "(${pv##*:}, abcdef1)"
