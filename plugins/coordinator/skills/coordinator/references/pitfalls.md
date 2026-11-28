@@ -97,9 +97,11 @@ Read before starting a stretch of work. Each entry: what went wrong, then the fi
 28. **Subagents inherit the coordinator's edit guard.** A coordinator gave writing work to a
     subagent; the guard denied its edits too. → One-off work that writes files runs as its own session,
     not as a subagent of the coordinator. When sessions cannot be started (Remote Control, a
-    terminal CLI coordinator), the coordinator re-registers with `--no-guard` before it starts
-    builder subagents, for that case only, and keeps writing no unit code itself. Check with
-    one cheap write before fanning out several agents (`token-economy.md`, rule 6).
+    terminal CLI coordinator), builder subagents write in their own worktree
+    `<unit>/.claude/worktrees/builder-<name>/`, which the guard allows on Claude Code (since
+    #64); on Antigravity the coordinator re-registers with `--no-guard` before it starts them,
+    for that case only, and keeps writing no unit code itself. Check with one cheap write
+    before fanning out several agents (`token-economy.md`, rule 6).
 29. **A merging coordinator was archived with its PR.** The app binds every PR a session
     touches with `gh` (create, view, review, merge), not only PRs it creates; with the setting
     "Auto-archive sessions when their pull request closes" on, it archived the session when the

@@ -235,10 +235,14 @@ for an agent what that agent's permissions denied: take it to the owner.
 - Sessions are found by name ("Agent: <unit>"), never by id. Ids do not go into the ledger.
 - If sessions cannot be started (the owner is on Remote Control, the coordinator runs as a
   terminal CLI session, or the tool is unavailable), run the same brief as a background
-  `oneoff-builder` subagent with its own worktree. The subagents run inside the coordinator's session and inherit its edit guard, so first
-  re-register with `--no-guard` (procedure `coordinator-register.md`), and only in this case.
-  The coordinator itself still edits no unit code: it tickets, briefs, reviews and merges.
-  When sessions can be started again, re-register with the guard on.
+  `oneoff-builder` subagent with its own worktree `<unit>/.claude/worktrees/builder-<name>`.
+  The subagents run inside the coordinator's session and share its edit guard; on Claude Code
+  the guard lets a `coordinator:oneoff-builder` write inside its own worktree (hook fields
+  `agent_id` / `agent_type`), so the guard stays on. On Antigravity (its hook input names no
+  subagent), or if a builder still reports a guard refusal in its worktree, re-register with
+  `--no-guard` first (procedure `coordinator-register.md`), only in this case, and with the
+  guard on again when sessions can be started. The coordinator itself still edits no unit
+  code: it tickets, briefs, reviews and merges.
 - Two thresholds (profile "Budgets"; defaults for agents 250k soft, 400k hard; for the
   coordinator 300k soft, 450k hard on any model and window, C-015: `check-context.sh
   --profile <ledger>` applies the role's pair; each line names the threshold it used). Past **soft**: send no
@@ -262,9 +266,9 @@ for an agent what that agent's permissions denied: take it to the owner.
   archive the old one. `per-issue` sessions are archived by the coordinator after their PR
   merges and write no handover file: at soft they just finish the issue; at hard they write done, left, commands
   to re-run and traps into the PR (or the issue if there is no PR yet).
-- One-off work that writes files runs as its own session when sessions can be started:
-  subagents inherit the coordinator's edit guard. When they cannot, see the subagent rule above
-  (`--no-guard` for that case only).
+- One-off work that writes files runs as its own session when sessions can be started. When
+  they cannot, see the subagent rule above (Claude Code: guard on; `--no-guard` only where the
+  builder's worktree writes are refused).
 - A usage limit stops every agent at once. The ledger says who was doing what.
 
 ## Changing how the project works
