@@ -5,6 +5,7 @@ How we work: `coordination/PROFILE.md`. What comes next: `coordination/ROADMAP.m
 Why: `coordination/DECISIONS.md`. Set-up and read order: `coordination/README.md`.
 
 Updated: {{DATE}}
+Kit: {{KIT}} (the newest coordinator kit release whose Upgrade steps this project has run; audit step 14)
 
 ## Units
 

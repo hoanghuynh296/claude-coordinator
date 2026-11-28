@@ -62,6 +62,10 @@ Start a new Antigravity conversation afterwards: hooks and the skill are read at
 2. Tag `vX.Y.Z` on `main` and publish the GitHub release.
 3. On the Mac mini: `claude plugin marketplace update coordinator-marketplace`, then
    `bash plugins/coordinator/scripts/ag-install.sh` and `ag-install.sh --check` (must say `ok`).
+4. Send every project coordinator one message with the release's **Upgrade** list
+   (`milestone-close.md` step 8). Each runs it with `audit.md` step 14 and rotates at the next
+   safe point: the SessionStart line `Coordinator kit <v> runs here; <new> is installed` tells
+   every running session that it is behind.
 
 ## For the owner: you only talk
 
@@ -225,7 +229,7 @@ tests/{hooks,parity,ag-install,ci-watch,merge-pr,ledger-lint,ledger-commit,pre-p
 ## Tests
 
 ```sh
-bash tests/hooks-test.sh           # edit guard, SessionStart, merge/Next/Stop hooks, CI watch reminder, jq and python3 paths, multi-unit workspace
+bash tests/hooks-test.sh           # edit guard, SessionStart (kit line), merge/Next/Stop hooks, CI watch reminder, jq and python3 paths, multi-unit workspace
 bash tests/parity-test.sh          # every hook with an Antigravity payload: one line of JSON, its answer or documented silence; both hooks.json name the same hooks
 bash tests/ag-install-test.sh      # ag-install.sh against a local origin: newest tag, --tag, a new release, --check ok / STALE, refusals, --dry-run
 bash tests/ci-watch-test.sh        # ci-watch.sh with a fake gh: green, red, stale and moved head, no checks, timeout, errors
@@ -251,6 +255,26 @@ lane jobs; run it locally with the template path when a change touches `bootstra
 
 ## Changes
 
+- **Unreleased**: kit upgrade path (#54, release group "Upgrades and parity", v0.14.0). 13 of
+  17 coordinators ran 0.10.0 in the week 0.11.0 and 0.12.0 shipped, and no upgrade step reached
+  an existing project (lean tools reached none). The SessionStart hook now ends each of its
+  messages with one kit line: `Coordinator kit <v>.` (the version this session runs, from its
+  own manifest), or, when a newer one is installed for this runtime (Claude Code:
+  `installed_plugins.json`; Antigravity: the plugin link's manifest),
+  `Coordinator kit <v> runs here; <new> is installed: rotate this session at the next safe
+  point (...)`. No network call, silent folders stay silent, fails open (`kit_line` and
+  helpers in `hooks/lib.sh`). New `audit.md` step 14 checks per project the running kit, the
+  ledger pre-commit hook, `.claude/lean-tools.lock.json` and the report-guard config per unit
+  repo, and lists the Upgrade items not yet done since the ledger's new `Kit:` line
+  (`init-ledger.sh` fills it). `milestone-close.md` step 8 and README "Releasing the kit" step
+  4: the kit release installs it on both runtimes and sends every project coordinator one
+  message with the Upgrade list. Every entry below now ends with an **Upgrade** list.
+  Ride-along: `parity-test.sh` gets the cases for `report-guard.sh` and `report-sent.sh` (#79
+  and #80 merged apart, so `main` was red). `hooks-test.sh`, `parity-test.sh` and
+  `ledger-lint-test.sh` cover it.
+  **Upgrade (each project):** run `audit.md` step 14 once, then add
+  `Kit: 0.14.0 (...)` under `Updated:` in `COORDINATION.md`; rotate every session whose kit line
+  says a newer kit is installed.
 - **Unreleased**: lean-tools lock safety (#38, prerequisite of #56, v0.14.0). `lean-tools.py`
   writes `.claude/lean-tools.lock.json` before `settings.json` and puts the old lock back when
   `settings.json` cannot be written, so kit-added entries never look like the user's; a failed
@@ -260,6 +284,7 @@ lane jobs; run it locally with the template path when a change touches `bootstra
   --adopt-existing`) records every exact catalog match as the kit's. Output contract unchanged
   (stdout `written` / `unchanged`). `adopt.md` step 4 says to commit the lock with the settings.
   `agent-tools-test.sh` covers the warning, adoption, an unwritable lock and unwritable settings.
+  **Upgrade (each unit repo):** none on its own; the lean-tools step (#56) uses it: `install-guards.sh --tools "<the unit's Tools groups>" <unit>` (`--adopt-existing` where `.claude/settings.json` already holds catalog entries), both files committed through a PR.
 - **Unreleased**: ledger lint budgets (#57, release group "Upgrades and parity", v0.14.0).
   `ledger-lint.sh` warns when a `coordination/handover/*.md` note is over 150 lines or 10k
   characters ("knowledge goes to the unit's docs"; `HANDOVER_MAX_LINES`,
@@ -271,6 +296,7 @@ lane jobs; run it locally with the template path when a change touches `bootstra
   queue and items still live ("not done", or waits / open / needs / until / check /
   `UNVERIFIED` / a `#ref` after the finished word) never error. Upgrading changes no ledger's
   exit code. `state-files.md` documents the rule; `ledger-lint-test.sh` covers both rules.
+  **Upgrade (each ledger):** `install-guards.sh <ledger-dir>` (the pre-commit hook runs a copy of the lint; the copy is refreshed only by a re-run).
 - **Unreleased**: agent-side report guard (#10, prerequisite of #59, v0.14.0 "Upgrades and
   parity"). Agents ended turns with a PR pushed and no report, so the coordinator never learned
   it was ready and both sides idled. New Stop hook `hooks/report-guard.sh` (Claude Code Stop;
@@ -287,6 +313,7 @@ lane jobs; run it locally with the template path when a change touches `bootstra
   Silent in coordinator and non-agent sessions, on integration and release branches, without
   a PR, and on any error; at most 3 blocks per turn. The unit brief asks for the PR comment; `adopt.md` step 4
   passes `--agent`. `report-guard-test.sh` covers it.
+  **Upgrade (each unit clone, on every machine):** `install-guards.sh --agent <project> <unit>`; briefs keep the line "Your coordinator is the session **Coordinator: <project>**".
 - **Unreleased**: profile names the model per runtime and who approves merges (#58, release
   group "Upgrades and parity", v0.14.0). One coordinator asked the owner 54 times in a week
   for leave to merge, though no profile said so; a unit table with one model column could not
@@ -317,6 +344,7 @@ lane jobs; run it locally with the template path when a change touches `bootstra
   `tests/parity-test.sh` (every hook with an Antigravity payload; a hook without a case fails)
   and `tests/ag-install-test.sh`; `structure-test.sh` checks the SKILL and README text (it
   already fails when the two manifest versions differ, since 0.12.0).
+  **Upgrade:** none per project; the Mac mini runs `ag-install.sh` at each release (README "Releasing the kit").
 - **Unreleased**: staffing caps (#53, release group "Coordinator cost", patch, v0.13.0). In a
   week the app refused 21 starts over its caps and 16 cards for another repo's agent. New
   `references/sessions.md` "Staffing caps" (one home): on Claude Code at most 5 agents working
@@ -326,6 +354,7 @@ lane jobs; run it locally with the template path when a change touches `bootstra
   SKILL "Where the human is needed" item 5 and `milestone-start.md` step 4 link to it; the
   COORDINATION template dates each pending start; `audit.md` reports pending starts older than
   one owner turn. `structure-test.sh` checks the home, the links and the one-home phrases.
+  **Upgrade (each ledger):** add the "Pending starts" section of the `COORDINATION.md` template if it is missing.
 - **Unreleased**: builder lockout fix (#69, release group "Coordinator cost", patch batch).
   `coordinator-guard.sh`: when a `coordinator:oneoff-builder` is refused in a worktree another
   builder claimed, the agent claim that call created is removed, so the builder can still write
@@ -334,6 +363,7 @@ lane jobs; run it locally with the template path when a change touches `bootstra
   `merge-pr.sh` reads a bold `**Merge method:** squash` label (the strip now skips whitespace);
   `structure-test.sh`'s 50%-of-soft check fails on a missing file; `procedures/handover.md`
   links the archive procedure in `references/sessions.md` instead of restating it.
+  **Upgrade:** none.
 - **Unreleased**: `archive_session` goes alone in its own message (#52, patch, rides with
   v0.13.0). 108 of 248 archive calls were refused in a week, 67 because the app's hook rewrites
   the archive input, which voids auto mode's verdict on every call sent in the same response.
@@ -342,6 +372,7 @@ lane jobs; run it locally with the template path when a change touches `bootstra
   step 6 and pitfall 38 say it once, and both merge reminders of `merge-reminder.sh` name it.
   Antigravity (`swarm kill`) is unchanged. `structure-test.sh` (one home, the four files) and
   `hooks-test.sh` cover it.
+  **Upgrade:** none.
 - **Unreleased**: kit text cites no project decision ids (#51, release group "Coordinator
   cost", v0.13.0). Ids such as C-015 named Semi Group decisions but mean other rules in other
   ledgers. SKILL references (`sessions.md`, `profile.md`, `state-files.md`, `pitfalls.md`,
@@ -349,6 +380,7 @@ lane jobs; run it locally with the template path when a change touches `bootstra
   in a few words instead; `state-files.md` no longer cites a wrong id for one ledger commit per
   turn. `structure-test.sh` fails on `C-[0-9]{3}` in skills (outside `templates/`), agents,
   commands, hooks and `check-context.sh`. Changelog entries below keep their history.
+  **Upgrade:** none.
 - **Unreleased**: delegation split (#63, release group "Coordinator cost", v0.13.0). The kit
   now says when the coordinator gives a task to a background `oneoff-builder` subagent and when
   to an agent session, instead of using the subagent only as the no-sessions fallback. Home:
@@ -365,6 +397,7 @@ lane jobs; run it locally with the template path when a change touches `bootstra
   `swarm`). `profile.md`, the PROFILE template, `milestone-start.md`, `review-merge.md`,
   `oneoff-builder` and the SKILL runtime map link to it (SKILL.md 11,953 characters).
   `structure-test.sh` checks the home, the links, the override and the one-home phrases.
+  **Upgrade:** none (a `Delegation:` line in the profile is optional).
 - **Unreleased**: one home per rule (#60, release group "Coordinator cost"). SKILL.md, loaded on
   every coordinator call, goes from 21.6k to 11.8k characters (budget 12,000); no rule's meaning
   changes. New `references/sessions.md` is the one home for placing, naming, messaging,
@@ -377,6 +410,7 @@ lane jobs; run it locally with the template path when a change touches `bootstra
   appears more than once outside its homes, and when SKILL.md is over budget. Ride-along (#49):
   `merge-pr.sh` reads a backticked, quoted or bold `Merge method:` value (`` `squash` ``) as
   that method, no longer as merge; `merge-pr-test.sh` covers it.
+  **Upgrade:** none.
 - **Unreleased**: builder subagents write without `--no-guard` on Claude Code (#64, release
   group "Coordinator cost", v0.13.0). The edit guard lets a call through when its PreToolUse
   input carries `agent_id` (Claude Code sets it only inside a subagent) with `agent_type`
@@ -396,6 +430,7 @@ lane jobs; run it locally with the template path when a change touches `bootstra
   worktree at that path; SKILL, `coordinator-register.md`, `milestone-start.md`, the profile
   reference and pitfall 28 drop the `--no-guard` step for Claude Code. `hooks-test.sh` covers
   both runtimes' payloads.
+  **Upgrade (Claude Code coordinators):** one registered with `--no-guard` only so builders could write registers again without it.
 - **Unreleased**: the manual "measure every context on every owner message" rule is gone (#48,
   release group "Coordinator cost"); it was followed in about 60 of 650 owner turns. The rule
   moved to a machine check: the rotation guard (#47) measures the coordinator's own context on
@@ -404,6 +439,7 @@ lane jobs; run it locally with the template path when a change touches `bootstra
   same, and the SessionStart hook no longer prints "Measure contexts on each owner message."
   `structure-test.sh` fails if any procedure, hook or script asks for a measurement on every
   owner message.
+  **Upgrade:** none.
 - **Unreleased**: rotation guard (#47, release group "Coordinator cost"). Coordinators spent 72%
   of their tokens after passing soft because rotation was only a sentence. New
   `hooks/rotation-guard.sh` (UserPromptSubmit and Stop; Antigravity PreInvocation and Stop
@@ -418,6 +454,7 @@ lane jobs; run it locally with the template path when a change touches `bootstra
   goes into the handover as "running: <agent>, <task>"). Fails open on any error. SKILL
   "Sessions", `token-economy.md` rule 10 and `handover.md` define a coordinator's soft (rotate at
   the next owner desktop turn) and hard (rotate in this turn). `rotation-guard-test.sh` covers it.
+  **Upgrade:** none (thresholds come from PROFILE Budgets when it has them).
 - **Unreleased**: `check-context.sh` is role- and profile-aware (#25, release group "Coordinator
   cost"). A session titled `Coordinator: …` gets the coordinator thresholds (300k / 450k) without
   `--coordinator`; `--role coordinator|agent` sets the role for every session listed
@@ -428,6 +465,7 @@ lane jobs; run it locally with the template path when a change touches `bootstra
   threshold. `SOFT_AT` / `HARD_AT` apply to agents only, as before. Same output on Claude Code and
   Antigravity transcripts. `check-context-test.sh` covers both roles, the title rule and PROFILE
   overrides.
+  **Upgrade:** none.
 - `scripts/merge-pr.sh <owner/repo> <N> <head sha>` (#49, group "Coordinator cost"): the
   mechanical part of review-merge steps 1, 6 and 7 in one call with at most 6 lines of output.
   Refuses on a closed PR, a moved head, red, pending or missing CI; merges with the profile method,
@@ -437,6 +475,7 @@ lane jobs; run it locally with the template path when a change touches `bootstra
   `coordinator/*` heads stay exempt (`next_exempt` in `hooks/lib.sh`). For a per-issue author it
   prints the session to archive and removes its worktree. `review-merge.md` uses it; the manual
   commands stay as the fallback. New `tests/merge-pr-test.sh`.
+  **Upgrade:** none.
 - `scripts/ledger-commit.sh <ledger> "<message>"` (#50, group "Coordinator cost"):
   lint, commit (ledger paths only, plus optional extra paths), rebase and push the ledger in one
   call with one line of output, replacing the
@@ -444,6 +483,7 @@ lane jobs; run it locally with the template path when a change touches `bootstra
   `pitfalls.md` and every procedure that commits the ledger call it; `audit.md` installs the
   ledger-lint pre-commit hook where it is missing. New `tests/ledger-commit-test.sh`; the structure
   test checks the docs name it.
+  **Upgrade (each ledger):** `install-guards.sh <ledger-dir>` where the pre-commit hook is missing.
 - `bootstrap.sh` no longer requires a `changes` check (#45). The template's fast CI
   (agent-project-template#4, C-045) has no `changes` job; each lane job decides in its first step
   and always reports. Branch protection now requires the jobs of the new repo's
@@ -452,6 +492,7 @@ lane jobs; run it locally with the template path when a change touches `bootstra
   with `--check`). A private repo on GitHub Free still gets the 403 warning and continues.
   `bootstrap-test.sh` checks the default list, a protected rerun after removing a lane, and runs in
   CI against a minimal template when the private template is not checked out.
+  **Upgrade:** none (rerun `bootstrap.sh` on a repo after removing a lane, to refresh its required checks).
 - **0.12.0** (2026-11-26): Antigravity alongside Claude Code (#40). Every hook reads both
   payloads (`session_id` or `conversationId`, `tool_input` or `toolCall.args`) and answers in
   the runtime's own format; Claude Code output is unchanged. New `plugins/coordinator/plugin.json`

@@ -152,3 +152,64 @@ next_exempt() {
   case "$1" in release/*|backmerge/*|coordinator/*) return 0 ;; esac
   [[ -n "${COORDINATOR_GH_LOGIN:-}" && -n "$2" && "$2" == "$COORDINATOR_GH_LOGIN" ]]
 }
+
+# Kit version (#54). No network; every helper prints nothing on any error (fail open).
+# kit_version <plugin root> [ag]: the version in the manifest of the kit this hook runs from
+# (.claude-plugin/plugin.json for Claude Code, plugin.json for Antigravity).
+kit_version() {
+  local m="$1/.claude-plugin/plugin.json"
+  [[ -n "${2:-}" ]] && m="$1/plugin.json"
+  [[ -f "$m" ]] || return 0
+  sed -n 's/^ *"version": *"\([0-9][0-9.]*\)".*/\1/p' "$m" 2>/dev/null | head -n 1
+}
+
+# kit_installed_version [ag]: the newest coordinator version installed for this runtime.
+# Claude Code: the coordinator@* entries of installed_plugins.json ($COORDINATOR_CC_INSTALLED,
+# default ${CLAUDE_CONFIG_DIR:-~/.claude}/plugins/installed_plugins.json). Antigravity: the
+# manifest behind the plugin link ($COORDINATOR_AG_LINK, default ~/.gemini/config/plugins/coordinator).
+kit_installed_version() {
+  if [[ -n "${1:-}" ]]; then
+    kit_version "${COORDINATOR_AG_LINK:-$HOME/.gemini/config/plugins/coordinator}" ag
+    return 0
+  fi
+  local f="${COORDINATOR_CC_INSTALLED:-${CLAUDE_CONFIG_DIR:-$HOME/.claude}/plugins/installed_plugins.json}"
+  [[ -f "$f" ]] || return 0
+  command -v python3 >/dev/null 2>&1 || return 0
+  python3 -I -c '
+import json, sys
+try:
+    d = json.load(open(sys.argv[1]))
+    p = d.get("plugins", d) if isinstance(d, dict) else {}
+    vs = []
+    for k, rows in p.items():
+        if k.split("@")[0] != "coordinator":
+            continue
+        for r in rows if isinstance(rows, list) else [rows]:
+            v = str((r or {}).get("version", ""))
+            if v and all(x.isdigit() for x in v.split(".")):
+                vs.append(tuple(int(x) for x in v.split(".")))
+    if vs:
+        print(".".join(str(x) for x in max(vs)))
+except Exception:
+    pass
+' "$f" 2>/dev/null || true
+}
+
+# version_gt <a> <b>: 0 when version a is newer than b (numeric per part; 0.12.0 > 0.9.1)
+version_gt() {
+  [[ -n "$1" && -n "$2" && "$1" != "$2" ]] || return 1
+  [[ "$(printf '%s\n%s\n' "$1" "$2" | sort -t. -k1,1n -k2,2n -k3,3n | tail -n 1)" == "$1" ]]
+}
+
+# kit_line <plugin root> [ag]: the SessionStart kit line ("" when the version is unknown)
+kit_line() {
+  local run new
+  run="$(kit_version "$1" "${2:-}")"
+  [[ -n "$run" ]] || return 0
+  new="$(kit_installed_version "${2:-}")"
+  if version_gt "$new" "$run"; then
+    printf 'Coordinator kit %s runs here; %s is installed: rotate this session at the next safe point (a coordinator: handover.md, then a replacement; an agent: once its PR is merged, tell its coordinator).' "$run" "$new"
+  else
+    printf 'Coordinator kit %s.' "$run"
+  fi
+}

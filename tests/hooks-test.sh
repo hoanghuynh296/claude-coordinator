@@ -7,6 +7,7 @@ root="$(cd "$(dirname "$0")/.." && pwd -P)"
 hooks="$root/plugins/coordinator/hooks"
 tmp="$root/tests/.work"; rm -rf "$tmp"; mkdir -p "$tmp"  # not under a temp dir: temp dirs are allowed paths
 export COORDINATOR_HOME="$tmp/home"
+export COORDINATOR_CC_INSTALLED="$tmp/none.json" COORDINATOR_AG_LINK="$tmp/no-link"  # the real installs never leak in
 mkdir -p "$tmp/proj/docs/adr" "$tmp/proj/src" "$tmp/ledger"
 touch "$tmp/ledger/COORDINATION.md"
 "$root/plugins/coordinator/scripts/register.sh" coord-1 "$tmp/ledger" "$tmp/proj" >/dev/null
@@ -179,6 +180,31 @@ expect_out "wrapper folder with two ledgers"         "several coordination ledge
 expect_out "unit checkout inside a workspace"        "unit of a coordinated project" "$(ss agent-1 "$WS/products/app")"
 expect_out "ordinary folder: silent"                 EMPTY              "$(ss new-3 "$tmp/plain")"
 expect_out "registered session: coordinator text"    "You are the COORDINATOR" "$(ss coord-2 "$tmp/plain")"
+echo "--- SessionStart kit line (#54): running version, newer installed -> rotate"
+kv="$(sed -n 's/^ *"version": *"\([^"]*\)".*/\1/p' "$root/plugins/coordinator/.claude-plugin/plugin.json" | head -n 1)"
+expect_out "kit line: registered session names the running version" "Coordinator kit $kv." "$(ss coord-2 "$tmp/plain")"
+expect_out "kit line: ledger hint names it too"      "Coordinator kit $kv." "$(ss new-1 "$WS")"
+expect_out "kit line: unit checkout names it too"    "Coordinator kit $kv." "$(ss agent-1 "$WS/products/app")"
+expect_out "kit line: ordinary folder stays silent"  EMPTY "$(ss new-3 "$tmp/plain")"
+printf '{"version":2,"plugins":{"coordinator@coordinator-marketplace":[{"version":"0.9.0"},{"version":"99.0.0"}],"other@x":[{"version":"100.0.0"}]}}' >"$tmp/inst.json"
+expect_out "kit line: newer installed -> rotate"     "Coordinator kit $kv runs here; 99.0.0 is installed: rotate this session at the next safe point" \
+  "$(COORDINATOR_CC_INSTALLED="$tmp/inst.json" ss coord-2 "$tmp/plain")"
+expect_out "kit line: newer installed, one line"     1 "$(COORDINATOR_CC_INSTALLED="$tmp/inst.json" ss coord-2 "$tmp/plain" | grep -c 'Coordinator kit')"
+printf '{"plugins":{"coordinator@m":[{"version":"0.1.0"}]}}' >"$tmp/inst-old.json"
+expect_out "kit line: older installed -> no rotate"  "Coordinator kit $kv." "$(COORDINATOR_CC_INSTALLED="$tmp/inst-old.json" ss coord-2 "$tmp/plain")"
+printf 'not json' >"$tmp/inst-bad.json"
+expect_out "kit line: unreadable install list -> fail open" "Coordinator kit $kv." "$(COORDINATOR_CC_INSTALLED="$tmp/inst-bad.json" ss coord-2 "$tmp/plain")"
+mkdir -p "$tmp/aglink"; printf '{\n  "name": "coordinator",\n  "version": "99.1.0"\n}\n' >"$tmp/aglink/plugin.json"
+expect_out "kit line: Antigravity reads its own link" '99.1.0 is installed: rotate' \
+  "$(printf '{"conversationId":"coord-2","workspacePaths":["%s"],"hookEventName":"SessionStart"}' "$tmp/plain" | COORDINATOR_AG_LINK="$tmp/aglink" COORDINATOR_CC_INSTALLED="$tmp/inst-old.json" bash "$hooks/session-start.sh")"
+expect_out "kit line: Claude Code ignores the Antigravity link" "Coordinator kit $kv." \
+  "$(COORDINATOR_AG_LINK="$tmp/aglink" ss coord-2 "$tmp/plain")"
+vgt() { # a b want(0 newer|1 not)
+  local r=1; if ( . "$hooks/lib.sh"; version_gt "$1" "$2" ); then r=0; fi
+  if [[ "$r" == "$3" ]]; then pass=$((pass+1)); echo "PASS version_gt '$1' '$2' -> $3"
+  else failn=$((failn+1)); echo "FAIL version_gt '$1' '$2': got $r want $3"; fi
+}
+vgt 0.12.0 0.9.1 0; vgt 0.9.1 0.12.0 1; vgt 1.0.0 1.0.0 1; vgt 0.14.0 "" 1; vgt "" 0.14.0 1
 echo "--- PostToolUse merge reminder (fake gh: PR state from files in \$FAKE_GH_DIR)"
 export FAKE_GH_DIR="$tmp/gh"; mkdir -p "$FAKE_GH_DIR"
 cat >"$tmp/fake-gh" <<'GH'

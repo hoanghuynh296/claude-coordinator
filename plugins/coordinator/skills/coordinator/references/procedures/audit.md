@@ -60,6 +60,24 @@ working day, before every handover, and whenever the ledger feels wrong.
     a `KEEP` that is a finished session's unpushed or dirty work goes to its unit (an issue or a
     message), a `STRAY` folder to the owner. Generated files a unit's tools write into a
     worktree (for example `apps/*/AGENTS.md`) go in the profile and are passed as `--discard`.
+14. **Kit upgrade** (per project; also when a kit release message arrives):
+    - **Running kit:** the SessionStart line `Coordinator kit <v>`. A line `... <new> is
+      installed: rotate this session at the next safe point` → rotate (`handover.md`, then a
+      replacement) at the next owner desktop turn; agents on the old kit rotate once their PR
+      is merged. Installed older than the newest release (`gh release view --repo
+      hoanghuynh296/claude-coordinator --json tagName`; Antigravity: `ag-install.sh --check`
+      says `STALE`) → tell the kit's coordinator (Semi Group: "Coordinator: Semi Group Tech").
+    - **Ledger repo:** the ledger-lint pre-commit hook (step 1).
+    - **Each unit repo:** `.claude/lean-tools.lock.json` is committed (missing → the lean-tools
+      step: `install-guards.sh --tools "<the unit's Tools groups>" <unit>`, with
+      `--adopt-existing` when `settings.json` already holds catalog entries, through a PR), and
+      `git config coordinator.reportTo` is set in its clone (missing →
+      `install-guards.sh --agent <project> <unit>`).
+    - **Missing upgrade steps:** `COORDINATION.md` line `Kit: <x.y.z>` names the newest release
+      whose steps this project has done (missing line → assume the oldest kit you can prove,
+      else 0.10.0). List every **Upgrade** item of README "Changes" for each later release
+      that is not done, do them (owner-only ones go to the owner queue), then set `Kit:` to the
+      release they reach. Report: running kit, `Kit:`, the steps done and the steps left.
 
 Commit the ledger (`ledger-commit.sh`). Report in at most 8 lines: what was wrong, what you fixed, what
 needs the owner.

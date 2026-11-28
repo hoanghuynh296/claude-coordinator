@@ -39,6 +39,8 @@ mkdir -p "$dir/coordination/handover" "$dir/coordination/memory"
 dir="$(cd "$dir" && pwd -P)"
 [[ -n "$name" ]] || name="$(basename "$dir" | sed 's/-coordination$//')"
 today="$(date +%Y-%m-%d)"
+kit="$(sed -n 's/^ *"version": *"\([^"]*\)".*/\1/p' "$(dirname "$templates")/../../../.claude-plugin/plugin.json" 2>/dev/null | head -n 1)"
+[[ -n "$kit" ]] || kit="unknown"
 
 # put <template> <destination relative to the ledger dir>
 put() {
@@ -47,12 +49,12 @@ put() {
     printf '    kept    %s\n' "$2"
     return 0
   fi
-  python3 -I - "$src" "$dst" "$name" "$owner" "$today" <<'PY'
+  python3 -I - "$src" "$dst" "$name" "$owner" "$today" "$kit" <<'PY'
 import sys
-src, dst, name, owner, today = sys.argv[1:6]
+src, dst, name, owner, today, kit = sys.argv[1:7]
 with open(src, encoding="utf-8") as fh:
     text = fh.read()
-text = text.replace("{{PROJECT_NAME}}", name).replace("{{OWNER}}", owner).replace("{{DATE}}", today)
+text = text.replace("{{PROJECT_NAME}}", name).replace("{{OWNER}}", owner).replace("{{DATE}}", today).replace("{{KIT}}", kit)
 with open(dst, "w", encoding="utf-8") as fh:
     fh.write(text)
 PY

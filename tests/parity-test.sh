@@ -10,6 +10,7 @@ root="$(cd "$(dirname "$0")/.." && pwd -P)"
 plugin="$root/plugins/coordinator"; hooks="$plugin/hooks"
 w="$root/tests/.work/parity"; rm -rf "${w:?}"; mkdir -p "$w/ledger/coordination" "$w/unit/src" "$w/plain" "$w/gh"
 export COORDINATOR_HOME="$w/home" ANTIGRAVITY_BRAIN_DIR="$w/brain" CLAUDE_CONFIG_DIR="$w/config"
+export COORDINATOR_AG_LINK="$w/no-link" COORDINATOR_CC_INSTALLED="$w/none.json"
 unset SOFT_AT HARD_AT ROTATE_AT CONTEXT_WINDOW COORDINATOR_GH_LOGIN
 touch "$w/ledger/COORDINATION.md"
 L="$(cd "$w/ledger" && pwd -P)"; U="$(cd "$w/unit" && pwd -P)"; PL="$(cd "$w/plain" && pwd -P)"
@@ -82,10 +83,16 @@ ag "guard: builder worktree on Antigravity -> deny (builder rule is Claude Code 
 cc "guard: builder worktree on Claude Code -> allow" coordinator-guard.sh EMPTY \
   "$(printf '{"session_id":"cc-coord","agent_id":"b1","agent_type":"coordinator:oneoff-builder","cwd":"%s","hook_event_name":"PreToolUse","tool_name":"Write","tool_input":{"file_path":"%s","content":"x"}}' "$U" "$B")"
 
+echo "--- Stop / PostToolUse send_message: report-guard.sh, report-sent.sh (silent outside an opted-in agent unit; full cases in report-guard-test.sh)"
+ag "report-guard: coordinator -> stop"     report-guard.sh '{"decision":"stop"}' "$(printf '{"conversationId":"ag-coord","cwd":"%s","hookEventName":"Stop","continuationActive":false}' "$U")"
+ag "report-sent: no report -> {}"          report-sent.sh  '{}' "$(printf '{"conversationId":"ag-other","cwd":"%s","hookEventName":"PostToolUse","toolCall":{"id":"t","name":"send_message","args":{"Recipient":"Coordinator: Demo","Message":"hello"}}}' "$U")"
+
 echo "--- SessionStart: session-start.sh"
 start() { printf '{"conversationId":"%s","workspacePaths":["%s"],"hookEventName":"SessionStart"}' "$1" "$2"; }
 ag "session-start: registered -> injectSteps" session-start.sh '~{"injectSteps":[{"systemMessage":{"systemMessage":"You are the COORDINATOR' "$(start ag-coord "$PL")"
 ag "session-start: plain folder -> {}"        session-start.sh '{}' "$(start ag-other "$PL")"
+mkdir -p "$w/aglink"; printf '{\n  "version": "99.0.0"\n}\n' >"$w/aglink/plugin.json"
+COORDINATOR_AG_LINK="$w/aglink" ag "session-start: newer kit at the link -> one rotate line in the same JSON" session-start.sh '~99.0.0 is installed: rotate this session at the next safe point' "$(start ag-coord "$PL")"
 
 echo "--- PostToolUse run_command: merge-reminder.sh (silent on Antigravity, records the merge)"
 cmd() { printf '{"conversationId":"%s","cwd":"%s","hookEventName":"PostToolUse","toolCall":{"id":"t","name":"run_command","args":{"CommandLine":"%s"}}}' "$1" "$w" "$2"; }
