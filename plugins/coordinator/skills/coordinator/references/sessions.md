@@ -1,7 +1,8 @@
 # Sessions and messages
 
 The one home for how the project's sessions are started, placed, named, messaged, rotated and
-archived. Other files link here instead of restating it. The same-session next issue and the
+archived, and when a task goes to a subagent instead (delegation split). Other files link here
+instead of restating it. The same-session next issue and the
 merge notice's form live in `procedures/review-merge.md` step 9 (coordinator) and
 `templates/unit-brief.md` rule 11 (agent).
 
@@ -60,6 +61,36 @@ merge notice's form live in `procedures/review-merge.md` step 9 (coordinator) an
 - Agents do their own git plumbing (branch, push, PR, worktree clean-up).
 - Never subscribe to idle notices.
 
+## Subagent or session (delegation split)
+
+The coordinator gives each task to a background `oneoff-builder` subagent or to an agent
+session by this default split; it does not pick case by case. Both cost about the same per
+task (measured 2026-11-22..28: 5.4M tokens per subagent task, 5.3M per session PR); sessions
+add start and archive friction and wake the coordinator with messages, subagents cannot be
+opened or steered by the owner and end with the coordinator's session.
+
+- **Subagent:** self-contained one-round work (docs, fixtures, investigations, audits, version
+  bumps, codemods, small fixes), outside every Reviewer-mandatory risk area (profile section
+  6), expected under about 150k context; and any brief while sessions cannot be started
+  (below).
+- **Session:** product feature issues, work in a risk area, `Draft: required` UI work, work
+  likely to need review rounds, work longer than the coordinator's own session will last.
+- **Override per unit:** the profile may change the split for a unit with one line, in the
+  unit table's Session column or in Budgets (`Delegation: <unit>: sessions only` /
+  `subagent for <kinds>`). The profile line wins over this default.
+- **Too large for a subagent:** a builder that finds the work larger than the split allows
+  (a risk area, over about 150k, needs a design decision or several rounds) stops, pushes what
+  it has, opens or updates its PR and reports `blocked: needs a session` with the PR link. The
+  coordinator starts a session for the issue with that PR link in its prompt (same branch).
+- **Fix rounds on a subagent PR:** resume the same subagent with the findings when it still
+  exists (Claude Code: `SendMessage` to its agent id; Antigravity: `send_message` to the
+  subagent); otherwise a fresh `oneoff-builder` gets the PR link and the findings only, not
+  the whole brief again.
+- Runtimes: subagent = Agent tool `coordinator:oneoff-builder` (Claude Code) /
+  `invoke_subagent(TypeName="oneoff-builder")` (Antigravity); session = start session in a
+  worktree (Claude Code) / `swarm(action="add", ...)` (Antigravity). Briefs, reports and
+  output contracts are the same either way.
+
 ## When sessions cannot be started
 
 - Sessions can only be started in a turn the owner started from the desktop app. Start every
@@ -74,9 +105,10 @@ merge notice's form live in `procedures/review-merge.md` step 9 (coordinator) an
   `--no-guard` first (procedure `coordinator-register.md`), only in this case, and with the
   guard on again when sessions can be started. The coordinator itself still edits no unit
   code: it tickets, briefs, reviews and merges.
-- One-off work that writes files runs as its own session when sessions can be started. When
-  they cannot, see the subagent rule above (Claude Code: guard on; `--no-guard` only where the
-  builder's worktree writes are refused).
+- While sessions can be started, the delegation split above decides; while they cannot, every
+  brief runs as a subagent (Claude Code: guard on; `--no-guard` only where the builder's
+  worktree writes are refused) and the session-side ones move to sessions at the next desktop
+  turn.
 - A usage limit stops every agent at once. The ledger says who was doing what.
 
 ## Context thresholds and rotation

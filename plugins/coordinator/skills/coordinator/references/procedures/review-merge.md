@@ -42,6 +42,11 @@ Review and merge the named pull request. Read the unit's row and the
      watch has ended red); stop until it reports again. It fixes them on the same branch,
      reports "PR ready" again and waits again; review that report from step 1 and start a new
      CI watch for the new head (step 2).
+   - A subagent's PR (delegation split, `references/sessions.md`): resume the same
+     `oneoff-builder` with the findings while it still exists (Claude Code `SendMessage` to its
+     agent id; Antigravity `send_message`); otherwise a fresh one gets the PR link and the
+     findings only. A builder that reports `blocked: needs a session`: start a session for the
+     issue with its PR link (same branch).
    - Fix commits in a risk area: run the Reviewer again on the fix commits before merging.
    - Fix commits outside a risk area: check them yourself from the diff of the fix range and the
      CI; no second Reviewer run (`references/token-economy.md`, rule 9). A re-review, when

@@ -380,6 +380,8 @@ rules = {  # name: (regex, homes)
     "top level": (r"top[\s-]+level", [sk + "sessions.md"]),
     "archive procedure": (r"archive_session", [sk + "sessions.md"]),
     "PR ready on push": (r"never\s+wait(s|ing)?\s+for\s+CI", [sk + "templates/unit-brief.md", sk + "procedures/review-merge.md"]),
+    "delegation split": (r"self-contained\s+one-round\s+work", [sk + "sessions.md"]),
+    "needs a session": (r"blocked:\s+needs\s+a\s+session", [sk + "sessions.md", "agents/oneoff-builder.md"]),
 }
 files = []
 for d in ("skills", "agents", "commands"):
@@ -397,6 +399,24 @@ for name, (rx, homes) in rules.items():
 for e in errs: print("  " + e)
 sys.exit(1 if errs else 0)
 PY5
+# Delegation split (#63): one home in sessions.md (subagent vs session, override, too-large stop,
+# fix rounds, both runtimes); the profile, its template, milestone-start, review-merge and the
+# builder link to it; the profile may override it per unit.
+ss=references/sessions.md
+has $ss 'Subagent or session (delegation split)' && has $ss '150k' && has $ss 'Draft: required' \
+  && has $ss 'Override per unit' && has $ss 'agent id' && has $ss 'invoke_subagent' && has $ss 'swarm(action="add"' \
+  && ok "sessions.md is the home of the delegation split" || bad "sessions.md lacks the delegation split"
+for f in references/profile.md references/templates/PROFILE.md references/procedures/milestone-start.md \
+         references/procedures/review-merge.md ../../agents/oneoff-builder.md; do
+  has "$f" 'references/sessions.md' && has "$f" 'delegation split\|Delegation:' \
+    && ok "$f links to the delegation split" || bad "$f does not link to the delegation split"
+done
+has references/profile.md 'Delegation: <unit>' && has references/templates/PROFILE.md '- Delegation:' \
+  && ok "profile: per-unit Delegation override" || bad "profile lacks the per-unit Delegation override"
+has references/procedures/review-merge.md 'findings only' && has ../../agents/oneoff-builder.md 'findings only' \
+  && ok "fix rounds on a subagent PR: resume, else fresh builder with PR + findings" || bad "subagent fix rounds missing"
+has SKILL.md 'invoke_subagent' && has SKILL.md 'split: `references/sessions.md`' \
+  && ok "SKILL runtime map links the split for both runtimes" || bad "SKILL runtime map lacks the split link"
 n=$(python3 -I -c 'import sys; print(len(open(sys.argv[1], encoding="utf-8").read()))' "$skill/SKILL.md")
 [ "$n" -le 12000 ] && ok "SKILL.md is $n characters (budget 12,000)" || bad "SKILL.md is $n characters, over the 12,000 budget"
 echo "passed $pass, failed $failn"

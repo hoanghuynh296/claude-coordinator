@@ -15,6 +15,11 @@ Start the named milestone or stretch of work. Reread `references/pitfalls.md`.
 3. Order each unit's list in `ROADMAP.md`. Update `COORDINATION.md` (in progress per unit).
    Commit the ledger (`ledger-commit.sh`).
 4. **Staff it now, in this turn** (sessions can only be started from the owner's own message):
+   - Split first: per issue, subagent or session by the delegation split
+     (`references/sessions.md`, "Subagent or session"; the profile's `Delegation:` line wins).
+     Self-contained one-round work outside the risk areas, under about 150k: a background
+     `oneoff-builder` (own worktree `<unit>/.claude/worktrees/builder-<name>`); feature issues,
+     risk areas, `Draft: required` UI and multi-round work: a session, as below.
    - `standing` units with a live session: one message with its next ONE issue, if it is
      standing by. An agent with a PR in review gets its next issue in the merge notice
      (`PR #<n> merged. Next: #<m>`, `review-merge.md` step 9), not before.
