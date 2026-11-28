@@ -216,6 +216,14 @@ lane jobs; run it locally with the template path when a change touches `bootstra
 
 ## Changes
 
+- **Unreleased**: `archive_session` goes alone in its own message (#52, patch, rides with
+  v0.13.0). 108 of 248 archive calls were refused in a week, 67 because the app's hook rewrites
+  the archive input, which voids auto mode's verdict on every call sent in the same response.
+  The archive procedure (`references/sessions.md`) now says: call it alone, never in parallel
+  with other calls, then the existing fallback; SKILL's sessions summary, `review-merge.md`
+  step 6 and pitfall 38 say it once, and both merge reminders of `merge-reminder.sh` name it.
+  Antigravity (`swarm kill`) is unchanged. `structure-test.sh` (one home, the four files) and
+  `hooks-test.sh` cover it.
 - **Unreleased**: kit text cites no project decision ids (#51, release group "Coordinator
   cost", v0.13.0). Ids such as C-015 named Semi Group decisions but mean other rules in other
   ledgers. SKILL references (`sessions.md`, `profile.md`, `state-files.md`, `pitfalls.md`,

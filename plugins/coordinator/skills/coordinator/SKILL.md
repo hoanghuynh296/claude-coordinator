@@ -28,7 +28,7 @@ All output contracts — ledger files (`COORDINATION.md`, `coordination/*`), `le
 |---|---|---|
 | Start / staff a unit agent in its own worktree | Start session in worktree + `mcp__ccd_session_mgmt__detach_session` | `swarm(action="add", name="<unit>", workspace="share", brief="...")` |
 | Message an agent (`Next:`, findings) or coordinator | `SendMessage` / `mcp__ccd_session_mgmt__send_message` | `send_message` (or `swarm` board mention) |
-| Archive a `per-issue` agent & clean its worktree | `mcp__ccd_session_mgmt__archive_session` + `prune-worktrees.sh` | `swarm(action="kill", name="<unit>")` (deletes share workspace automatically) |
+| Archive a `per-issue` agent & clean its worktree | `mcp__ccd_session_mgmt__archive_session` + `prune-worktrees.sh` | `swarm(action="kill", name="<unit>")` (deletes its workspace) |
 | Measure context usage | `mcp__ccd_session_mgmt__get_usage` or `scripts/check-context.sh` | `scripts/check-context.sh --role coordinator --profile <ledger> <session>` |
 | Run background CI watch | `Bash` with `run_in_background` | `run_command` with `WaitMsBeforeAsync: 500` |
 | Spawn `reviewer` or `oneoff-builder` (split: `references/sessions.md`) | Subagent `coordinator:reviewer` / `coordinator:oneoff-builder` | `invoke_subagent(TypeName="reviewer" \| "oneoff-builder")` |
@@ -79,7 +79,7 @@ Everything else you do without asking. Stop and wait for the owner only here:
 8. **Checks only a human can do** (a real device, a real customer flow); otherwise they stay
    `UNVERIFIED` in the release notes.
 
-Batch questions into one message, decisions first. Never send status pings.
+Batch questions into one message, decisions first.
 
 ## First thing in every session
 
@@ -134,7 +134,8 @@ for an agent what that agent's permissions denied: take it to the owner.
 
 - Every session is a top-level peer in its own worktree; the starter detaches it; a replacement
   is never started by the session it replaces; names are unique ("<name> (old)" first).
-- The coordinator archives a `per-issue` agent after its PR merges (archive procedure there);
+- The coordinator archives a `per-issue` agent after its merge (archive procedure there, the
+  call alone in its own message);
   a `standing` one only on rotation.
 - No pings; one batched message per agent per round; agents report by message to
   "Coordinator: <project>", every report ending `Context: <k tokens>`.

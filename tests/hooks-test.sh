@@ -213,6 +213,7 @@ for mode in jq python3; do
   expect_eq  "merge records o/r#12"                    "o/r#12 " "$(pend coord-1)"
   expect_out "merge after &&: reminder"                "archive_session" "$(mr coord-1 'true && gh pr merge 13')"
   expect_eq  "no --repo: repo from gh's url"           "o/r#12 o/r#13 " "$(pend coord-1)"
+  expect_out "merge reminder: archive alone (#52)"     "archive_session, alone in its own message" "$(mr coord-1 'gh pr merge 14 --repo o/r2 --merge')"
   expect_out "gh pr view: silent"                      EMPTY "$(mr coord-1 'gh pr view 12')"
   expect_out "merge by unregistered session: silent"   EMPTY "$(mr lane-7 'gh pr merge 12')"
   expect_eq  "unregistered: no state"                  "" "$(ls "$COORDINATOR_HOME/state" | grep lane-7 || true)"
