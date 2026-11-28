@@ -299,22 +299,34 @@ for line in lines:
         indent = lead
     m = re.match(r"([A-Za-z0-9_-]+):\s*(#.*)?$", line[lead:])
     if lead == indent and m:
-        job, job_indent = [m.group(1), None], None
+        job, job_indent = [m.group(1), None, False], None
         out.append(job)
     elif job and lead > indent:
         job_indent = job_indent or lead
-        n = re.match(r"name:\s*(.+?)\s*$", line[lead:])
-        if lead == job_indent and n:
+        if lead != job_indent:
+            continue
+        n = re.match(r"name:\s*(.+?)\s*(#.*)?$", line[lead:])
+        if n:
             job[1] = n.group(1).strip("'\"")
-for jid, name in out:
-    print(name if name and "${{" not in name else jid)
+        if re.match(r"strategy:", line[lead:]):
+            job[2] = True
+for jid, name, matrix in out:
+    if matrix or (name and "${{" in name):
+        # GitHub names these checks per matrix value ("job (x)"): not derivable here.
+        print(f"skipped job {jid} (matrix or expression name): add its checks with --check", file=sys.stderr)
+        continue
+    print(name or jid)
 PY3
 }
 checks=()
 ci_file="$local_dir/.github/workflows/ci.yml"
 if [[ $protect -eq 1 ]]; then
   if [[ -f "$ci_file" ]]; then
-    while IFS= read -r c; do [[ -n "$c" ]] && checks+=("$c"); done < <(ci_jobs "$ci_file")
+    skipped_log="$(mktemp)"
+    jobs_out="$(ci_jobs "$ci_file" 2>"$skipped_log")" || { cat "$skipped_log" >&2; rm -f "$skipped_log"; fail "read jobs from $ci_file"; }
+    while IFS= read -r c; do [[ -n "$c" ]] && warn "$c"; done < "$skipped_log"
+    rm -f "$skipped_log"
+    while IFS= read -r c; do [[ -n "$c" ]] && checks+=("$c"); done <<< "$jobs_out"
     [[ ${#checks[@]} -gt 0 ]] || warn "no jobs found in $ci_file"
   elif [[ $dry -eq 1 ]]; then
     printf '    would require the jobs of %s (not cloned yet)\n' "$ci_file"
