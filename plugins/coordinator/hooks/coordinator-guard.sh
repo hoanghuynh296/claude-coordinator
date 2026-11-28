@@ -111,9 +111,10 @@ allowed_rel() {
 # worktree. Anything it cannot establish returns 1, and the coordinator rules below apply.
 aid="$(json_get "$input" agent_id)"
 # claim <file> <value>: create <file> holding <value> unless it exists (noclobber is atomic);
-# 0 when the file now holds <value>.
+# 0 when the file now holds <value>. Sets created=1 only when this call's own create succeeded.
 claim() {
-  ( set -C; printf '%s\n' "$2" >"$1" ) 2>/dev/null || true
+  created=0
+  if ( set -C; printf '%s\n' "$2" >"$1" ) 2>/dev/null; then created=1; fi
   [[ "$(head -n 1 "$1" 2>/dev/null)" == "$2" ]]
 }
 # worktree_key <unit> <name> <path>: prints "<dev>-<inode>" of <unit>/.claude/worktrees/<name>
@@ -147,10 +148,12 @@ builder_ok() {
     [[ "$rest" == */* && "$rest" != "$name/.git" && "$name" =~ ^builder-[A-Za-z0-9._-]+$ ]] || return 1
     key="$(worktree_key "${unit%/}" "$name" "$path")" && [[ "$key" =~ ^[0-9]+-[0-9]+$ ]] || return 1
     d="$(state_dir "$sid")" || return 1; d="$d/builders"; mkdir -p "$d" || return 1
-    # Bind the agent, then the worktree; when the worktree is another builder's, undo an agent
-    # claim this call created, so a refused builder is not locked out of its own worktree (#69).
-    local fresh=1; [[ -e "$d/agent-$aid" ]] && fresh=0
+    # Bind the agent, then the worktree; when the worktree is another builder's, undo the agent
+    # claim only if this call's own create made it, so a refused builder is not locked out of
+    # its own worktree (#69) and a parallel call never removes a claim it did not make.
+    local fresh
     claim "$d/agent-$aid" "$key" || return 1
+    fresh=$created
     claim "$d/wt-$key" "$aid" && return 0
     (( fresh )) && rm -f "$d/agent-$aid"
     return 1
