@@ -384,6 +384,8 @@ rules = {  # name: (regex, homes)
     "top level": (r"top[\s-]+level", [sk + "sessions.md"]),
     "archive procedure": (r"archive_session", [sk + "sessions.md"]),
     "archive alone": (r"alone\s+in\s+its\s+own\s+message", [sk + "sessions.md"]),
+    "card cannot carry a folder": (r"card\s+cannot\s+carry", [sk + "sessions.md"]),
+    "app start cap": (r"without\s+a\s+card", [sk + "sessions.md"]),
     "PR ready on push": (r"never\s+wait(s|ing)?\s+for\s+CI", [sk + "templates/unit-brief.md", sk + "procedures/review-merge.md"]),
     "delegation split": (r"self-contained\s+one-round\s+work", [sk + "sessions.md"]),
     "needs a session": (r"blocked:\s+needs\s+a\s+session", [sk + "sessions.md", "agents/oneoff-builder.md"]),
@@ -422,6 +424,21 @@ has references/procedures/review-merge.md 'findings only' && has ../../agents/on
   && ok "fix rounds on a subagent PR: resume, else fresh builder with PR + findings" || bad "subagent fix rounds missing"
 has SKILL.md 'invoke_subagent' && has SKILL.md 'split: `references/sessions.md`' \
   && ok "SKILL runtime map links the split for both runtimes" || bad "SKILL runtime map lacks the split link"
+# Staffing caps (#53): one home in sessions.md (5 working, 10 starts per owner message, the rest
+# to Pending starts, another repo only user_asked, Antigravity no cap); linked from SKILL item 5
+# and milestone-start; the template's Pending starts names the caps; audit reports old lines.
+has $ss '## Staffing caps' && has $ss 'at most 5 working at once and at most 10 starts per owner message' \
+  && has $ss 'Pending starts' && has $ss 'next owner turn' && has $ss 'initiation: "user_asked"' \
+  && has $ss 'never proposed as a card' && has $ss 'Antigravity:\*\* no cap' \
+  && ok "sessions.md is the home of the staffing caps" || bad "sessions.md lacks the staffing caps (5 / 10 / Pending starts / user_asked / Antigravity)"
+has SKILL.md 'Starting sessions.*caps: `sessions.md`' && ok "SKILL item 5 links the staffing caps" || bad "SKILL item 5 lacks the caps link"
+has references/procedures/milestone-start.md 'Staffing caps' && has references/procedures/milestone-start.md '5 agents' \
+  && has references/procedures/milestone-start.md '10 starts per owner message' && has references/procedures/milestone-start.md 'Pending' \
+  && ok "milestone-start staffs within the caps" || bad "milestone-start lacks the staffing caps"
+has references/templates/COORDINATION.md 'staffing caps' && has references/templates/COORDINATION.md '<added YYYY-MM-DD>' \
+  && ok "COORDINATION template: Pending starts names the caps, dated lines" || bad "COORDINATION template Pending starts lacks the caps / date"
+has references/procedures/audit.md 'Pending starts:\*\*' && has references/procedures/audit.md 'latest owner turn' \
+  && ok "audit reports pending starts older than one owner turn" || bad "audit lacks the pending-starts check"
 # Archive alone (#52): archive_session goes alone in its own message (one home sessions.md);
 # SKILL, review-merge step 6 and pitfalls say it once; Antigravity keeps swarm kill.
 for f in references/sessions.md SKILL.md references/procedures/review-merge.md references/pitfalls.md; do

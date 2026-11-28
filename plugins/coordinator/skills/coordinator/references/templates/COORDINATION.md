@@ -18,8 +18,10 @@ Updated: {{DATE}}
 
 ## Pending starts
 
-Sessions to start on the owner's next desktop turn, because starts are refused while the owner is
-on Remote Control. One line each: <session name>, <unit>, <issue>, <brief location>.
+Sessions to start on the owner's next desktop turn: starts are refused while the owner is on
+Remote Control, over the staffing caps (5 working, 10 starts per owner message) or, for another
+repo's agent, outside an owner-started turn (`references/sessions.md`, "Staffing caps"). One line
+each: <added YYYY-MM-DD>, <session name>, <unit>, <issue>, <brief location>.
 
 - none
 
