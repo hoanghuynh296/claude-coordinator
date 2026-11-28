@@ -154,7 +154,7 @@ id and must register again.
 | `prune-worktrees.sh <root>... (--sessions <file> \| --no-session-check) [--apply] [--min-age-hours N] [--discard <glob>]...` | remove finished agent worktrees (`.claude/worktrees/*`) under the roots: only a registered, unlocked worktree with no change for N hours (default 6), a clean `git status` (or only changes matching `--discard`), HEAD in a remote branch, and (`--sessions`: the `list_sessions` JSON) no live session in it or on its branch and no open PR for its branch (`gh`; a failed lookup keeps it). `git worktree remove`, branches kept, stray folders reported and kept; prints the space freed. Dry run unless `--apply` |
 | `check-context.sh [--coordinator] [--soft N] [--hard N] [--window N] [session...]` | context size per session from its transcript, with a level: `ok`, `SOFT` (finish the current issue, then rotate; default 250k) or `HARD` (rotate now; default 400k). `--coordinator`: 300k / 450k. `--window` caps soft at 50% and hard at 75% of the context window. Also `SOFT_AT`, `HARD_AT`, `CONTEXT_WINDOW`; one run per model group |
 | `token-report.py <transcript dir \| session.jsonl> [--top N] [--json]` | where a session and its subagents spent tokens: calls, input, cache writes and reads, output, a weighted share, tool calls by tool, largest tool results; read-only (procedure `token-audit.md`) |
-| `bootstrap.sh <owner/repo> <dir> ...` | the single-repo SaaS starting point: repo from a template (default `hoanghuynh296/agent-project-template`, which is private: pass `--template <your repo>`), placeholders, `develop`, labels, ledger, branch protection. `--ledger-only` creates just the ledger; `--dry-run` prints every action |
+| `bootstrap.sh <owner/repo> <dir> ...` | the single-repo SaaS starting point: repo from a template (default `hoanghuynh296/agent-project-template`, which is private: pass `--template <your repo>`), placeholders, `develop`, labels, ledger, branch protection that requires the jobs of the new repo's `ci.yml` (the template's lane jobs, which always report; `--check` adds more; rerun after removing a lane). `--ledger-only` creates just the ledger; `--dry-run` prints every action |
 
 ## Layout
 
@@ -184,7 +184,7 @@ bash tests/ci-watch-test.sh        # ci-watch.sh with a fake gh: green, red, sta
 bash tests/ledger-lint-test.sh     # every lint rule; a fresh ledger passes
 bash tests/token-report-test.sh    # token-report.py on a fixture session with a subagent
 bash tests/pre-push-guard-test.sh  # merged, closed and open PRs with a fake gh; install-guards
-bash tests/bootstrap-test.sh [template-dir]   # full bootstrap against local bare repos and a fake gh
+bash tests/bootstrap-test.sh [template-dir]   # full bootstrap against local bare repos and a fake gh; required checks
 bash tests/structure-test.sh       # commands, procedures and the skill agree; listing text fits the cap; key rules present
 bash tests/exec-bits-test.sh       # every plugin *.sh is executable in git
 bash tests/agent-tools-test.sh     # install-guards --tools: merge, idempotent, groups back on, refusals, catalog spares core tools
@@ -194,12 +194,19 @@ bash tests/prune-worktrees-test.sh # dirty, unpushed, live, open PR, young, lock
 
 Gate for a kit PR: CI `tests` green (`.github/workflows/tests.yml` runs every `tests/*-test.sh`
 on each PR and push to `main`, on a GitHub-hosted macOS runner). CI has no checkout of the private
-agent-project-template, so `bootstrap-test.sh` prints `SKIP` there; run it locally with the
-template path when a change touches `bootstrap.sh`.
+agent-project-template, so `bootstrap-test.sh` runs there against a minimal template with the same
+lane jobs; run it locally with the template path when a change touches `bootstrap.sh`.
 
 ## Changes
 
-- **Unreleased**: nothing yet.
+- **Unreleased**: `bootstrap.sh` no longer requires a `changes` check (#45). The template's fast CI
+  (agent-project-template#4, C-045) has no `changes` job; each lane job decides in its first step
+  and always reports. Branch protection now requires the jobs of the new repo's
+  `.github/workflows/ci.yml` (so a removed lane is never required; rerun after removing one) plus any
+  `--check` names; matrix jobs or jobs with an expression name are skipped with a warning (add them
+  with `--check`). A private repo on GitHub Free still gets the 403 warning and continues.
+  `bootstrap-test.sh` checks the default list, a protected rerun after removing a lane, and runs in
+  CI against a minimal template when the private template is not checked out.
 - **0.12.0** (2026-11-26): Antigravity alongside Claude Code (#40). Every hook reads both
   payloads (`session_id` or `conversationId`, `tool_input` or `toolCall.args`) and answers in
   the runtime's own format; Claude Code output is unchanged. New `plugins/coordinator/plugin.json`

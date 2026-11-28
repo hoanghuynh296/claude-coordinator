@@ -41,6 +41,8 @@ approves in a later message.**
   `bash "<plugin>/scripts/bootstrap.sh" <owner/repo> <local-dir> --values <file> --plan <PLAN.md>`
   builds the repo from the template repo `hoanghuynh296/agent-project-template` (private: it needs access to
   that repo, or pass `--template <your own template repo>`; run it with `--dry-run` first).
+  Branch protection requires every job of the repo's `ci.yml`; once unused lanes are removed
+  (their job and OWNERSHIP row), rerun it so a removed lane is no longer required.
   For other shapes create the repos with `gh repo create`, add the integration branch, and
   give each unit an `AGENTS.md`.
 - Guards: `bash "<plugin>/scripts/install-guards.sh" --settings --tools "<unit's Tools>" <unit-dir>...`
