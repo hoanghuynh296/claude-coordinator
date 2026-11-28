@@ -468,6 +468,15 @@ has SKILL.md "Owner approves merges into:\` names (default none)" \
   && ok "SKILL: owner merges only where the profile names the branch" || bad "SKILL lacks the owner-merge line"
 has references/procedures/audit.md 'Owner merge asks:\*\*' && has references/procedures/audit.md 'does not name' \
   && ok "audit flags owner merge asks the profile does not back" || bad "audit lacks the owner merge asks check"
+# Runtime parity (#55): SKILL lists what Antigravity does not enforce and where its release
+# install comes from; README documents that install. (The two manifest versions: the
+# "plugin.json and marketplace.json agree" check above.)
+has SKILL.md 'Silent: the merge reminder and the Next-sent note' && has SKILL.md 'No builder exemption in the edit guard' \
+  && has SKILL.md 'no merge let-through in the rotation guard' && has SKILL.md '`UNVERIFIED` whether PreInvocation hooks run' \
+  && has SKILL.md 'scripts/ag-install.sh' && ! has SKILL.md 'mechanical hook guards' \
+  && ok "SKILL lists what Antigravity does not enforce" || bad "SKILL runtime section lacks the Antigravity differences"
+grep -q 'ag-install.sh --check' "$root/README.md" && grep -q 'release tag' "$root/README.md" \
+  && ok "README documents the Antigravity release install" || bad "README lacks the Antigravity release install"
 n=$(python3 -I -c 'import sys; print(len(open(sys.argv[1], encoding="utf-8").read()))' "$skill/SKILL.md")
 [ "$n" -le 12000 ] && ok "SKILL.md is $n characters (budget 12,000)" || bad "SKILL.md is $n characters, over the 12,000 budget"
 echo "passed $pass, failed $failn"

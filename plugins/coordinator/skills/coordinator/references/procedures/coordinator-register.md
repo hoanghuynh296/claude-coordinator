@@ -45,7 +45,8 @@ Register this session as coordinator. Input: the ledger folder and, optionally, 
 8. Give the owner a status in at most 8 lines (as the `status` procedure would).
 9. Rotation check: the rotation guard hook measures this session's context on every owner turn
    (Claude Code: UserPromptSubmit and Stop; Antigravity: PreInvocation and Stop). On a runtime
-   where the kit's hooks do not run, measure yourself once per owner turn:
+   where the kit's hooks do not run, and on Antigravity while its PreInvocation hook is
+   `UNVERIFIED` (SKILL.md "Two runtimes"), measure yourself once per owner turn:
    `bash "<plugin>/scripts/check-context.sh" --role coordinator --profile <ledger> <session>`;
    `SOFT`: rotate at the next owner desktop turn, `HARD`: rotate in this turn (`handover.md`).
 
