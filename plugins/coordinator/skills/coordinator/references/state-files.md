@@ -95,10 +95,13 @@ runs it together with the checks that need judgement and installs the hook where
 ## Committing the ledger
 
 Every ledger commit is one call:
-`bash "<plugin>/scripts/ledger-commit.sh" <ledger-dir> "<message>"`. It runs the lint (on errors
-it prints only the errors and commits nothing, exit 1), stages every change under the ledger
-dir, commits, `git pull --rebase --autostash`, pushes and prints one line:
-`ledger-commit: <sha> pushed to <upstream> (<n> file(s)[, <w> warning(s)])`, or
-`nothing to commit`, or `committed; not pushed: no upstream`. A rebase conflict is aborted and
+`bash "<plugin>/scripts/ledger-commit.sh" <ledger-dir> "<message>" [path...]`. It runs the lint
+(on errors it prints only the errors and commits nothing, exit 1), stages and commits only the
+ledger paths: `COORDINATION.md` and `coordination/` under the ledger dir, plus each extra path
+given (for example `handbook/` in the group ledger). Everything else in the checkout (product
+code when the ledger sits in the product repo, another session's files) stays out and is
+counted. Then `git pull --rebase --autostash`, push, and one line:
+`ledger-commit: <sha> pushed to <upstream> (<n> file(s)[, <w> warning(s)][, <m> other change(s) left unstaged])`,
+or `nothing to commit`, or `committed; not pushed: no upstream`. A rebase conflict is aborted and
 the commit stays local (exit 3); a refused push exits 4. Same script and output on Claude Code
 (Bash) and Antigravity (`run_command`). Do not chain lint, add, commit, pull and push by hand.

@@ -87,7 +87,7 @@ git -C "$w/a" reset -q --hard origin/main; git -C "$w/a" pull -q
 echo "- local only" >> "$w/a/coordination/DECISIONS.md"
 git -C "$w/a" commit -qam "local only"
 run "$w/a" "ledger: unused"
-expect "earlier unpushed commit is pushed" 0 "pushed to origin/main (1 earlier commit(s))"
+expect "earlier unpushed commit is pushed" 0 "pushed to origin/main (1 earlier commit(s)"
 
 # 8. push refused: exit 4
 printf '#!/bin/sh\necho refused by test >&2\nexit 1\n' > "$w/a.git/hooks/pre-receive"; chmod +x "$w/a.git/hooks/pre-receive"
@@ -116,6 +116,34 @@ run "$w/nope" "x"
 expect "missing dir" 2 "not found"
 plain="$(mktemp -d "${TMPDIR:-/tmp}/ledger-commit-plain.XXXXXX")"; run "$plain" "x"
 expect "not a git repo" 2 "not a git repository"; rm -rf "${plain:?}"
+
+# 12. ledger inside a product repo: product code and unrelated files stay out of the commit
+setup p
+mkdir -p "$w/p/src" "$w/p/handbook"
+echo "code" > "$w/p/src/app.js"; echo "guide" > "$w/p/handbook/a.md"
+git -C "$w/p" add src handbook && git -C "$w/p" commit -qm "product" && git -C "$w/p" push -q
+echo "changed code" >> "$w/p/src/app.js"
+echo "scratch" > "$w/p/other-session.txt"
+echo "- ledger only" >> "$w/p/coordination/ROADMAP.md"
+run "$w/p" "ledger: only ledger"
+expect "only ledger paths are committed" 0 "pushed to origin/main (1 file(s), 1 warning(s), 2 other change(s) left unstaged)"
+[[ "$(git -C "$w/p.git" show --name-only --format= main | tr '\n' ' ')" == "coordination/ROADMAP.md " ]] \
+  && ok "commit holds the ledger file only" || bad "commit holds the ledger file only" "$(git -C "$w/p.git" show --stat main)"
+st="$(git -C "$w/p" status --porcelain)"
+[[ "$st" == *" M src/app.js"* && "$st" == *"?? other-session.txt"* ]] \
+  && ok "product change and untracked file left as they were" || bad "product change and untracked file left as they were" "$st"
+
+# 13. extra path argument is included
+echo "more guide" >> "$w/p/handbook/a.md"
+echo "- with handbook" >> "$w/p/coordination/ROADMAP.md"
+rc=0; out="$(bash "$scripts/ledger-commit.sh" "$w/p" "ledger: with handbook" handbook/ 2>&1)" || rc=$?
+expect "extra path is committed" 0 "pushed to origin/main (2 file(s), 1 warning(s), 2 other change(s) left unstaged)"
+[[ "$(git -C "$w/p.git" show --name-only --format= main | sort | tr '\n' ' ')" == "coordination/ROADMAP.md handbook/a.md " ]] \
+  && ok "commit holds ledger and handbook" || bad "commit holds ledger and handbook" "$(git -C "$w/p.git" show --stat main)"
+
+# 14. nothing in the ledger paths, other changes present
+run "$w/p" "ledger: none"
+expect "nothing to commit names the other changes" 0 "up to date (2 other change(s) left unstaged)"
 
 [[ -n "${KEEP:-}" ]] || rm -rf "${w:?}"
 echo "passed $pass, failed $failn"

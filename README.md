@@ -147,7 +147,7 @@ id and must register again.
 |---|---|
 | `init-ledger.sh <dir> [--name] [--owner] [--workspace]` | write the standard ledger layout from the templates; never overwrites |
 | `ledger-lint.sh [dir]` | see above; budgets in the environment or in `<dir>/.ledger-lint` |
-| `ledger-commit.sh <ledger> "<message>"` | every ledger commit in one call: lint (errors only, nothing committed, exit 1), stage all ledger changes, commit, `pull --rebase --autostash`, push, one line `ledger-commit: <sha> pushed to <upstream> (<n> file(s))`. Rebase conflict: aborted, commit kept local (3); refused push (4); no upstream: commit only |
+| `ledger-commit.sh <ledger> "<message>" [path...]` | every ledger commit in one call: lint (errors only, nothing committed, exit 1), stage and commit only `COORDINATION.md`, `coordination/` and the extra paths (other changes stay unstaged and are counted), `pull --rebase --autostash`, push, one line `ledger-commit: <sha> pushed to <upstream> (<n> file(s))`. Rebase conflict: aborted, commit kept local (3); refused push (4); no upstream: commit only |
 | `install-guards.sh`, `pre-push-guard.sh` | see above |
 | `next-clear.sh <session> <owner/repo#N> <reason>` | clear a merged PR the Stop hook waits on, when its author cannot get the Next message; the reason is appended to `coordination/next-cleared.md` in the ledger. `--list` shows what is pending; `--handover` prints it and drops the session's state (written into the handover note); `--add <owner/repo#N>...` lets the replacement take it over |
 | `ci-watch.sh <owner/repo> <N> [<sha>]` | watch a PR's CI until it ends and print one line: `green` (exit 0), `red: <checks> <link>` (1, at the first failure), `error` (2), `stale-head` when the head is not or no longer the reported SHA (3), `timeout` (4, `CI_WATCH_DEADLINE`, default 90 min), `no-checks` (5, `CI_WATCH_NOCHECKS`, default 15 min), not open (6). The coordinator runs it with `run_in_background` on every "PR ready": its exit wakes the coordinator when CI ends |
@@ -183,7 +183,7 @@ tests/{hooks,ci-watch,ledger-lint,ledger-commit,pre-push-guard,structure,bootstr
 bash tests/hooks-test.sh           # edit guard, SessionStart, merge/Next/Stop hooks, CI watch reminder, jq and python3 paths, multi-unit workspace
 bash tests/ci-watch-test.sh        # ci-watch.sh with a fake gh: green, red, stale and moved head, no checks, timeout, errors
 bash tests/ledger-lint-test.sh     # every lint rule; a fresh ledger passes
-bash tests/ledger-commit-test.sh   # ledger-commit.sh against a local bare origin: push, rebase, conflict, refused push, lint errors, hook
+bash tests/ledger-commit-test.sh   # ledger-commit.sh against a local bare origin: push, rebase, conflict, refused push, lint errors, hook, product files left out, extra paths
 bash tests/token-report-test.sh    # token-report.py on a fixture session with a subagent
 bash tests/pre-push-guard-test.sh  # merged, closed and open PRs with a fake gh; install-guards
 bash tests/bootstrap-test.sh [template-dir]   # full bootstrap against local bare repos and a fake gh; required checks
@@ -212,7 +212,8 @@ lane jobs; run it locally with the template path when a change touches `bootstra
   Antigravity transcripts. `check-context-test.sh` covers both roles, the title rule and PROFILE
   overrides.
 - `scripts/ledger-commit.sh <ledger> "<message>"` (#50, group "Coordinator cost"):
-  lint, commit, rebase and push the ledger in one call with one line of output, replacing the
+  lint, commit (ledger paths only, plus optional extra paths), rebase and push the ledger in one
+  call with one line of output, replacing the
   separate lint / add / commit / pull / push calls. SKILL.md, `state-files.md`, `workflow.md`,
   `pitfalls.md` and every procedure that commits the ledger call it; `audit.md` installs the
   ledger-lint pre-commit hook where it is missing. New `tests/ledger-commit-test.sh`; the structure
