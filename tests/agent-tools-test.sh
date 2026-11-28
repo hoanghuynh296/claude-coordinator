@@ -63,6 +63,9 @@ cat > "$cfg" <<'JSON'
 JSON
 out="$(guards --tools "semi-design")"
 [[ "$out" == *"warning: skillOverrides 'cloudflare:wrangler' is 'name-only'"* ]] && ok "different value warns" || bad "no warning: $out"
+[[ "$out" == *"lean-tools.lock.json is missing"*"deny 'mcp__Claude_Browser'"*"skillOverrides 'anthropic-skills:docx'"*"settings 'disableClaudeAiConnectors'"*"--adopt-existing"* ]] \
+  && ok "missing lock: warning names the exact catalog entries and --adopt-existing" || bad "missing-lock warning: $out"
+[[ "$out" != *"'my-skill'"* && "$out" != *"'Bash(rm -rf *)'"* ]] && ok "missing-lock warning skips non-catalog entries" || bad "warning names user-only entries: $out"
 check "key order kept, title first"   "list(s)[0] == 'title'"
 check "unrelated keys kept"           "s['model'] == 'opus' and s['hooks'] == {'Stop': []}"
 check "allow rules kept"              "s['permissions']['allow'] == ['Bash(npm test)']"
@@ -102,6 +105,40 @@ guards --tools none >/dev/null
 grep -q 'mcp__computer-use' "$w/shared.json" && ok "target written" || bad "target not written"
 ls "$w/repo/.claude"/.lean-tools.* >/dev/null 2>&1 && bad "temp file left" || ok "no temp file left"
 rm -f "$cfg"; cp "$w/shared.json" "$cfg"
+
+echo "--- missing lock: --adopt-existing records exact catalog entries as the kit's"
+rm -f "$lock"
+cat > "$cfg" <<'JSON'
+{
+  "permissions": {"deny": ["Bash(rm -rf *)", "mcp__plugin_cloudflare_cloudflare"]},
+  "skillOverrides": {"cloudflare:wrangler": "off", "my-skill": "off"}
+}
+JSON
+out="$(guards --tools none --adopt-existing)"
+[[ "$out" != *"is missing"* ]] && ok "adopt: no missing-lock warning" || bad "adopt still warns: $out"
+lockhas "adopt: exact deny entry now owned"  "'mcp__plugin_cloudflare_cloudflare' in l['deny'] and 'Bash(rm -rf *)' not in l['deny']"
+lockhas "adopt: exact skill entry now owned" "'cloudflare:wrangler' in l['skillOverrides'] and 'my-skill' not in l['skillOverrides']"
+guards --tools "cloudflare" >/dev/null
+check "adopt: keeping the group removes the adopted entries" "'mcp__plugin_cloudflare_cloudflare' not in s['permissions']['deny'] and 'cloudflare:wrangler' not in s['skillOverrides']"
+check "adopt: user's own entries survive" "s['permissions']['deny'][0] == 'Bash(rm -rf *)' and s['skillOverrides']['my-skill'] == 'off'"
+if bash "$scripts/install-guards.sh" --adopt-existing "$w/repo" >/dev/null 2>&1; then bad "--adopt-existing without --tools accepted"; else ok "--adopt-existing needs --tools"; fi
+
+echo "--- the lock is written first; a failed write leaves both files as they were"
+guards --tools none >/dev/null
+cp "$cfg" "$w/ok.json"; cp "$lock" "$w/ok.lock"
+mkdir -p "$w/ro"; cp "$w/ok.lock" "$w/ro/lean-tools.lock.json"; cp "$w/ok.json" "$w/ro/settings.json"; chmod 555 "$w/ro"
+rm -f "$lock"; ln -s "$w/ro/lean-tools.lock.json" "$lock"
+if out="$(guards --tools "browser")"; then bad "unwritable lock accepted"; else ok "unwritable lock refused"; fi
+[[ "$out" == *"cannot write lock"*"nothing written"* ]] && ok "unwritable lock: says so" || bad "unwritable lock message: $out"
+cmp -s "$cfg" "$w/ok.json" && ok "unwritable lock: settings untouched" || bad "settings written although the lock failed"
+cmp -s "$w/ro/lean-tools.lock.json" "$w/ok.lock" && ok "unwritable lock: lock untouched" || bad "lock changed"
+rm -f "$lock"; cp "$w/ok.lock" "$lock"
+mv "$cfg" "$w/cfg.real"; ln -s "$w/ro/settings.json" "$cfg"
+if out="$(guards --tools "browser")"; then bad "unwritable settings accepted"; else ok "unwritable settings refused"; fi
+[[ "$out" == *"cannot write settings"*"lock put back"* ]] && ok "unwritable settings: says so" || bad "unwritable settings message: $out"
+cmp -s "$lock" "$w/ok.lock" && ok "unwritable settings: old lock put back" || bad "lock changed although settings failed"
+rm -f "$cfg"; mv "$w/cfg.real" "$cfg"; chmod 755 "$w/ro"
+ls "$w/repo/.claude"/.lean-tools.* >/dev/null 2>&1 && bad "temp file left after failures" || ok "no temp file left after failures"
 
 echo "--- refusals write nothing"
 cp "$cfg" "$w/before.json"
