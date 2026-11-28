@@ -89,5 +89,16 @@ defined (`<project>:C-NNN` points at another ledger and is allowed), decisions w
 a missing or old `Updated:` date, or one a day behind the last commit. Table rows are exempt from
 the line-length budget. It exits nonzero on errors, and `install-guards.sh <ledger-repo>` installs a
 pre-commit hook that runs a copy of it, so a broken ledger is not committed (re-run
-`install-guards.sh` after upgrading the plugin; without python3 the hook warns and lets the commit through). Run it before every ledger commit; procedure `audit.md`
-runs it together with the checks that need judgement.
+`install-guards.sh` after upgrading the plugin; without python3 the hook warns and lets the commit through). Procedure `audit.md`
+runs it together with the checks that need judgement and installs the hook where it is missing.
+
+## Committing the ledger
+
+Every ledger commit is one call:
+`bash "<plugin>/scripts/ledger-commit.sh" <ledger-dir> "<message>"`. It runs the lint (on errors
+it prints only the errors and commits nothing, exit 1), stages every change under the ledger
+dir, commits, `git pull --rebase --autostash`, pushes and prints one line:
+`ledger-commit: <sha> pushed to <upstream> (<n> file(s)[, <w> warning(s)])`, or
+`nothing to commit`, or `committed; not pushed: no upstream`. A rebase conflict is aborted and
+the commit stays local (exit 3); a refused push exits 4. Same script and output on Claude Code
+(Bash) and Antigravity (`run_command`). Do not chain lint, add, commit, pull and push by hand.

@@ -13,7 +13,7 @@ Start the named milestone or stretch of work. Reread `references/pitfalls.md`.
 2. Create each issue with the `ticket` procedure. Issues that depend on the contract say
    "depends on #<n>" and are not handed out until it merges.
 3. Order each unit's list in `ROADMAP.md`. Update `COORDINATION.md` (in progress per unit).
-   Lint, commit and push the ledger.
+   Commit the ledger (`ledger-commit.sh`).
 4. **Staff it now, in this turn** (sessions can only be started from the owner's own message):
    - `standing` units with a live session: one message with its next ONE issue, if it is
      standing by. An agent with a PR in review gets its next issue in the merge notice

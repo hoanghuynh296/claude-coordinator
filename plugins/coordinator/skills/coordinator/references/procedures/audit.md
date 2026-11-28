@@ -7,7 +7,9 @@ working day, before every handover, and whenever the ledger feels wrong.
 
 1. **Mechanical lint:**
    `bash "<plugin>/scripts/ledger-lint.sh" <ledger-dir>`
-   Fix every error (the message names the file and the rule). Typical fixes: delete finished
+   Fix every error (the message names the file and the rule). If the ledger repo has no
+   `coordinator-kit ledger-lint pre-commit` hook (`.git/hooks/pre-commit`), install it:
+   `bash "<plugin>/scripts/install-guards.sh" <ledger-dir>` (also after a plugin upgrade). Typical fixes: delete finished
    items from `COORDINATION.md`; move a rule to `PROFILE.md`; add a missing decision row;
    remove a session id or a home path.
 2. **Drift against GitHub**, per unit repo: open PRs and open `task` issues against the
@@ -51,5 +53,5 @@ working day, before every handover, and whenever the ledger feels wrong.
     message), a `STRAY` folder to the owner. Generated files a unit's tools write into a
     worktree (for example `apps/*/AGENTS.md`) go in the profile and are passed as `--discard`.
 
-Commit and push the ledger. Report in at most 8 lines: what was wrong, what you fixed, what
+Commit the ledger (`ledger-commit.sh`). Report in at most 8 lines: what was wrong, what you fixed, what
 needs the owner.

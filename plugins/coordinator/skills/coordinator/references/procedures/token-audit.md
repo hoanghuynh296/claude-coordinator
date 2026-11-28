@@ -32,4 +32,4 @@ so expensive?").
 5. **Report to the owner** in at most 10 lines: the top three costs with their share, the
    general rules added (plugin PR link), the project rules added, and the expected saving.
    Anything that changes models or spending is the owner's decision: ask before applying it.
-6. Lint, commit and push the ledger.
+6. Commit the ledger (`ledger-commit.sh`).

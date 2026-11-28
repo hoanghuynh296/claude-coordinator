@@ -15,7 +15,7 @@ handover carries only what is in flight; see `references/state-files.md`.
    its work, (b) move what it learned about the code into the unit's docs (in its open PR or a
    small docs PR), (c) write `coordination/handover/<unit>.md` in the ledger repo from
    `references/templates/handover.md` (at `HARD` fill every section: done, left in order,
-   decisions, commands to re-run, traps), commit and push, (d) report "handover written" with
+   decisions, commands to re-run, traps), commit it (`ledger-commit.sh`), (d) report "handover written" with
    the file path, by message to "Coordinator: <project>". Do not
    write it for the agent. `per-issue` sessions write no handover file: at `SOFT` they just finish the issue; at `HARD`
    they write done, left, commands to re-run and traps into the PR (or the issue if there is
@@ -28,7 +28,7 @@ handover carries only what is in flight; see `references/state-files.md`.
    paths). Merged PRs still waiting for their Next message move with you: run
    `bash "<plugin>/scripts/next-clear.sh" <session> --handover` (it prints them as
    `owner/repo#N` and drops this session's hook state) and list them under "Pending Next" in
-   the note. Lint, commit and push the ledger.
+   the note. Commit the ledger (`ledger-commit.sh`).
 4. Propose the replacement to the owner in at most 4 lines: a fresh session with the same
    name, first prompt "Read `coordination/README.md` in <ledger> and continue as <role>". It is
    never started by the session it replaces: an agent's replacement is started by the

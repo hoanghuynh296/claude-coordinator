@@ -316,5 +316,19 @@ for f in references/procedures/milestone-close.md references/workflow.md referen
 done
 has references/templates/PROFILE.md 'Tag-only repo' && ok "PROFILE template: tag-only note" || bad "PROFILE template lacks the tag-only note"
 has references/procedures/review-merge.md 'gh issue close' && ok "review-merge: coordinator closes the linked issue" || bad "review-merge lacks gh issue close"
+# One call per ledger commit (#50): the skill, state files and procedures that commit the
+# ledger name ledger-commit.sh; none still asks for a separate lint before the commit.
+for f in SKILL.md references/state-files.md references/pitfalls.md references/workflow.md \
+         references/procedures/audit.md references/procedures/handover.md references/procedures/kickoff.md \
+         references/procedures/milestone-start.md references/procedures/review-merge.md \
+         references/procedures/status.md references/procedures/ticket.md references/procedures/token-audit.md; do
+  has "$f" 'ledger-commit.sh' && ok "$f names ledger-commit.sh" || bad "$f does not name ledger-commit.sh"
+done
+if grep -rqi -- 'lint, commit and push\|before every ledger commit\|before every commit' "$plugin/skills"; then
+  bad "the kit still asks for a separate lint before the ledger commit"
+else ok "no separate lint-before-commit step left"; fi
+has references/procedures/audit.md 'install-guards.sh' && ok "audit installs the missing pre-commit hook" \
+  || bad "audit does not install the pre-commit hook"
+[[ -x "$plugin/scripts/ledger-commit.sh" ]] && ok "scripts/ledger-commit.sh exists" || bad "scripts/ledger-commit.sh missing"
 echo "passed $pass, failed $failn"
 [[ $failn -eq 0 ]]
