@@ -40,5 +40,12 @@ is for each unit, who performs it, and which checks come first.
    `hooks/merge-reminder.sh`; `$COORDINATOR_GH_LOGIN` also exempts by author, never set it to an account agents share).
 7. **Ledger.** Update the unit's row (released = the new version, ahead by 0), remove the
    released group and its cleared debt rows, close the milestone in `ROADMAP.md` and on GitHub. Lint, commit, push.
-8. Measure contexts; replace `SOFT` and `HARD` sessions before the next stretch. If the unit
+8. **Coordinator kit unit only** (the project that releases this kit): after the tag, install
+   the release on every runtime (README "Releasing the kit": `claude plugin marketplace update
+   coordinator-marketplace`, `ag-install.sh`, `ag-install.sh --check` says `ok`), then send
+   every project coordinator ONE message: `Kit vX.Y.Z released. Upgrade: <the release's
+   Upgrade items, or none>. Rotate at the next safe point; then audit step 14.` (one message
+   each, all in one batch; the list of coordinators is the group's registry, or the sessions
+   titled `Coordinator: `). Skip a coordinator only when its project is archived.
+9. Measure contexts; replace `SOFT` and `HARD` sessions before the next stretch. If the unit
    was in a feature freeze because of its safety ceiling, the freeze ends here.

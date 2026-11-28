@@ -23,6 +23,9 @@ fresh() { rm -rf "${w:?}/$1"; bash "$scripts/init-ledger.sh" "$w/$1" --name Demo
 fresh a
 expect_lint "fresh ledger" ok "$w/a" "0 error(s)"
 expect_lint "fresh profile warns about unfilled fields" ok "$w/a" "fields to fill"
+kv="$(sed -n 's/^ *"version": *"\([^"]*\)".*/\1/p' "$scripts/../.claude-plugin/plugin.json" | head -n 1)"
+if grep -q "^Kit: $kv (" "$w/a/COORDINATION.md"; then pass=$((pass+1)); echo "PASS init-ledger writes the 'Kit: $kv' line (#54)"
+else failn=$((failn+1)); echo "FAIL init-ledger 'Kit:' line"; grep -n Kit "$w/a/COORDINATION.md" || true; fi
 
 bash "$scripts/init-ledger.sh" "$w/a" --name Other >/dev/null
 if grep -q '^# Demo' "$w/a/COORDINATION.md"; then pass=$((pass+1)); echo "PASS init-ledger keeps existing files"
@@ -147,9 +150,9 @@ fresh f1; ( cd "$w/f1" && git init -q . ); gcommit "$w/f1" 30 init
 for n in 1 2 3; do echo "- web PR #1$n merged" >> "$w/f1/COORDINATION.md"; done; gcommit "$w/f1" 12 old
 for n in 4 5 6; do echo "- web PR #1$n merged" >> "$w/f1/COORDINATION.md"; done; gcommit "$w/f1" 3 newer
 expect_lint "default: old finished lines are a warning only" ok "$w/f1" "0 error(s)"
-expect_lint "the warning gives each line's age, oldest first" ok "$w/f1" "oldest first: line 3 (30 days), line 35 (12 days)"
+expect_lint "the warning gives each line's age, oldest first" ok "$w/f1" "oldest first: line 3 (30 days), line 36 (12 days)"
 printf 'FINISHED_DAYS=7\n' > "$w/f1/.ledger-lint"
-expect_lint "FINISHED_DAYS=7: finished item older than 7 days is an error" fail "$w/f1" "COORDINATION.md:35: finished work 12 days old"
+expect_lint "FINISHED_DAYS=7: finished item older than 7 days is an error" fail "$w/f1" "COORDINATION.md:36: finished work 12 days old"
 expect_lint "the error names the FINISHED_DAYS=0 escape" fail "$w/f1" "set FINISHED_DAYS=0 in .ledger-lint"
 expect_lint "template prose (merged PRs) is never an error" fail "$w/f1" "3 error(s)"
 out="$(FINISHED_DAYS=20 bash "$scripts/ledger-lint.sh" "$w/f1" 2>&1)" && { pass=$((pass+1)); echo "PASS FINISHED_DAYS from the environment wins"; } \
