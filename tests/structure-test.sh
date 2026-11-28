@@ -220,6 +220,15 @@ for f in SKILL.md references/token-economy.md references/procedures/handover.md;
   tr '\n' ' ' <"$skill/$f" | tr -s ' ' | grep -q 'next owner desktop turn' && tr '\n' ' ' <"$skill/$f" | tr -s ' ' | grep -qi 'in this turn' \
     && ok "$f defines the coordinator's soft and hard" || bad "$f does not define coordinator soft (next owner desktop turn) / hard (in this turn)"
 done
+# #48: the manual "measure every context on every owner message" rule is gone. The coordinator's
+# context is measured by the rotation guard, an agent's before its Next (review-merge step 9);
+# no procedure, hook or script text asks for a measurement on every owner message.
+hits=$(cd "$plugin" && for f in $(find skills/coordinator -name '*.md') hooks/*.sh scripts/*.sh; do
+  tr '\n' ' ' <"$f" | tr -s ' ' | grep -iE 'measure[^.]*(every|each) owner message|(every|each) owner message[^.]*measure' >/dev/null && echo "$f"; done; true)
+[ -z "$hits" ] && ok "no procedure, hook or script measures contexts on every owner message" || bad "manual per-message measuring rule still in: $hits"
+step3=$(awk '/^## First thing in every session/{on=1} on && /^3\. /{p=1} p && /^4\. /{exit} p' "$skill/SKILL.md" | tr '\n' ' ')
+case "$step3" in *"rotation guard"*"review-merge.md"*"step 9"*) ok "SKILL First thing step 3 points to the rotation guard and review-merge step 9" ;;
+  *) bad "SKILL First thing step 3 does not point to the rotation guard and review-merge step 9" ;; esac
 has references/procedures/handover.md 'running: <agent>, <task>' && ok "handover: running subagents go into the note" || bad "handover does not list running subagents"
 
 

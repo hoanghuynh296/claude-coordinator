@@ -129,8 +129,9 @@ After a release, clear the unit's verification debt items that the release cover
 - Ledger: update, then `ledger-commit.sh` (lint, commit, rebase, push) after every merge, decision, release, session change
   and owner answer.
 - Decisions: one row in `DECISIONS.md`; the bound units add their one-line entry.
-- Contexts: measure on every owner message. `SOFT`: no new issue for that session; replace it
-  after its current PR. `HARD`: replace it now (section 8).
+- Contexts: the rotation guard measures the coordinator's on every owner turn; an agent's is
+  measured before its Next (`review-merge.md` step 9). `SOFT`: no new issue for that session;
+  replace it after its current PR. `HARD`: replace it now (section 8).
 - procedure `audit.md` at least once per working day and before every handover.
 
 ## 8. Rotate or stop

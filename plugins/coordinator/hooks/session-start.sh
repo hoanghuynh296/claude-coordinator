@@ -56,7 +56,7 @@ Edit guard: off (the project's profile lets the coordinator edit code)."
 Edit guard: on. Inside units you may edit only the planning files the profile allows; delegate the rest through issues."
   fi
   out+="
-The project's rules are in coordination/PROFILE.md, not in your memory. The owner speaks plain language: load the coordinator skill and pick the procedure yourself. Measure contexts on each owner message."
+The project's rules are in coordination/PROFILE.md, not in your memory. The owner speaks plain language: load the coordinator skill and pick the procedure yourself."
   finish "$out"
 fi
 

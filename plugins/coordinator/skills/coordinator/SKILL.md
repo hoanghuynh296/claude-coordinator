@@ -98,10 +98,10 @@ Batch questions into one message, decisions first. Never send status pings.
    `ROADMAP.md`, your handover note. That is your memory; trust it over recollection.
 2. Not registered yet: follow `coordinator-register.md`. No ledger yet: `adopt.md` (existing
    project) or `kickoff.md` (new project).
-3. On every owner message, measure the contexts of your agents (session tools, or
-   `<plugin>/scripts/check-context.sh --profile <ledger>`; a `Coordinator: …` title gets the
-   coordinator thresholds), yours included, against the profile's two thresholds. `SOFT`: no new issue; it finishes the current one, writes its handover and is
-   replaced after that PR. `HARD`: it stops at the next safe point and is replaced now.
+3. Contexts are measured by machine, not by you on every message: the rotation guard hook
+   measures yours on every owner turn (no hooks: `coordinator-register.md` step 9), and
+   `review-merge.md` step 9 measures an agent's before its Next (thresholds and what `SOFT` /
+   `HARD` mean: "Sessions" below).
 4. Keep the sessions flat: every session of the project sits at the top level of the sidebar
    ("Sessions" below). A session nested under you that you started: detach it. One you cannot
    detach: ask the owner to drag it to the top level. The app setting

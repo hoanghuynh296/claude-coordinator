@@ -216,6 +216,14 @@ lane jobs; run it locally with the template path when a change touches `bootstra
 
 ## Changes
 
+- **Unreleased**: the manual "measure every context on every owner message" rule is gone (#48,
+  release group "Coordinator cost"); it was followed in about 60 of 650 owner turns. The rule
+  moved to a machine check: the rotation guard (#47) measures the coordinator's own context on
+  every owner turn, and `review-merge.md` step 9 measures an agent's context before its Next.
+  SKILL "First thing" step 3 is now one line pointing to both; `workflow.md` section 7 says the
+  same, and the SessionStart hook no longer prints "Measure contexts on each owner message."
+  `structure-test.sh` fails if any procedure, hook or script asks for a measurement on every
+  owner message.
 - **Unreleased**: rotation guard (#47, release group "Coordinator cost"). Coordinators spent 72%
   of their tokens after passing soft because rotation was only a sentence. New
   `hooks/rotation-guard.sh` (UserPromptSubmit and Stop; Antigravity PreInvocation and Stop
