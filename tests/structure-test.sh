@@ -379,6 +379,7 @@ rules = {  # name: (regex, homes)
     "detach": (r"detach_session", [sk + "sessions.md"]),
     "top level": (r"top[\s-]+level", [sk + "sessions.md"]),
     "archive procedure": (r"archive_session", [sk + "sessions.md"]),
+    "archive alone": (r"alone\s+in\s+its\s+own\s+message", [sk + "sessions.md"]),
     "PR ready on push": (r"never\s+wait(s|ing)?\s+for\s+CI", [sk + "templates/unit-brief.md", sk + "procedures/review-merge.md"]),
     "delegation split": (r"self-contained\s+one-round\s+work", [sk + "sessions.md"]),
     "needs a session": (r"blocked:\s+needs\s+a\s+session", [sk + "sessions.md", "agents/oneoff-builder.md"]),
@@ -417,6 +418,14 @@ has references/procedures/review-merge.md 'findings only' && has ../../agents/on
   && ok "fix rounds on a subagent PR: resume, else fresh builder with PR + findings" || bad "subagent fix rounds missing"
 has SKILL.md 'invoke_subagent' && has SKILL.md 'split: `references/sessions.md`' \
   && ok "SKILL runtime map links the split for both runtimes" || bad "SKILL runtime map lacks the split link"
+# Archive alone (#52): archive_session goes alone in its own message (one home sessions.md);
+# SKILL, review-merge step 6 and pitfalls say it once; Antigravity keeps swarm kill.
+for f in references/sessions.md SKILL.md references/procedures/review-merge.md references/pitfalls.md; do
+  has "$f" 'alone in its own message' && ok "$f: archive_session alone in its own message" \
+    || bad "$f does not send archive_session alone in its own message"
+done
+has references/sessions.md 'never in parallel' && has SKILL.md 'swarm(action="kill"' \
+  && ok "archive alone: never in parallel; Antigravity swarm kill kept" || bad "archive alone lacks never-in-parallel or swarm kill"
 # No project decision ids in kit text (#51): an id like C-015 means another rule in another
 # ledger. Skill (except templates/), agents, commands, hooks and check-context.sh say the rule or
 # its reason instead; ledger-lint.sh's C-123 is its documented example, the README changelog

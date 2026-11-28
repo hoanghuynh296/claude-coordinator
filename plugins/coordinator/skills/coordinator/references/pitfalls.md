@@ -155,4 +155,5 @@ Read before starting a stretch of work. Each entry: what went wrong, then the fi
     owner-queue item each (coordination review 2026-11-18). → One archive procedure
     (`sessions.md`): a second call, then "<name> (old)" and ONE owner-queue line "Archive
     finished sessions: <names>". `audit` checks that line and that no "(old)" session is still
-    working.
+    working. The archive call also goes alone in its own message: the hook's rewrite voids the
+    verdict of every call sent with it (67 of 108 refusals in a week, review 2026-11-28).

@@ -89,7 +89,7 @@ Review and merge the named pull request. Read the unit's row and the
      archive its session (but if step 9 allows `Next: #<m> (same session)`, send that and archive
      nothing)
      (found by name "Agent: <unit> #<issue>", with the archive procedure in
-     `references/sessions.md`: on refusal one more call, then "<name> (old)" and the one owner
+     `references/sessions.md`: `archive_session` alone in its own message; on refusal one more call, then "<name> (old)" and the one owner
      line "Archive finished sessions: <names>"). Its
      work is in the PR; anything left for a next session is in the PR or the issue.
      Then check that its worktree is gone (`merge-pr.sh --per-issue ... --repo-dir` does it) (`git -C <repo> worktree list`: the PR's head branch,
