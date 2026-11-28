@@ -114,7 +114,7 @@ opened or steered by the owner and end with the coordinator's session.
 ## Context thresholds and rotation
 
 - Two thresholds (profile "Budgets"; defaults for agents 250k soft, 400k hard; for the
-  coordinator 300k soft, 450k hard on any model and window, C-015: `check-context.sh
+  coordinator 300k soft, 450k hard on any model and window, as its context grows with every merge and message: `check-context.sh
   --profile <ledger>` applies the role's pair, `--role coordinator` forces the coordinator's;
   each line names the threshold it used). Context is measured, never self-reported: the
   rotation guard hook measures the coordinator's on every owner turn, and `review-merge.md`

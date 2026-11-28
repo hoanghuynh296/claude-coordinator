@@ -19,8 +19,8 @@ short enough to check in one sitting.
 
 ## Rule: a draft before the build
 
-A new screen is approved by the owner as a draft before it is built for real (Semi Group owner
-decision C-022, amended by C-023). The draft is real app code with mock data, so nothing is
+A new screen is approved by the owner as a draft before it is built for real (so the owner sees
+and corrects it before build time is spent). The draft is real app code with mock data, so nothing is
 redrawn later. The project's own standard (for Semi Group: `handbook/standards/ui-drafts.md`
 in the group ledger) gives the route, fixtures, viewports and checks; this pack gives the
 coordination around it.

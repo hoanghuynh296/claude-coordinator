@@ -135,7 +135,7 @@ Review and merge the named pull request. Read the unit's row and the
      → `Next: done` and `#m` goes to a fresh session. Without `(same session)` the agent stops.
      Record the count in the ledger's unit row ("Agent: <unit> #<m>, issue k/3") each time you
      send a Next, so it survives a coordinator rotation; an unknown count counts as a failed
-     condition (5): the next issue goes to a fresh session. Why (C-016): a fresh session costs
+     condition (5): the next issue goes to a fresh session. Why: a fresh session costs
      one start (~78k plus ~40k of doc reads); reuse adds 60-120k to each of the ~70 calls of an
      issue, 5-8x dearer, so reuse only pays when it avoids a stalled start. The session stays
      `per-issue`: it never becomes `standing` by repetition. `Next: build #<n> (same session)`

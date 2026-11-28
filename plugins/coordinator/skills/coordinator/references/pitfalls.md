@@ -146,7 +146,7 @@ Read before starting a stretch of work. Each entry: what went wrong, then the fi
     refused in all six projects and session starts are refused while the owner is on Remote
     Control; one project let finished agents take the next issue by a vague rule and sessions
     silently became `standing`. A fresh session also re-reads every doc for a small issue. →
-    One strict same-session form with five conditions, only for a stalled start (C-016): the
+    One strict same-session form with five conditions, only for a stalled start: the
     rule is in `procedures/review-merge.md` step 9, the agent's side in `templates/unit-brief.md`
     rule 11.
 38. **Finished sessions piled up in the owner queue.** In all six projects the app's hook rewrites

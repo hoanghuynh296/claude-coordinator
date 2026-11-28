@@ -13,7 +13,7 @@
 # Role: a session titled "Coordinator: ..." is a coordinator, any other an agent; --role (or
 # --coordinator, the same as --role coordinator) sets it for every session listed.
 # Thresholds per role, later wins:
-#   1. kit defaults: agent soft 250k, hard 400k; coordinator soft 300k, hard 450k (C-015)
+#   1. kit defaults: agent soft 250k, hard 400k; coordinator soft 300k, hard 450k (any model and window)
 #   2. --profile: the "Budgets" section of the ledger's PROFILE.md (a ledger folder means its
 #      coordination/PROFILE.md); a value it does not give keeps the default
 #   3. SOFT_AT, HARD_AT (ROTATE_AT is the old name of SOFT_AT): agents only

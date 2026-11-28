@@ -51,7 +51,8 @@ Rules:
 - **Sessions are found by name**, never by id. Ids differ per machine.
 - Commit and push the changes another session would need (a merge, a decision, a release, a
   session start or rotation, an owner answer) before the turn ends: at most one ledger commit
-  per coordinator turn, batching all of that turn's changes (C-015). A handover or rotation
+  per coordinator turn, batching all of that turn's changes (each commit re-reads and
+re-lints the ledger, so fewer commits cost fewer tokens). A handover or rotation
   still commits before the session is replaced.
 
 ## `ROADMAP.md` shape
