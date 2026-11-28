@@ -128,7 +128,7 @@ files, review checklist, pitfalls, packs, templates) and two agents: `coordinato
 
 | Guard | What it stops |
 |---|---|
-| Edit guard (PreToolUse hook) | a registered coordinator editing anything inside a unit except the planning files the profile allows. Understands several units, also when they sit inside the ledger folder. `register.sh --allow <glob>` sets the allowed files; `--no-guard` switches it off for projects whose profile lets the coordinator write code |
+| Edit guard (PreToolUse hook) | a registered coordinator editing anything inside a unit except the planning files the profile allows. Understands several units, also when they sit inside the ledger folder. `register.sh --allow <glob>` sets the allowed files; `--no-guard` switches it off for projects whose profile lets the coordinator write code. On Claude Code a `coordinator:oneoff-builder` subagent may write inside its own worktree `<unit>/.claude/worktrees/builder-<name>/`; on Antigravity, whose hook input names no subagent, builders still need `--no-guard` |
 | Merge reminder (PostToolUse hook on Bash) | a registered coordinator forgetting, after `gh pr merge <N>`, to tell the author what is next or to archive a `per-issue` agent's session. It splits the command like a shell (`echo gh pr merge 9` does not count), confirms each PR with `gh pr view` (one 20 s deadline for all; `--auto` included, since a ready PR merges at once) and records `owner/repo#N` as "pending Next" only when it is MERGED (state in `~/.claude/coordinator/state/<session>/`); when gh cannot answer, or a `gh pr merge` cannot be parsed, it only reminds |
 | Next sent (PostToolUse hook on `SendMessage` and `send_message`) | clears a PR when any message the coordinator sends holds `PR #N merged` (or `PR owner/repo#N merged`, needed when N is pending in two repos) and a `Next:` line, whatever the recipient |
 | CI watch reminder (UserPromptSubmit hook, and PostToolUse on `ReadNotifications` / `FetchInboxMessage`) | a registered coordinator receiving "PR ready" and forgetting to start the background CI watch: it is reminded in that turn, with a ready-to-run `ci-watch.sh` command for each PR link in the message. A reminder, never a block |
@@ -216,6 +216,25 @@ lane jobs; run it locally with the template path when a change touches `bootstra
 
 ## Changes
 
+- **Unreleased**: builder subagents write without `--no-guard` on Claude Code (#64, release
+  group "Coordinator cost", v0.13.0). The edit guard lets a call through when its PreToolUse
+  input carries `agent_id` (Claude Code sets it only inside a subagent) with `agent_type`
+  `coordinator:oneoff-builder` (or `oneoff-builder`), and the path lies inside a linked git
+  worktree `<unit>/.claude/worktrees/builder-<name>/` of a registered unit: the name must match
+  the entry on disk (case included), and the real paths of the worktree and the file must stay
+  inside the real unit (no symlinked `.claude`, `worktrees`, worktree or file). The first builder
+  that writes there claims it, keyed on the worktree's device and inode: one worktree per
+  builder, one builder per worktree. The claims live under `$COORDINATOR_HOME/state/*/builders/`,
+  which edit tools may not write. Everything else is judged as before, so the coordinator's own
+  edits stay refused, also inside a builder worktree, and a builder writing elsewhere in the
+  unit is refused. Antigravity's hook input names no subagent (checked against the hook contract
+  shipped in its language server), so there builders keep the `--no-guard` fallback. Known
+  limits: Bash redirections and `tee` stay unguarded (the hook matches edit tools only); the
+  `agent_type` value of the plugin agent is assumed from the Agent tool's listing, and a wrong
+  guess refuses the builder (fail-safe, then `--no-guard`). `oneoff-builder` creates its
+  worktree at that path; SKILL, `coordinator-register.md`, `milestone-start.md`, the profile
+  reference and pitfall 28 drop the `--no-guard` step for Claude Code. `hooks-test.sh` covers
+  both runtimes' payloads.
 - **Unreleased**: the manual "measure every context on every owner message" rule is gone (#48,
   release group "Coordinator cost"); it was followed in about 60 of 650 owner turns. The rule
   moved to a machine check: the rotation guard (#47) measures the coordinator's own context on

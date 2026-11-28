@@ -26,10 +26,11 @@ Start the named milestone or stretch of work. Reread `references/pitfalls.md`.
      to detach itself, and otherwise ask the owner to drag it out. The brief names
      "Coordinator: <project>" as the session it reports to by message.
    - Cannot start sessions (owner on Remote Control, the coordinator runs as a terminal CLI
-     session, or the tool is unavailable): re-register this session with `--no-guard` first
-     (subagents inherit the edit guard and would be denied every write), then launch the same
-     briefs as background `oneoff-builder` subagents with their own worktree. The coordinator
-     still writes no unit code. Convert to sessions, and re-register with the guard on, when the
-     owner is back at the desktop.
+     session, or the tool is unavailable): launch the same briefs as background
+     `oneoff-builder` subagents, each with its own worktree `<unit>/.claude/worktrees/builder-<name>`
+     (the guard lets a builder write there on Claude Code; on Antigravity re-register this
+     session with `--no-guard` first, its hook input names no subagent). The coordinator
+     still writes no unit code. Convert to sessions (and, after `--no-guard`, re-register with
+     the guard on) when the owner is back at the desktop.
 5. Reply to the owner in at most 8 lines: issues created (numbers), who is doing what, what
    waits on the contract, any owner-side task this stretch needs.

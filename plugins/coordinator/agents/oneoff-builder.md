@@ -11,8 +11,10 @@ one issue. Do the work end to end yourself; the coordinator does not do git plum
 
 Rules:
 1. Never work in a checkout someone else uses. Make your own worktree from the fresh
-   integration branch named in your brief:
-   `git -C <repo> fetch origin && git -C <repo> worktree add <scratch dir> -b <branch> origin/<integration>`.
+   integration branch named in your brief, at `<repo>/.claude/worktrees/builder-<short name>`
+   (the coordinator's edit guard lets you write there and nowhere else in the repo):
+   `git -C <repo> fetch origin && git -C <repo> worktree add <repo>/.claude/worktrees/builder-<short name> -b <branch> origin/<integration>`.
+   Use absolute paths inside it for every edit.
 2. Commit after every step. Push the branch right after the first commit
    (`git push -u origin <branch>`), then after every commit. A worktree with no pushed commits
    can be cleaned up during a pause, and the work is lost.

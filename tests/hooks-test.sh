@@ -64,6 +64,71 @@ check "ws allowed docs/design/*"  allow "$(ev coord-2 Write file_path "$WS/produ
 check "ws AGENTS.md not in list"  deny  "$(ev coord-2 Edit file_path "$WS/products/app/AGENTS.md")"
 check "ws traversal into unit"    deny  "$(ev coord-2 Write file_path "$WS/coordination/../products/app/src/x.py")"
 
+echo "--- builder subagents (#64): Claude Code agent_id/agent_type, own worktree under <unit>/.claude/worktrees/builder-*"
+P="$(cd "$tmp/proj" && pwd -P)"
+git -C "$P" init -q && git -C "$P" -c user.name=t -c user.email=t@t commit -q --allow-empty -m init
+for w in builder-a builder-b 42-agent-session; do git -C "$P" worktree add -q "$P/.claude/worktrees/$w" -b "$w"; done
+mkdir -p "$P/.claude/worktrees/builder-plain/.git" "$P/.claude/worktrees/builder-a/src"
+ln -s "$P/src" "$P/.claude/worktrees/builder-b/escape"
+ln -s "$P/.claude/worktrees/builder-a" "$P/.claude/worktrees/builder-link"
+WT="$P/.claude/worktrees"
+# units whose .claude/worktrees (P2) or .claude (P3) is a symlink out of the unit
+mkdir -p "$tmp/proj2/.claude" "$tmp/proj3" "$tmp/outside/dot/worktrees"
+git -C "$P" worktree add -q "$tmp/outside/wts/builder-x" -b bx
+git -C "$P" worktree add -q "$tmp/outside/dot/worktrees/builder-y" -b by
+ln -s "$tmp/outside/wts" "$tmp/proj2/.claude/worktrees"; ln -s "$tmp/outside/dot" "$tmp/proj3/.claude"
+P2="$(cd "$tmp/proj2" && pwd -P)"; P3="$(cd "$tmp/proj3" && pwd -P)"
+"$root/plugins/coordinator/scripts/register.sh" coord-1 "$tmp/ledger" "$tmp/proj" "$tmp/proj2" "$tmp/proj3" >/dev/null
+CL="$COORDINATOR_HOME/state/coord-1/builders"
+evs() { # session agent_id agent_type path [tool]
+  printf '{"session_id":"%s","agent_id":"%s","agent_type":"%s","cwd":"%s","hook_event_name":"PreToolUse","tool_name":"%s","tool_input":{"file_path":"%s","content":"x"}}' "$1" "$2" "$3" "$L" "${5:-Write}" "$4"
+}
+for mode in jq python3; do
+  echo "--- builder JSON via $mode"
+  if [[ $mode == python3 ]]; then export COORDINATOR_NO_JQ=1; fi
+  check "coordinator itself in unit code"          deny  "$(ev coord-1 Write file_path "$P/src/app.ts")"
+  check "coordinator itself in a builder worktree" deny  "$(ev coord-1 Write file_path "$WT/builder-a/src/app.ts")"
+  check "builder in its worktree"                  allow "$(evs coord-1 a1 coordinator:oneoff-builder "$WT/builder-a/src/app.ts")"
+  check "builder in its worktree, Edit, new dir"   allow "$(evs coord-1 a1 coordinator:oneoff-builder "$WT/builder-a/new/dir/x.md" Edit)"
+  check "builder, bare agent type"                 allow "$(evs coord-1 b1 oneoff-builder "$WT/builder-b/README.md")"
+  check "builder outside its worktree (unit src)"  deny  "$(evs coord-1 a1 coordinator:oneoff-builder "$P/src/app.ts")"
+  check "builder in another builder's worktree"    deny  "$(evs coord-1 a1 coordinator:oneoff-builder "$WT/builder-b/README.md")"
+  check "second builder in a claimed worktree"     deny  "$(evs coord-1 c1 coordinator:oneoff-builder "$WT/builder-a/src/app.ts")"
+  check "builder in a session's worktree"          deny  "$(evs coord-1 d1 coordinator:oneoff-builder "$WT/42-agent-session/x.ts")"
+  check "builder in a non-worktree builder-* dir"  deny  "$(evs coord-1 e1 coordinator:oneoff-builder "$WT/builder-plain/x.ts")"
+  check "builder through a symlink out"            deny  "$(evs coord-1 b1 oneoff-builder "$WT/builder-b/escape/app.ts")"
+  check "builder via a symlinked worktree"         deny  "$(evs coord-1 f1 oneoff-builder "$WT/builder-link/src/app.ts")"
+  check "builder writing the worktree .git file"   deny  "$(evs coord-1 a1 coordinator:oneoff-builder "$WT/builder-a/.git")"
+  check "builder traversal out of its worktree"    deny  "$(evs coord-1 a1 coordinator:oneoff-builder "$WT/builder-a/../../../src/app.ts")"
+  check "other subagent type in a worktree"        deny  "$(evs coord-1 g1 general-purpose "$WT/builder-a/src/app.ts")"
+  check "agent_type without agent_id (--agent)"    deny  "$(evs coord-1 '' coordinator:oneoff-builder "$WT/builder-a/src/app.ts")"
+  check "bad agent_id"                             deny  "$(evs coord-1 'a/../1' coordinator:oneoff-builder "$WT/builder-a/src/app.ts")"
+  check "builder in the ledger (coordinator rule)" allow "$(evs coord-1 a1 coordinator:oneoff-builder "$L/COORDINATION.md")"
+  check "second builder via another letter case"   deny  "$(evs coord-1 c1 coordinator:oneoff-builder "$WT/builder-A/src/app.ts")"
+  check "owner via another letter case"            deny  "$(evs coord-1 a1 coordinator:oneoff-builder "$WT/BUILDER-a/src/app.ts")"
+  check "owner still allowed after those"          allow "$(evs coord-1 a1 coordinator:oneoff-builder "$WT/builder-a/src/app.ts")"
+  check "unit .claude/worktrees symlinked out"     deny  "$(evs coord-1 x1 coordinator:oneoff-builder "$P2/.claude/worktrees/builder-x/a.ts")"
+  check "unit .claude symlinked out"               deny  "$(evs coord-1 y1 coordinator:oneoff-builder "$P3/.claude/worktrees/builder-y/a.ts")"
+done
+unset COORDINATOR_NO_JQ
+out="$(evs coord-1 a1 coordinator:oneoff-builder "$P/src/app.ts" | bash "$hooks/coordinator-guard.sh")"
+expect_has() { # needle output [label]
+  if [[ "$2" == *"$1"* ]]; then pass=$((pass+1)); echo "PASS deny names: $1 ${3:-}"; else failn=$((failn+1)); printf 'FAIL deny lacks %s %s\n%s\n' "$1" "${3:-}" "$2"; fi; }
+expect_has "own worktree <unit>/.claude/worktrees/builder-<name>/" "$out"
+c="builder worktree claims"
+expect_has "$c" "$(evs coord-1 c1 coordinator:oneoff-builder "$CL/wt-1-2" | bash "$hooks/coordinator-guard.sh")" "(builder)"
+expect_has "$c" "$(ev coord-1 Write file_path "$CL/agent-c1" | bash "$hooks/coordinator-guard.sh")" "(coordinator)"
+expect_has "$c" "$(ev coord-1 Edit file_path "$COORDINATOR_HOME/STATE/coord-1/Builders/agent-a1" | bash "$hooks/coordinator-guard.sh")" "(case)"
+expect_has "$c" "$(ev coord-1 Write file_path "$CL" | bash "$hooks/coordinator-guard.sh")" "(dir itself)"
+ln -s "$CL" "$tmp/claims-link"
+expect_has "$c" "$(ev coord-1 Write file_path "$tmp/claims-link/agent-c1" | bash "$hooks/coordinator-guard.sh")" "(symlink)"
+owners="$(cat "$CL"/wt-* | sort | tr '\n' ' ')"  # a refused builder may hold an agent- file, never a worktree
+if [[ "$owners" == "a1 b1 " ]]; then pass=$((pass+1)); echo "PASS worktree claims: a1 and b1 only"; else failn=$((failn+1)); echo "FAIL worktree claims: $owners"; fi
+ag_b() { printf '{"conversationId":"coord-1","agentId":"a1","agentType":"coordinator:oneoff-builder","cwd":"%s","hookEventName":"PreToolUse","toolCall":{"id":"t1","name":"write_to_file","args":{"TargetFile":"%s","CodeContent":"x"}}}' "$L" "$1" | bash "$hooks/coordinator-guard.sh"; }
+out="$(ag_b "$WT/builder-a/src/app.ts")"
+if [[ "$out" == '{"decision":"deny",'* ]]; then pass=$((pass+1)); echo "PASS AG: builder worktree stays guarded (no subagent fields)"; else failn=$((failn+1)); echo "FAIL AG builder: $out"; fi
+if [[ "$(ag_b "$L/COORDINATION.md")" == '{"decision":"allow"}' ]]; then pass=$((pass+1)); echo "PASS AG: ledger allow output unchanged"; else failn=$((failn+1)); echo "FAIL AG ledger allow"; fi
+
 echo "--- registered without the guard"
 "$root/plugins/coordinator/scripts/register.sh" coord-3 "$W" "$W/products/app" --no-guard >/dev/null
 check "no-guard unit code"        allow "$(ev coord-3 Write file_path "$WS/products/app/src/main.py")"

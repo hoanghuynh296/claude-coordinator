@@ -18,9 +18,12 @@ Register this session as coordinator. Input: the ledger folder and, optionally, 
      `AGENTS.md`.
    - `--allow-none` when the profile lets the coordinator edit nothing inside units.
    - `--no-guard` only when the profile says the coordinator may write code, or when sessions
-     cannot be started and builder subagents must write in their worktrees (they inherit this
-     session's guard). In that second case the coordinator still writes no unit code itself,
-     and re-registers with the guard on once sessions can be started again.
+     cannot be started and builder subagents must write in their worktrees on a runtime where
+     the guard cannot tell them apart: Antigravity (no subagent fields in its hook input). On
+     Claude Code the guard lets a `coordinator:oneoff-builder` write inside its own worktree
+     `<unit>/.claude/worktrees/builder-<name>/`, so keep it on. In the `--no-guard` case the
+     coordinator still writes no unit code itself, and re-registers with the guard on once
+     sessions can be started again.
 3. Follow the read order in `coordination/README.md` and load the `coordinator` skill.
 4. Make sure this session sits at the top level of the sidebar: if it nests under the session
    that started it, detach yourself (`mcp__ccd_session_mgmt__detach_session` with `self`), or
