@@ -27,8 +27,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash ./hooks/next-sent.sh",
-            "timeout": 10
+            "command": "bash ./hooks/ag-chain.sh post next-sent.sh report-sent.sh",
+            "timeout": 20
           }
         ]
       }
@@ -49,8 +49,8 @@
     "Stop": [
       {
         "type": "command",
-        "command": "bash ./hooks/ag-chain.sh stop next-guard.sh rotation-guard.sh:stop",
-        "timeout": 40
+        "command": "bash ./hooks/ag-chain.sh stop next-guard.sh rotation-guard.sh:stop report-guard.sh",
+        "timeout": 60
       }
     ]
   }
