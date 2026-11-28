@@ -53,8 +53,11 @@ first measured project (one release, 13 builders, 13 reviews, one coordinator):
    so. A small fix commit after review is checked by the coordinator from its diff (and the
    CI) unless it touches a risk area; then the Reviewer re-reviews only that range.
 10. **Rotate before it gets expensive.** The coordinator's context is re-read on every call, so
-    it rotates at its soft threshold (handover), not when it is full. One working day or one
-    release per coordinator session is a good default.
+    it rotates at its soft threshold (handover), not when it is full. For a coordinator, soft =
+    rotate at the next owner desktop turn; hard = rotate in this turn (the rotation guard hook
+    says so on every owner turn past soft and blocks the end of an owner turn past hard until
+    the handover is committed). One working day or one release per coordinator session is a
+    good default.
 11. **Measure and improve.** Run the token audit (`references/procedures/token-audit.md`) at
     every release or milestone close, and whenever a session feels slow or costly. A pattern
     that holds beyond the project becomes a rule here; the rest goes into the profile.

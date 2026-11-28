@@ -136,5 +136,11 @@ export ANTIGRAVITY_BRAIN_DIR="$w/ag-brain"
 expect "Antigravity conversation id" ok   "ag-conv-1   260k / soft 250k: SOFT" bash "$script" ag-conv-1
 expect "Antigravity transcript path" ok   "ag-conv-1   260k / soft 300k: ok"   bash "$script" --coordinator "$w/ag-brain/ag-conv-1/.system_generated/logs/transcript.jsonl"
 
+expect "porcelain: exact counts, both thresholds" ok "s-mid 320000 300000 450000 SOFT" bash "$script" --porcelain --coordinator s-mid
+expect "porcelain: hard"                         ok "s-coord-hard 460000 300000 450000 HARD" bash "$script" --porcelain s-coord-hard
+expect "porcelain: ok"                           ok "s-small 120000 250000 400000 ok" bash "$script" --porcelain s-small
+expect "porcelain: no usage yet"                 ok "s-new - 250000 400000 none" bash "$script" --porcelain s-new
+expect "porcelain: Antigravity"                  ok "ag-conv-1 260000 300000 450000 ok" bash "$script" --porcelain --role coordinator ag-conv-1
+
 echo "$pass passed, $failn failed"
 [[ $failn -eq 0 ]]

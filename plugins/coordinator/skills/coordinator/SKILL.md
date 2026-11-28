@@ -246,6 +246,15 @@ for an agent what that agent's permissions denied: take it to the owner.
   is replaced. Past **hard**: it stops at the next safe point (commit, push), writes a full
   handover, reports "blocked: rotate". Never stop a session mid-task at soft: a fresh one
   re-reads everything.
+- **The coordinator** has no current issue, so its two thresholds mean: past **soft**, rotate at
+  the next owner desktop turn (handover, then a replacement); past **hard**, rotate in this
+  turn. The rotation guard hook measures the coordinator's own context on every owner turn (no
+  tool call): past soft each owner turn gets one line `Coordinator at <k>k / soft <s>k: rotate
+  now (...)`; past hard the Stop hook blocks the end of an owner-started turn until
+  `coordination/handover/coordinator.md` is committed in this session (a merge in flight is let
+  through once). Never rotate while a background subagent still runs: wait for its report, or
+  write it into the handover as "running: <agent>, <task>". On Remote Control (no session can
+  be started) the rotation is the first Owner queue item of `COORDINATION.md` instead.
 - The handover is written **before** the session's last PR merges: the coordinator archives a
   `per-issue` session right after its PR merges, and its context is gone.
 - `standing` session past a threshold: handover note, fresh session with the same name,

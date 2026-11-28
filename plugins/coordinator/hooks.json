@@ -36,8 +36,8 @@
     "PreInvocation": [
       {
         "type": "command",
-        "command": "bash ./hooks/ci-watch-reminder.sh",
-        "timeout": 10
+        "command": "bash ./hooks/ag-chain.sh prompt ci-watch-reminder.sh rotation-guard.sh:prompt",
+        "timeout": 40
       }
     ],
     "SessionStart": [
@@ -49,8 +49,8 @@
     "Stop": [
       {
         "type": "command",
-        "command": "bash ./hooks/next-guard.sh",
-        "timeout": 10
+        "command": "bash ./hooks/ag-chain.sh stop next-guard.sh rotation-guard.sh:stop",
+        "timeout": 40
       }
     ]
   }
