@@ -299,7 +299,7 @@ done
 has references/profile.md 'Same-session cap: 175k' && has references/templates/PROFILE.md 'Same-session cap' \
   && ok "same-session cap in profile Budgets" || bad "same-session cap missing from profile Budgets"
 for f in SKILL.md references/workflow.md references/profile.md references/pitfalls.md references/procedures/review-merge.md references/templates/PROFILE.md; do
-  ! grep -q '50% of \(the unit.s \)\?soft' "$f" && ok "$f has no 50%-of-soft rule" || bad "$f still has the 50%-of-soft rule"
+  ! grep -q '50% of \(the unit.s \)\?soft' "$skill/$f" && ok "$f has no 50%-of-soft rule" || bad "$f still has the 50%-of-soft rule"
 done
 # C-015 / C-017 defaults (#24): coordinator 300k/450k, Reviewer size trigger, one ledger commit per turn.
 for f in SKILL.md references/profile.md references/templates/PROFILE.md; do
