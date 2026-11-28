@@ -22,10 +22,13 @@ cat >"$tmp/gh" <<'GH'
 F="$FAKE"
 out() { local c; c="$(cat "$1")"; if [[ "$c" == ERR* ]]; then echo "${c#ERR }" >&2; exit 1; fi; printf '%s\n' "$c"; }
 case "$1 $2" in
-  "pr view") if [[ " $* " == *" --jq .state "* ]]; then [[ -f "$F/merged" ]] && echo MERGED || echo OPEN
+  "pr view") if [[ " $* " == *" --jq .state "* ]]; then [[ -f "$F/state-fail" ]] && { echo "timeout" >&2; exit 1; }
+               [[ -f "$F/merged" ]] && echo MERGED || echo OPEN
              else out "$F/view"; fi ;;
   "pr checks") out "$F/checks" ;;
-  "pr merge") echo "$*" >>"$F/merge.log"; [[ -f "$F/merge-fail" ]] && { echo "GraphQL: Head branch was modified" >&2; exit 1; }
+  "pr merge") echo "$*" >>"$F/merge.log"
+              [[ -f "$F/merge-landed-fail" ]] && { touch "$F/merged"; echo "failed to delete branch" >&2; exit 1; }
+              [[ -f "$F/merge-fail" ]] && { echo "GraphQL: Head branch was modified" >&2; exit 1; }
               touch "$F/merged" ;;
   "issue close") echo "$*" >>"$F/close.log" ;;
   "repo view") cat "$F/default" ;;
@@ -43,8 +46,8 @@ SHA=abcdef1234567890abcdef1234567890abcdef12
 case_() {
   rm -rf "$tmp/f"; mkdir -p "$tmp/f"; export FAKE="$tmp/f"
   rm -rf "$COORDINATOR_HOME/state"
-  printf '{"state":"%s","headRefOid":"%s","headRefName":"%s","baseRefName":"%s","author":{"login":"%s"},"closingIssuesReferences":[{"number":12,"repository":{"name":"r","owner":{"login":"o"}}}]}' \
-    "${3:-OPEN}" "$SHA" "${1:-feat/12-x}" "${2:-develop}" "${4:-agent-bot}" >"$FAKE/view"
+  printf '{"state":"%s","url":"https://github.com/%s/pull/7","headRefOid":"%s","headRefName":"%s","baseRefName":"%s","author":{"login":"%s"},"closingIssuesReferences":[{"number":12,"repository":{"name":"r","owner":{"login":"o"}}}]}' \
+    "${3:-OPEN}" "${5:-o/r}" "$SHA" "${1:-feat/12-x}" "${2:-develop}" "${4:-agent-bot}" >"$FAKE/view"
   echo '[{"name":"tests","bucket":"pass"},{"name":"lint","bucket":"skipping"}]' >"$FAKE/checks"
   echo main >"$FAKE/default"
 }
@@ -105,7 +108,7 @@ expect "--method wins over the profile" 0 "(rebase, abcdef1)"
 
 # Merge failure
 case_; touch "$FAKE/merge-fail"; run o/r 7 abcdef1 --session $SID
-expect "failed merge exits 3" 3 "merge failed: GraphQL: Head branch was modified"
+expect "failed merge exits 3" 3 "merge failed: o/r#7 is OPEN: GraphQL: Head branch was modified"
 [[ -z "$(bash "$plugin/scripts/next-clear.sh" $SID --list)" ]] && ok "failed merge records nothing" || bad "failed merge records nothing"
 
 # Exempt heads and login
@@ -151,6 +154,39 @@ expect "per-issue: archive line" 0 "archive: Agent: core #12"
 [[ "$(lines)" -le 6 ]] && ok "per-issue output is at most 6 lines" || bad "per-issue output is at most 6 lines" "$out"
 case_; run o/r 7 abcdef1 --session $SID --per-issue "Agent: core #12" --repo-dir "$tmp/g/repo"
 expect "no worktree left" 0 "worktree: none for feat/12-x"
+
+# The merge call fails but the PR merged (branch delete failed): merged, noted, Next recorded
+case_; touch "$FAKE/merge-landed-fail"; run o/r 7 abcdef1 --session $SID
+expect "nonzero gh pr merge on a MERGED PR counts as merged" 0 "merged into develop (merge, abcdef1); gh pr merge exited 1 (failed to delete branch; check the branch was deleted); closed o/r#12"
+[[ "$(bash "$plugin/scripts/next-clear.sh" $SID --list)" == "o/r#7" ]] && ok "landed merge records the pending Next" || bad "landed merge records the pending Next" "$out"
+# The state lookup fails: unknown, Next recorded anyway, exit 4
+case_; touch "$FAKE/state-fail"; run o/r 7 abcdef1 --session $SID
+expect "state lookup fails -> state unknown" 4 "merge state unknown (gh pr merge exit 0): check it and send the Next anyway"
+[[ "$out" == *"PR #7 merged. Next: done"* && "$(bash "$plugin/scripts/next-clear.sh" $SID --list)" == "o/r#7" ]] \
+  && ok "unknown state still records the pending Next and prints the line" || bad "unknown state records the pending Next" "$out"
+[[ ! -f "$FAKE/close.log" ]] && ok "unknown state closes no issue" || bad "unknown state closes no issue"
+
+# Merge method: only the value after the colon; a placeholder is unset
+for pv in 'Merge method: <merge commit or squash>.:merge' 'Merge method: merge (never squash).:merge' \
+          'Merge method: Squash.:squash' 'Merge method: rebase:rebase'; do
+  case_; printf -- '- Integration branch: develop. %s\n' "${pv%:*}" >"$tmp/ledger/coordination/PROFILE.md"
+  run o/r 7 abcdef1 --session $SID --ledger "$tmp/ledger"
+  expect "profile '${pv%:*}' -> ${pv##*:}" 0 "(${pv##*:}, abcdef1)"
+done
+
+# An unregistered session leaves no state dir behind
+case_; run o/r 7 abcdef1 --session typo-sess
+[[ ! -e "$COORDINATOR_HOME/state/typo-sess" ]] && ok "unregistered session creates no state dir" || bad "unregistered session creates no state dir"
+
+# The key merge-reminder stores comes from the PR URL; a case-different one is the same PR
+case_ feat/12-x develop OPEN agent-bot Owner/Repo
+bash "$plugin/scripts/next-clear.sh" $SID --add Owner/Repo#7 >/dev/null
+run owner/repo 7 abcdef1 --session $SID
+[[ "$(bash "$plugin/scripts/next-clear.sh" $SID --list)" == "Owner/Repo#7" && "$out" == *"PR #7 merged."* ]] \
+  && ok "case-different repo arg resolves to the URL key, no duplicate" || bad "case-different key" "$(bash "$plugin/scripts/next-clear.sh" $SID --list; echo "$out")"
+printf '{"session_id":"%s","tool_name":"SendMessage","tool_input":{"to":"a","message":"PR owner/repo#7 merged. Next: done"}}' $SID \
+  | bash "$plugin/hooks/next-sent.sh" >/dev/null
+[[ -z "$(bash "$plugin/scripts/next-clear.sh" $SID --list)" ]] && ok "a lower-case owner/repo#N message clears the URL key" || bad "lower-case message clears the URL key"
 
 echo "passed $pass, failed $failn"
 [[ $failn -eq 0 ]]

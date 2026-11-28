@@ -214,7 +214,7 @@ lane jobs; run it locally with the template path when a change touches `bootstra
   Antigravity transcripts. `check-context-test.sh` covers both roles, the title rule and PROFILE
   overrides.
 - `scripts/merge-pr.sh <owner/repo> <N> <head sha>` (#49, group "Coordinator cost"): the
-  mechanical part of review-merge steps 1, 6 and 9 in one call with at most 6 lines of output.
+  mechanical part of review-merge steps 1, 6 and 7 in one call with at most 6 lines of output.
   Refuses on a closed PR, a moved head, red, pending or missing CI; merges with the profile method,
   `--delete-branch` and `--match-head-commit`; closes linked issues off the default branch; records
   the pending Next itself (the merge-reminder hook does not see a `gh pr merge` inside a script), so

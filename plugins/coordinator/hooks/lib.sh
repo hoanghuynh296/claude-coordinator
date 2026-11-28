@@ -106,12 +106,13 @@ pending_add() {
   rm -f "$d/stop-blocks"
 }
 
-# pending_remove <sid> <owner/repo#N>: returns 0 when that PR was pending
+# pending_remove <sid> <owner/repo#N>: returns 0 when that PR was pending. GitHub names are
+# case-insensitive, so O/R#7 and o/r#7 are the same PR.
 pending_remove() {
   local d f; d="$(state_dir "$1")" || return 1; f="$d/pending-next"
   [[ -f "$f" ]] || return 1
-  awk -v k="$2" '$1 == k {found=1} END {exit !found}' "$f" || return 1
-  awk -v k="$2" '$1 != k' "$f" >"$f.tmp" || true
+  awk -v k="$2" 'tolower($1) == tolower(k) {found=1} END {exit !found}' "$f" || return 1
+  awk -v k="$2" 'tolower($1) != tolower(k)' "$f" >"$f.tmp" || true
   mv "$f.tmp" "$f"
   [[ -s "$f" ]] || rm -f "$f" "$d/stop-blocks"
   return 0
@@ -130,7 +131,8 @@ pending_keys() {
 pending_resolve() {
   local ref="${2#PR }"; ref="${ref# }"
   if valid_key "$ref"; then
-    pending_keys "$1" | grep -qxF "$ref" && { printf '%s' "$ref"; return 0; }
+    local hit; hit="$(pending_keys "$1" | grep -ixF -- "$ref" | head -n 1)"
+    [[ -n "$hit" ]] && { printf '%s' "$hit"; return 0; }
     return 1
   fi
   ref="${ref#\#}"

@@ -68,7 +68,8 @@ Review and merge the named pull request. Read the unit's row and the
    runtimes), and for a `per-issue` author prints the session to archive and removes its
    worktree as below. It prints at most 6 lines, among them the exact
    `PR #<n> merged. Next: <text>` to send in step 9 (`--next`, default `done`): decide the Next
-   first. It does not touch the ledger (step 7). Fallback when the script cannot run, by hand:
+   first. `merge state unknown` (exit 4): check the PR with `gh pr view`; the pending Next is
+   recorded anyway. It does not touch the ledger (step 7). Fallback when the script cannot run, by hand:
    `gh pr merge <n> --repo <repo> --merge --delete-branch --match-head-commit <head sha>`
    (or `--squash`). Pass a literal PR number; `--match-head-commit` refuses the merge if the
    head moved after what you reviewed. With `--auto` the merge may only be queued: the hook records the PR only once it

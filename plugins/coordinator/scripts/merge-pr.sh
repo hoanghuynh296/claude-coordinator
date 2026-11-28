@@ -10,8 +10,8 @@
 #   1. refuses, with one line why and no merge (exit 1), when the PR is not open, its head is not
 #      <head sha> (full or a prefix of 7+), or CI on that head is red, pending or has no checks
 #   2. `gh pr merge <N> --<method> --delete-branch --match-head-commit <sha>`; the method is
-#      --method, else the "Merge method:" line of <ledger>/coordination/PROFILE.md (squash when
-#      it says squash), else merge
+#      --method, else the first word after "Merge method:" in <ledger>/coordination/PROFILE.md
+#      (squash or rebase; a <placeholder> is ignored), else merge
 #   3. base is not the default branch → closes the PR's linked issues ("Closes #N" fires only on
 #      the default branch), each with the comment "Merged in <owner/repo>#<N>"
 #   4. records the PR as pending its Next message in the coordinator's hook state (the
@@ -31,7 +31,9 @@
 #   archive: <name>                                     (--per-issue only)
 #   worktree: removed <path> | kept: <reason> | none for <branch>   (--per-issue with --repo-dir)
 #   pending Next recorded for <session> | WARNING: ...
-# Exit: 0 merged, 1 refused (nothing merged), 2 usage or gh error, 3 the merge itself failed.
+# Exit: 0 merged, 1 refused (nothing merged), 2 usage or gh error, 3 the merge failed (the PR is
+# not MERGED afterwards), 4 merge state unknown (the pending Next is recorded anyway: check it).
+# A nonzero `gh pr merge` on a PR that is MERGED afterwards counts as merged (noted on line 1).
 # COORDINATOR_GH: the gh binary (tests). Needs python3. Same output on Claude Code and Antigravity.
 set -uo pipefail
 
@@ -64,7 +66,15 @@ next="${next//$'\n'/ }"
 if [[ -z "$method" ]]; then
   method=merge
   prof="${ledger:+$ledger/coordination/PROFILE.md}"
-  if [[ -n "$prof" && -f "$prof" ]] && grep -i 'merge method:' "$prof" | grep -qi 'squash'; then method=squash; fi
+  if [[ -n "$prof" && -f "$prof" ]]; then
+    # The first word after "Merge method:"; a template placeholder (<...>) counts as unset.
+    val="$(sed -n 's/.*[Mm]erge [Mm]ethod:[[:space:]]*//p' "$prof" | head -n 1)"
+    case "$val" in
+      "<"*) ;;
+      [Ss]quash*) method=squash ;;
+      [Rr]ebase*) method=rebase ;;
+    esac
+  fi
 fi
 
 # 1. State, head, CI. The python part prints key=value lines, or "refuse <why>" / "error <why>".
@@ -76,7 +86,7 @@ def run(args):
     p = subprocess.run([gh] + args, capture_output=True, text=True, timeout=60)
     return p.returncode, p.stdout, (p.stderr or p.stdout).strip().splitlines()[-1:] or [""]
 rc, out, err = run(["pr", "view", num, "-R", repo, "--json",
-                    "state,headRefOid,headRefName,baseRefName,author,closingIssuesReferences"])
+                    "state,url,headRefOid,headRefName,baseRefName,author,closingIssuesReferences"])
 if rc != 0:
     print("error gh pr view: " + err[0]); sys.exit()
 try:
@@ -116,7 +126,10 @@ for i in v.get("closingIssuesReferences") or []:
     ir = f"{owner}/{name}" if owner and name else repo
     if i.get("number"):
         issues.append(f"{ir}#{i['number']}")
+import re
+u = re.match(r"^https?://[^/]+/([^/]+/[^/]+)/pull/(\d+)", v.get("url") or "")
 print("ok")
+print("key=" + (u.group(1) + "#" + u.group(2) if u else f"{repo}#{num}"))
 print("head=" + head)
 print("headref=" + (v.get("headRefName") or ""))
 print("base=" + (v.get("baseRefName") or ""))
@@ -134,19 +147,42 @@ case "$first" in
 esac
 fact() { printf '%s\n' "$facts" | sed -n "s/^$1=//p" | head -n 1; }
 head="$(fact head)"; headref="$(fact headref)"; base="$(fact base)"; default="$(fact default)"
-author="$(fact author)"; issues="$(fact issues)"
+author="$(fact author)"; issues="$(fact issues)"; key="$(fact key)"
 
-# 2. Merge.
-if ! out="$("$gh" pr merge "$num" -R "$repo" "--$method" --delete-branch --match-head-commit "$head" 2>&1)"; then
-  echo "merge-pr: merge failed: $(printf '%s\n' "$out" | grep . | tail -1)"
-  exit 3
+# Record the PR as pending its Next (registered coordinator only) and print the line to send.
+reg_ok=0; [[ -n "$sid" ]] && registration_file "$sid" >/dev/null && reg_ok=1
+record_next() {
+  if [[ -z "$sid" ]]; then
+    state_line="WARNING: no --session: pending Next not recorded, the Stop guard will not hold the turn"
+  elif [[ $reg_ok -eq 0 ]]; then
+    state_line="WARNING: $sid is not a registered coordinator: pending Next not recorded"
+  elif pending_add "$sid" "$key"; then
+    state_line="pending Next recorded for $sid; the Stop guard holds the turn until it is sent"
+  else
+    state_line="WARNING: could not record the pending Next for $sid"
+  fi
+  ref="#$num"
+  if [[ $reg_ok -eq 1 && "$(pending_keys "$sid" "$num" | grep -c . || true)" -gt 1 ]]; then ref="$key"; fi
+  echo "send to ${per_issue:-the author}: PR $ref merged. Next: $next"
+}
+
+# 2. Merge. gh may exit nonzero although the merge landed (branch delete failed, timeout), so the
+# PR's state decides, never the exit code.
+merge_rc=0
+out="$("$gh" pr merge "$num" -R "$repo" "--$method" --delete-branch --match-head-commit "$head" 2>&1)" || merge_rc=$?
+merge_err="$(printf '%s\n' "$out" | grep . | tail -1)"
+state="$("$gh" pr view "$num" -R "$repo" --json state --jq .state 2>/dev/null)" || state=""
+if [[ -z "$state" ]]; then
+  echo "merge-pr: $repo#$num merge state unknown (gh pr merge exit $merge_rc${merge_err:+: $merge_err}): check it and send the Next anyway"
+  if next_exempt "$headref" "$author"; then echo "no Next message: exempt head $headref"; exit 4; fi
+  record_next; echo "$state_line"; exit 4
 fi
-state="$("$gh" pr view "$num" -R "$repo" --json state --jq .state 2>/dev/null || true)"
 if [[ "$state" != "MERGED" ]]; then
-  echo "merge-pr: merge failed: $repo#$num is ${state:-unknown} after gh pr merge"
+  echo "merge-pr: merge failed: $repo#$num is $state${merge_err:+: $merge_err}"
   exit 3
 fi
 result="merge-pr: $repo#$num merged into $base ($method, ${head:0:7})"
+[[ $merge_rc -ne 0 ]] && result+="; gh pr merge exited $merge_rc (${merge_err:-no message}; check the branch was deleted)"
 
 # 3. Linked issues when the base is not the default branch.
 if [[ -n "$issues" && -n "$default" && "$base" != "$default" ]]; then
@@ -166,24 +202,11 @@ fi
 echo "$result"
 
 # 4. Next: exempt heads, else record it pending for the Stop guard.
-key="$repo#$num"
 if next_exempt "$headref" "$author"; then
   echo "no Next message: exempt head $headref"
   exit 0
 fi
-state_line=""
-if [[ -z "$sid" ]]; then
-  state_line="WARNING: no --session: pending Next not recorded, the Stop guard will not hold the turn"
-elif ! registration_file "$sid" >/dev/null; then
-  state_line="WARNING: $sid is not a registered coordinator: pending Next not recorded"
-elif pending_add "$sid" "$key"; then
-  state_line="pending Next recorded for $sid; the Stop guard holds the turn until it is sent"
-else
-  state_line="WARNING: could not record the pending Next for $sid"
-fi
-ref="#$num"
-if [[ -n "$sid" ]] && [[ "$(pending_keys "$sid" "$num" 2>/dev/null | grep -c . || true)" -gt 1 ]]; then ref="$key"; fi
-echo "send to ${per_issue:-the author}: PR $ref merged. Next: $next"
+record_next
 
 # 5. A per-issue author: archive it and check its worktree (not when it goes on, same session).
 if [[ -n "$per_issue" && "$next" != *"(same session)"* ]]; then
