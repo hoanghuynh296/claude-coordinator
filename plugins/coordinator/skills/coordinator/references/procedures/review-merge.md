@@ -83,10 +83,9 @@ Review and merge the named pull request. Read the unit's row and the
    - The author is a `per-issue` agent: send it `PR #<n> merged. Next: done` (step 9), then
      archive its session (but if step 9 allows `Next: #<m> (same session)`, send that and archive
      nothing)
-     (`mcp__ccd_session_mgmt__archive_session`, found by name "Agent: <unit> #<issue>"; if it is
-     refused, follow the archive procedure in SKILL.md "Sessions": call once more with the
-     rewritten input, then rename "<name> (old)" and add it to the one owner line "Archive finished
-     sessions: <names>"). Its
+     (found by name "Agent: <unit> #<issue>", with the archive procedure in
+     `references/sessions.md`: on refusal one more call, then "<name> (old)" and the one owner
+     line "Archive finished sessions: <names>"). Its
      work is in the PR; anything left for a next session is in the PR or the issue.
      Then check that its worktree is gone (`merge-pr.sh --per-issue ... --repo-dir` does it) (`git -C <repo> worktree list`: the PR's head branch,
      under `<repo>/.claude/worktrees/`). If the app kept it, remove that one worktree, never the
@@ -131,7 +130,12 @@ Review and merge the named pull request. Read the unit's row and the
      → `Next: done` and `#m` goes to a fresh session. Without `(same session)` the agent stops.
      Record the count in the ledger's unit row ("Agent: <unit> #<m>, issue k/3") each time you
      send a Next, so it survives a coordinator rotation; an unknown count counts as a failed
-     condition (5): the next issue goes to a fresh session.
+     condition (5): the next issue goes to a fresh session. Why (C-016): a fresh session costs
+     one start (~78k plus ~40k of doc reads); reuse adds 60-120k to each of the ~70 calls of an
+     issue, 5-8x dearer, so reuse only pays when it avoids a stalled start. The session stays
+     `per-issue`: it never becomes `standing` by repetition. `Next: build #<n> (same session)`
+     after an approved UI draft is the same issue's build (step 5), not a next issue: these
+     conditions do not apply.
    - Otherwise the next issue from its `ROADMAP.md` list (`Next: #<m> <link>`), or
      `Next: stand by` if nothing unblocked is left.
    The plugin's Stop hook blocks the end of your turn while a merged PR has no such message.

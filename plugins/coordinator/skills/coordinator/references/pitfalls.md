@@ -111,7 +111,7 @@ Read before starting a stretch of work. Each entry: what went wrong, then the fi
     it never unbound. A rule that depends on memory failed (principle 7). → The app setting
     `auto_archive_on_pr_close` is off (`coordinator-register.md` checks it), and the
     coordinator archives each `per-issue` agent's session itself after merging its PR
-    (`mcp__ccd_session_mgmt__archive_session`); a hook after `gh pr merge` reminds it.
+    (`sessions.md`); a hook after `gh pr merge` reminds it.
 30. **Nested chains on rotation.** Each session started by another nested under it; rotations
     built chains (coordinator under coordinator, agent under replaced agent), and archiving a
     parent archived its side sessions. → All sessions are top-level peers: the starter detaches
@@ -121,8 +121,8 @@ Read before starting a stretch of work. Each entry: what went wrong, then the fi
     turn; the coordinator merged and, as the kit then said, told it nothing. Agent sessions run
     only when a message arrives, and nothing noticed the stop, so both waited. → One issue, one
     full lifecycle: the agent works one issue, reports "PR ready" and waits; in the same turn
-    as the merge the coordinator sends `PR #<n> merged. Next: <issue | handover | stand by |
-    done>`. The plugin's Stop hook blocks the coordinator's turn from ending until it has.
+    as the merge the coordinator sends the merge notice (`procedures/review-merge.md` step 9).
+    The plugin's Stop hook blocks the coordinator's turn from ending until it has.
 32. **Both sides waited for CI.** An agent pushed, saw CI queued on the single self-hosted
     runner and ended its turn: "I'll report once CI is green". Sessions run only when a message
     arrives; Auto-fix wakes an agent on CI failure only, so the green run woke nobody, and the
@@ -142,21 +142,17 @@ Read before starting a stretch of work. Each entry: what went wrong, then the fi
     `bash <path>`; `tests/exec-bits-test.sh` checks the mode in git.
 36. **Template placeholders left behind** in CI files matched nothing. → The bootstrap script
     fails while any placeholder remains.
-37. **Per-issue sessions drifting into standing ones, or never reused.** `archive_session` was
+37. **Per-issue sessions drifting into standing ones, or never reused.** Archiving was
     refused in all six projects and session starts are refused while the owner is on Remote
     Control; one project let finished agents take the next issue by a vague rule and sessions
     silently became `standing`. A fresh session also re-reads every doc for a small issue. →
-    One strict form: `PR #<n> merged. Next: #<m> (same session)`, sent only when `#m` is in the
-    same unit, measured context is under 175k (the profile may set another cap), no session can
-    be started this turn (Remote Control, an automated turn, a refused start), `#m` is not in a
-    Reviewer-mandatory risk area, and the session has done fewer than 3 issues in a row. Reuse
-    costs 5-8x a fresh start over an issue (C-016), so it is only for a stalled start. After the 3rd issue the next one
-    goes to a fresh session. The agent renames itself "Agent: <unit> #<m>" and branches fresh.
+    One strict same-session form with five conditions, only for a stalled start (C-016): the
+    rule is in `procedures/review-merge.md` step 9, the agent's side in `templates/unit-brief.md`
+    rule 11.
 38. **Finished sessions piled up in the owner queue.** In all six projects the app's hook rewrites
-    the `archive_session` input, auto mode refuses the first call, a second call with the hook's
+    the archive call's input, auto mode refuses the first call, a second call with the hook's
     `session` field usually works and sometimes is denied; ~25 finished sessions sat live, one
-    owner-queue item each (coordination review 2026-11-18). → One procedure: call
-    `archive_session`; if refused with a rewritten input, call once more with exactly that input;
-    if still refused, rename the session "<name> (old)" and add it to ONE owner-queue line
-    "Archive finished sessions: <names>". `audit` checks that line and that no "(old)" session is
-    still working.
+    owner-queue item each (coordination review 2026-11-18). → One archive procedure
+    (`sessions.md`): a second call, then "<name> (old)" and ONE owner-queue line "Archive
+    finished sessions: <names>". `audit` checks that line and that no "(old)" session is still
+    working.

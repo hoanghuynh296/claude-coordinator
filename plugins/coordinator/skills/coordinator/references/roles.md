@@ -8,8 +8,8 @@ project's `PROFILE.md` (see `profile.md` for when each one pays).
 | Role | Kind | Does | Never does |
 |---|---|---|---|
 | Owner | human | approves the plan and the profile; answers real decisions; approves anything that costs money; releases the units the profile marks owner-released; does non-code tasks (accounts, secrets, billing) | receives status pings or ack-only messages |
-| Coordinator | one Claude session | keeps the ledger, roadmap and decisions; writes issues; starts and briefs agents; reviews; on every "PR ready" starts a background CI watch (`scripts/ci-watch.sh`) and merges only on green CI for the reported head; merges into the integration branch, tells the author `PR #<n> merged. Next: ...` in the same turn, and archives the `per-issue` agent's session; detaches every session it starts to the top level; releases the units the profile gives it; reports to the owner | writes product code (unless the profile says so); does agents' git plumbing; does for an agent what that agent's permissions denied |
-| Unit agent | Claude session, `standing` or `per-issue` | owns one unit; one branch and one PR per issue; keeps its gate green; moves what it learns into the unit's docs; reports "PR ready" once per push that needs review (first line starts with `PR ready:`; local gate green, head SHA, CI state; never waiting for CI), by message to "Coordinator: <project>", then waits for `PR #<n> merged. Next: ...`; one issue at a time | edits another unit's files; merges its own PR; decides anything that costs money |
+| Coordinator | one Claude session | keeps the ledger, roadmap and decisions; writes issues; starts and briefs agents; reviews; on every "PR ready" starts a background CI watch (`scripts/ci-watch.sh`) and merges only on green CI for the reported head; merges into the integration branch, sends the author its merge notice in the same turn (`procedures/review-merge.md` step 9), and archives the `per-issue` agent's session; detaches every session it starts (`sessions.md`); releases the units the profile gives it; reports to the owner | writes product code (unless the profile says so); does agents' git plumbing; does for an agent what that agent's permissions denied |
+| Unit agent | Claude session, `standing` or `per-issue` | owns one unit; one branch and one PR per issue; keeps its gate green; moves what it learns into the unit's docs; reports "PR ready" once per push that needs review (first line starts with `PR ready:`; local gate green, head SHA, CI state; never waiting for CI), by message to "Coordinator: <project>", then waits for the merge notice; one issue at a time | edits another unit's files; merges its own PR; decides anything that costs money |
 
 ## Optional
 
@@ -33,7 +33,7 @@ project's `PROFILE.md` (see `profile.md` for when each one pays).
 - **One issue, one full lifecycle.** An agent runs only when a message arrives. It works on the
   one issue it was given, reports "PR ready", and waits; the coordinator's message after the
   merge (`PR #<n> merged. Next: ...`) is what starts its next step. Nothing else wakes it.
-- **Sessions are peers, not a tree.** Every session sits at the top level of the sidebar, so a
+- **Sessions are peers, not a tree** (`sessions.md`), so a
   rotation or an archive touches one session only. The price: no turn-end notes, so every
   report is a message to the coordinator by name.
 - **Review is independent of the author.** The author's tests encode the author's

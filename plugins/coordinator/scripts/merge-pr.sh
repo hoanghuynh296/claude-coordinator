@@ -67,8 +67,10 @@ if [[ -z "$method" ]]; then
   method=merge
   prof="${ledger:+$ledger/coordination/PROFILE.md}"
   if [[ -n "$prof" && -f "$prof" ]]; then
-    # The first word after "Merge method:"; a template placeholder (<...>) counts as unset.
+    # The first word after "Merge method:", without leading backticks, quotes or asterisks
+    # (`squash`, "squash", **squash**); a template placeholder (<...>) counts as unset.
     val="$(sed -n 's/.*[Mm]erge [Mm]ethod:[[:space:]]*//p' "$prof" | head -n 1)"
+    while [[ "$val" == [\`\"\'*]* ]]; do val="${val:1}"; done
     case "$val" in
       "<"*) ;;
       [Ss]quash*) method=squash ;;

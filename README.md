@@ -178,7 +178,7 @@ plugins/coordinator/
   .claude-plugin/plugin.json
   skills/coordinator/SKILL.md
   skills/token-audit/SKILL.md
-  skills/coordinator/references/{principles,profile,workflow,roles,state-files,review-checklist,pitfalls,token-economy}.md
+  skills/coordinator/references/{principles,profile,workflow,sessions,roles,state-files,review-checklist,pitfalls,token-economy}.md
   skills/coordinator/references/procedures/*.md            (one per command; the skill routes to them)
   skills/coordinator/references/packs/{saas-multitenant,artifact-contracts,ui-product}.md
   skills/coordinator/references/templates/*.md
@@ -216,6 +216,18 @@ lane jobs; run it locally with the template path when a change touches `bootstra
 
 ## Changes
 
+- **Unreleased**: one home per rule (#60, release group "Coordinator cost"). SKILL.md, loaded on
+  every coordinator call, goes from 21.6k to 11.8k characters (budget 12,000); no rule's meaning
+  changes. New `references/sessions.md` is the one home for placing, naming, messaging,
+  archiving (the archive procedure) and rotating sessions; SKILL keeps the runtime map, the
+  routing table, "Where the human is needed", the loop and one summary line per moved rule. The
+  same-session rule and the merge notice live in `review-merge.md` step 9 (coordinator) and
+  `unit-brief.md` rule 11 (agent); "PR ready on push" in `unit-brief.md` rule 4 and
+  `review-merge.md` step 2. `workflow.md`, `profile.md`, `roles.md`, `pitfalls.md` and the
+  PROFILE template link to those homes. `structure-test.sh` fails when a rule's key phrase
+  appears more than once outside its homes, and when SKILL.md is over budget. Ride-along (#49):
+  `merge-pr.sh` reads a backticked, quoted or bold `Merge method:` value (`` `squash` ``) as
+  that method, no longer as merge; `merge-pr-test.sh` covers it.
 - **Unreleased**: builder subagents write without `--no-guard` on Claude Code (#64, release
   group "Coordinator cost", v0.13.0). The edit guard lets a call through when its PreToolUse
   input carries `agent_id` (Claude Code sets it only inside a subagent) with `agent_type`

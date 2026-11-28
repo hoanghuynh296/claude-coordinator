@@ -72,7 +72,7 @@ for f in scripts/check-context.sh skills/coordinator/SKILL.md skills/coordinator
   if grep -q '250k' "$plugin/$f" && grep -q '400k' "$plugin/$f"; then ok "$f states the 250k/400k defaults"
   else bad "$f does not state both defaults 250k and 400k"; fi
 done
-for f in SKILL.md references/workflow.md references/procedures/handover.md references/templates/unit-brief.md; do
+for f in references/sessions.md references/workflow.md references/procedures/handover.md references/templates/unit-brief.md; do
   tr '\n' ' ' <"$skill/$f" | tr -s ' ' | grep -q 'no handover file' && ok "$f gives the per-issue handover rule" \
     || bad "$f does not give the per-issue handover rule (no handover file; at hard, into the PR)"
 done
@@ -81,7 +81,7 @@ done
 # the coordinator by name, the app setting auto_archive_on_pr_close is checked at registration,
 # and the coordinator archives a per-issue agent's session after merging its PR.
 has() { tr '\n' ' ' <"$skill/$1" | tr -s ' ' | grep -q -- "$2"; }
-for f in SKILL.md references/workflow.md references/procedures/milestone-start.md \
+for f in SKILL.md references/sessions.md references/procedures/milestone-start.md \
          references/procedures/handover.md references/procedures/coordinator-register.md \
          references/templates/unit-brief.md; do
   has "$f" 'detach_session' && ok "$f says to detach sessions to the top level" \
@@ -102,9 +102,9 @@ has references/procedures/coordinator-register.md 'get_settings' \
   && has references/procedures/coordinator-register.md 'set_setting' \
   && ok "coordinator-register reads the setting and asks the owner to turn it off" \
   || bad "coordinator-register does not read (get_settings) and change (set_setting) the setting"
-for f in SKILL.md references/workflow.md references/procedures/review-merge.md; do
-  has "$f" 'archive_session' && ok "$f archives a per-issue agent's session after its merge" \
-    || bad "$f does not name archive_session"
+has references/sessions.md 'archive_session' && ok "sessions.md archives a per-issue agent's session after its merge" \
+  || bad "sessions.md does not name archive_session"
+for f in references/sessions.md references/workflow.md references/procedures/review-merge.md; do
   has "$f" 'archived only' && ok "$f archives a standing session only on rotation" \
     || bad "$f does not say a standing session is archived only on rotation"
 done
@@ -112,7 +112,7 @@ for f in references/profile.md references/roles.md SKILL.md; do
   has "$f" 'archive.\{0,30\}per-issue\|per-issue.\{0,60\}archived by the coordinator' \
     && ok "$f: the coordinator archives per-issue sessions" || bad "$f does not say the coordinator archives per-issue sessions"
 done
-for f in references/procedures/handover.md references/templates/handover.md SKILL.md; do
+for f in references/procedures/handover.md references/templates/handover.md references/sessions.md; do
   has "$f" 'coordinator archives a `per-issue` session right after its PR merges' \
     && ok "$f: handover before the last merge, since the coordinator archives right after" \
     || bad "$f does not tie the handover timing to the coordinator's archive"
@@ -153,9 +153,9 @@ has references/pitfalls.md 'Nested chains on rotation' && has references/pitfall
 # context and wait for "PR #N merged. Next: ..."; the coordinator sends that in the merge turn,
 # and hooks enforce it.
 for f in references/templates/unit-brief.md references/templates/platform-brief.md \
-         references/templates/qa-brief.md ../../agents/oneoff-builder.md references/workflow.md \
-         SKILL.md references/roles.md references/profile.md references/templates/PROFILE.md \
-         references/procedures/review-merge.md references/pitfalls.md; do
+         references/templates/qa-brief.md ../../agents/oneoff-builder.md \
+         SKILL.md references/profile.md references/templates/PROFILE.md \
+         references/procedures/review-merge.md; do
   has "$f" 'PR #<n> merged. Next:' && ok "$f gives the merge notice \"PR #<n> merged. Next: ...\"" \
     || bad "$f does not give the merge notice format"
 done
@@ -169,8 +169,8 @@ for f in references/templates/unit-brief.md references/workflow.md SKILL.md refe
   has "$f" 'one issue at a time\|One issue at a time\|ONE issue\|one full lifecycle\|One task, one full lifecycle' \
     && ok "$f: one issue at a time" || bad "$f does not say one issue at a time"
 done
-has SKILL.md 'either working on the issue it was given or waiting on the coordinator' \
-  && ok "SKILL.md: an agent is working or waiting on the coordinator" || bad "SKILL.md lacks working-or-waiting"
+has references/sessions.md 'either working on the issue it was given or waiting on the coordinator' \
+  && ok "sessions.md: an agent is working or waiting on the coordinator" || bad "SKILL.md lacks working-or-waiting"
 has references/procedures/review-merge.md 'same turn as the merge' \
   && has references/procedures/review-merge.md 'get_usage' \
   && has references/procedures/review-merge.md 'next-clear.sh' \
@@ -289,17 +289,17 @@ assert "tools: Read, Grep, Glob, Bash" in r and "disallowedTools: Edit, Write" i
 assert "\ntools:" not in b and "model: sonnet" in b
 PY4
 # Same-session next issue (0.9.0): the strict conditions are stated where the coordinator and the agent read them.
-for f in SKILL.md references/workflow.md references/profile.md references/pitfalls.md references/procedures/review-merge.md references/templates/PROFILE.md references/templates/unit-brief.md; do
+for f in references/procedures/review-merge.md references/templates/unit-brief.md; do
   has "$f" '(same session)' && ok "$f gives the same-session Next" || bad "$f lacks the same-session Next"
 done
-for f in references/procedures/review-merge.md SKILL.md references/profile.md; do
+for f in references/procedures/review-merge.md; do
   has "$f" '175k' && has "$f" 'cannot start a session' && has "$f" 'fewer than 3' && ok "$f states the 175k, no-start and fewer-than-3 conditions" || bad "$f lacks the 175k / no-start / 3-issue conditions"
 done
 # C-016 (#23): the same-session cap is a Budgets line, default 175k; no "50% of soft" rule is left.
 has references/profile.md 'Same-session cap: 175k' && has references/templates/PROFILE.md 'Same-session cap' \
   && ok "same-session cap in profile Budgets" || bad "same-session cap missing from profile Budgets"
 for f in SKILL.md references/workflow.md references/profile.md references/pitfalls.md references/procedures/review-merge.md references/templates/PROFILE.md; do
-  ! grep -q '50% of \(the unit.s \)\?soft' "$f" && ok "$f has no 50%-of-soft rule" || bad "$f still has the 50%-of-soft rule"
+  ! grep -q '50% of \(the unit.s \)\?soft' "$skill/$f" && ok "$f has no 50%-of-soft rule" || bad "$f still has the 50%-of-soft rule"
 done
 # C-015 / C-017 defaults (#24): coordinator 300k/450k, Reviewer size trigger, one ledger commit per turn.
 for f in SKILL.md references/profile.md references/templates/PROFILE.md; do
@@ -314,7 +314,7 @@ for f in references/state-files.md references/procedures/review-merge.md; do
   has "$f" 'one ledger commit\|one commit' && ok "$f batches ledger commits per turn" || bad "$f lacks one ledger commit per turn"
 done
 # Archive fallback: two calls, then rename "(old)" and one batched owner line.
-for f in SKILL.md references/procedures/review-merge.md references/workflow.md references/procedures/handover.md; do
+for f in references/sessions.md references/procedures/review-merge.md references/procedures/handover.md; do
   has "$f" '(old)' && has "$f" 'Archive finished sessions: <names>' \
     && ok "$f gives the archive fallback (rename (old), one owner line)" \
     || bad "$f does not give the archive fallback (rename \"(old)\", one line \"Archive finished sessions: <names>\")"
@@ -367,5 +367,37 @@ mp="$plugin/scripts/merge-pr.sh"
 for word in '--delete-branch' '--match-head-commit' 'merged. Next:' 'pending_add' 'next_exempt'; do
   grep -q -- "$word" "$mp" && ok "merge-pr.sh has $word" || bad "merge-pr.sh lacks $word"
 done
+# One home per rule (#60): each rule's key phrase lives in its homes; every other skill, agent or
+# command file holds it at most once (one line that links to the home). SKILL.md, loaded on
+# every coordinator call, stays within 12,000 characters.
+python3 -I - "$plugin" <<'PY5' && ok "one home per rule: key phrases only in their homes (others at most once)" || bad "a rule's key phrase is copied outside its homes"
+import os, re, sys
+p = sys.argv[1]; sk = "skills/coordinator/references/"
+rules = {  # name: (regex, homes)
+    "same-session Next": (r"(?<!build #<n> )\(same\s+session\)", [sk + "procedures/review-merge.md", sk + "templates/unit-brief.md"]),
+    "merge notice": (r"merged\.\s+Next:", [sk + "procedures/review-merge.md", sk + "templates/unit-brief.md"]),
+    "detach": (r"detach_session", [sk + "sessions.md"]),
+    "top level": (r"top[\s-]+level", [sk + "sessions.md"]),
+    "archive procedure": (r"archive_session", [sk + "sessions.md"]),
+    "PR ready on push": (r"never\s+wait(s|ing)?\s+for\s+CI", [sk + "templates/unit-brief.md", sk + "procedures/review-merge.md"]),
+}
+files = []
+for d in ("skills", "agents", "commands"):
+    for dp, _, fs in os.walk(os.path.join(p, d)):
+        files += [os.path.relpath(os.path.join(dp, f), p) for f in fs if f.endswith(".md")]
+errs = []
+for name, (rx, homes) in rules.items():
+    for h in homes:
+        if not re.search(rx, open(os.path.join(p, h)).read()):
+            errs.append(f"{name}: missing from its home {h}")
+    for f in files:
+        if f in homes: continue
+        n = len(re.findall(rx, open(os.path.join(p, f)).read()))
+        if n > 1: errs.append(f"{name}: {n}x in {f}")
+for e in errs: print("  " + e)
+sys.exit(1 if errs else 0)
+PY5
+n=$(python3 -I -c 'import sys; print(len(open(sys.argv[1], encoding="utf-8").read()))' "$skill/SKILL.md")
+[ "$n" -le 12000 ] && ok "SKILL.md is $n characters (budget 12,000)" || bad "SKILL.md is $n characters, over the 12,000 budget"
 echo "passed $pass, failed $failn"
 [[ $failn -eq 0 ]]

@@ -52,11 +52,8 @@ merge, sends the author `PR #<n> merged. Next: <issue | handover | stand by | do
 - Integration branch: `<develop>`. Release branch: `<main>`. Merge method: <merge commit or squash>.
   After merging a `per-issue` agent's PR, the coordinator archives that agent's session; a
   `standing` session is archived only on rotation.
-- Same-session next issue (`per-issue` units): `PR #<n> merged. Next: #<m> (same session)`, only
-  if `#m` is in the same unit, the agent's measured context is under the same-session cap
-  (section 8), no session can be started this turn (Remote Control, an automated turn, a refused
-  start), `#m` is not in a Reviewer-mandatory risk area, and the session has done fewer than 3
-  issues in a row; otherwise a fresh session.
+- Same-session next issue (`per-issue` units): only under the kit's strict rule
+  (`references/procedures/review-merge.md` step 9), with the cap of section 8.
 - App setting `auto_archive_on_pr_close`: off (checked <date>). With it on, the app archives
   every session bound to a PR when that PR closes, the coordinator included.
 - A release is: <release PR into main | tag | published package | data release>, per unit if they differ.
@@ -102,8 +99,7 @@ Everything else goes through an issue for the owning unit.
 - Reports: at most <6> lines. Reviewer: at most 15 lines.
 - `COORDINATION.md`: at most <80> lines.
 - No ack-only or status-ping messages. One batched message per agent per round. The merge
-  notice `PR #<n> merged. Next: ...` is not a ping: it is the only thing that starts an
-  agent's next step.
+  notice is not a ping: it is the only thing that starts an agent's next step.
 - Token economy (`references/token-economy.md`; measured with the token audit):
   - Models per task type: <strong model> for behaviour, layout, contracts; <cheaper model> for
     re-reviews of small fix commits, release bumps, generated docs, codemods, probes.
