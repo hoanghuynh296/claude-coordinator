@@ -150,6 +150,7 @@ id and must register again.
 | `ledger-commit.sh <ledger> "<message>" [path...]` | every ledger commit in one call: lint (errors only, nothing committed, exit 1), stage and commit only `COORDINATION.md`, `coordination/` and the extra paths (other changes stay unstaged and are counted), `pull --rebase --autostash`, push, one line `ledger-commit: <sha> pushed to <upstream> (<n> file(s))`. Rebase conflict: aborted, commit kept local (3); refused push (4); no upstream: commit only |
 | `install-guards.sh`, `pre-push-guard.sh` | see above |
 | `next-clear.sh <session> <owner/repo#N> <reason>` | clear a merged PR the Stop hook waits on, when its author cannot get the Next message; the reason is appended to `coordination/next-cleared.md` in the ledger. `--list` shows what is pending; `--handover` prints it and drops the session's state (written into the handover note); `--add <owner/repo#N>...` lets the replacement take it over |
+| `merge-pr.sh <owner/repo> <N> <head sha> [--session] [--ledger] [--next] [--per-issue <name> --repo-dir <clone>]` | the mechanical part of review-merge in one call, at most 6 lines: refuses (exit 1, no merge) when the PR is not open, the head moved, or CI is red, pending or absent; merges with the profile method, `--delete-branch`, `--match-head-commit`; closes linked issues off the default branch; records the pending Next for the Stop guard (heads `release/*`, `backmerge/*`, `coordinator/*` exempt); prints the exact `PR #<n> merged. Next: ...` line, and for a per-issue author the session to archive and its worktree removed (`prune-worktrees.sh`) |
 | `ci-watch.sh <owner/repo> <N> [<sha>]` | watch a PR's CI until it ends and print one line: `green` (exit 0), `red: <checks> <link>` (1, at the first failure), `error` (2), `stale-head` when the head is not or no longer the reported SHA (3), `timeout` (4, `CI_WATCH_DEADLINE`, default 90 min), `no-checks` (5, `CI_WATCH_NOCHECKS`, default 15 min), not open (6). The coordinator runs it with `run_in_background` on every "PR ready": its exit wakes the coordinator when CI ends |
 | `register.sh <session> <ledger> [unit...] [--allow glob]... [--allow-none] [--no-guard]` | register or `--unregister` a coordinator session |
 | `prune-worktrees.sh <root>... (--sessions <file> \| --no-session-check) [--apply] [--min-age-hours N] [--discard <glob>]...` | remove finished agent worktrees (`.claude/worktrees/*`) under the roots: only a registered, unlocked worktree with no change for N hours (default 6), a clean `git status` (or only changes matching `--discard`), HEAD in a remote branch, and (`--sessions`: the `list_sessions` JSON) no live session in it or on its branch and no open PR for its branch (`gh`; a failed lookup keeps it). `git worktree remove`, branches kept, stray folders reported and kept; prints the space freed. Dry run unless `--apply` |
@@ -172,8 +173,8 @@ plugins/coordinator/
   commands/*.md
   agents/{reviewer,oneoff-builder}.md
   hooks/hooks.json, hooks/{lib,coordinator-guard,session-start,merge-reminder,next-sent,next-guard,ci-watch-reminder}.sh
-  scripts/{init-ledger,ledger-lint,ledger-commit,install-guards,pre-push-guard,register,check-context,next-clear,ci-watch,prune-worktrees,bootstrap}.sh
-tests/{hooks,ci-watch,ledger-lint,ledger-commit,pre-push-guard,structure,bootstrap,exec-bits,check-context,prune-worktrees}-test.sh
+  scripts/{init-ledger,ledger-lint,ledger-commit,merge-pr,install-guards,pre-push-guard,register,check-context,next-clear,ci-watch,prune-worktrees,bootstrap}.sh
+tests/{hooks,ci-watch,merge-pr,ledger-lint,ledger-commit,pre-push-guard,structure,bootstrap,exec-bits,check-context,prune-worktrees}-test.sh
 .github/workflows/tests.yml
 ```
 
@@ -182,6 +183,7 @@ tests/{hooks,ci-watch,ledger-lint,ledger-commit,pre-push-guard,structure,bootstr
 ```sh
 bash tests/hooks-test.sh           # edit guard, SessionStart, merge/Next/Stop hooks, CI watch reminder, jq and python3 paths, multi-unit workspace
 bash tests/ci-watch-test.sh        # ci-watch.sh with a fake gh: green, red, stale and moved head, no checks, timeout, errors
+bash tests/merge-pr-test.sh        # merge-pr.sh with a fake gh: refusals, flags, issue close, pending Next + Stop guard, exempt heads, worktree
 bash tests/ledger-lint-test.sh     # every lint rule; a fresh ledger passes
 bash tests/ledger-commit-test.sh   # ledger-commit.sh against a local bare origin: push, rebase, conflict, refused push, lint errors, hook, product files left out, extra paths
 bash tests/token-report-test.sh    # token-report.py on a fixture session with a subagent
@@ -211,6 +213,15 @@ lane jobs; run it locally with the template path when a change touches `bootstra
   threshold. `SOFT_AT` / `HARD_AT` apply to agents only, as before. Same output on Claude Code and
   Antigravity transcripts. `check-context-test.sh` covers both roles, the title rule and PROFILE
   overrides.
+- `scripts/merge-pr.sh <owner/repo> <N> <head sha>` (#49, group "Coordinator cost"): the
+  mechanical part of review-merge steps 1, 6 and 7 in one call with at most 6 lines of output.
+  Refuses on a closed PR, a moved head, red, pending or missing CI; merges with the profile method,
+  `--delete-branch` and `--match-head-commit`; closes linked issues off the default branch; records
+  the pending Next itself (the merge-reminder hook does not see a `gh pr merge` inside a script), so
+  the Stop guard still holds on Claude Code and Antigravity; `release/*`, `backmerge/*` and
+  `coordinator/*` heads stay exempt (`next_exempt` in `hooks/lib.sh`). For a per-issue author it
+  prints the session to archive and removes its worktree. `review-merge.md` uses it; the manual
+  commands stay as the fallback. New `tests/merge-pr-test.sh`.
 - `scripts/ledger-commit.sh <ledger> "<message>"` (#50, group "Coordinator cost"):
   lint, commit (ledger paths only, plus optional extra paths), rebase and push the ledger in one
   call with one line of output, replacing the
