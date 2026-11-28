@@ -2,7 +2,8 @@
 # scripts/merge-pr.sh against a fake gh: refuses on closed, stale head, red, pending and no
 # checks (no merge); merges with the right flags; closes linked issues off the default branch;
 # records the pending Next so the Stop guard holds (Claude Code and Antigravity payloads);
-# exempt heads; per-issue archive line and worktree removal; at most 6 lines.
+# exempt heads; per-issue archive line and worktree removal; at most 6 lines; refuses a base the
+# profile's "Owner approves merges into:" names unless --owner-approved.
 set -uo pipefail
 root="$(cd "$(dirname "$0")/.." && pwd -P)"
 plugin="$root/plugins/coordinator"
@@ -175,6 +176,23 @@ for pv in 'Merge method: <merge commit or squash>.:merge' 'Merge method: merge (
   case_; printf -- '- Integration branch: develop. %s\n' "${pv%:*}" >"$tmp/ledger/coordination/PROFILE.md"
   run o/r 7 abcdef1 --session $SID --ledger "$tmp/ledger"
   expect "profile '${pv%:*}' -> ${pv##*:}" 0 "(${pv##*:}, abcdef1)"
+done
+
+# Owner approves merges into: a named base refuses without --owner-approved; none, a
+# placeholder or no line lets the coordinator merge (the kit default)
+for pv in 'Owner approves merges into: none.:0' 'Owner approves merges into: <none | branch>.:0' \
+          'Owner approves merges into: `none` (the coordinator merges).:0' 'Merge method: merge.:0' \
+          'Owner approves merges into: develop.:1' 'Owner approves merges into: `main`, `develop`.:1' \
+          '**Owner approves merges into:** develop:1' 'Owner approves merges into: main.:0'; do
+  case_; printf -- '- Integration branch: develop. %s\n' "${pv%:*}" >"$tmp/ledger/coordination/PROFILE.md"
+  run o/r 7 abcdef1 --session $SID --ledger "$tmp/ledger"
+  if [[ "${pv##*:}" == 1 ]]; then
+    expect "profile '${pv%:*}' refuses develop" 1 "merges into develop need the owner's approval"; nomerge "owner-approved base"
+    run o/r 7 abcdef1 --session $SID --ledger "$tmp/ledger" --owner-approved
+    expect "profile '${pv%:*}' + --owner-approved merges" 0 "merged into develop"
+  else
+    expect "profile '${pv%:*}' lets the coordinator merge develop" 0 "merged into develop"
+  fi
 done
 
 # An unregistered session leaves no state dir behind

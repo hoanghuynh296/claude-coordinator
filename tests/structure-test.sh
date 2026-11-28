@@ -455,6 +455,19 @@ ids=$(cd "$plugin" && grep -rnE 'C-[0-9]{3}' skills agents commands hooks script
   | grep -v '^skills/coordinator/references/templates/' || true)
 [ -z "$ids" ] && ok "kit text cites no project decision id (C-0xx)" \
   || { bad "kit text cites a project decision id"; echo "$ids" | sed 's/^/  /'; }
+# Model per runtime and owner merges (#58): the template's unit table names a model per runtime
+# and the Flow line defaults to none; profile.md explains both; SKILL item 6 limits owner merge
+# asks to that line; audit flags the asks the profile does not back.
+has references/templates/PROFILE.md 'Claude: <model>, <effort>; Antigravity: <model>' \
+  && ok "PROFILE template: model per runtime in the unit table" || bad "PROFILE template lacks the model per runtime"
+has references/templates/PROFILE.md '- Owner approves merges into: none\. ' \
+  && ok "PROFILE template: Owner approves merges into: none" || bad "PROFILE template lacks 'Owner approves merges into: none.'"
+has references/profile.md 'Antigravity: <model>' && has references/profile.md 'Owner approves merges into: none | <branch>' \
+  && ok "profile.md explains model per runtime and owner merges" || bad "profile.md lacks model per runtime or owner merges"
+has SKILL.md "Owner approves merges into:\` names (default none)" \
+  && ok "SKILL: owner merges only where the profile names the branch" || bad "SKILL lacks the owner-merge line"
+has references/procedures/audit.md 'Owner merge asks:\*\*' && has references/procedures/audit.md 'does not name' \
+  && ok "audit flags owner merge asks the profile does not back" || bad "audit lacks the owner merge asks check"
 n=$(python3 -I -c 'import sys; print(len(open(sys.argv[1], encoding="utf-8").read()))' "$skill/SKILL.md")
 [ "$n" -le 12000 ] && ok "SKILL.md is $n characters (budget 12,000)" || bad "SKILL.md is $n characters, over the 12,000 budget"
 echo "passed $pass, failed $failn"

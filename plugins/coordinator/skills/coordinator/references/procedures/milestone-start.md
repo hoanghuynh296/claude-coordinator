@@ -28,7 +28,7 @@ Start the named milestone or stretch of work. Reread `references/pitfalls.md`.
      standing by. An agent with a PR in review gets its next issue in the merge notice
      (`PR #<n> merged. Next: #<m>`, `review-merge.md` step 9), not before.
    - `standing` units without a session, and `per-issue` units: start a fresh session, named
-     per the profile, with the model and effort from the profile, background from
+     per the profile, with the profile's model and effort for this runtime, background from
      `references/templates/unit-brief.md` (plus `platform-brief.md` / `qa-brief.md`), prompt =
      the link of its one issue. Start each in its own worktree and detach it to the top level right away
      (`mcp__ccd_session_mgmt__detach_session`); if that is refused, the brief tells the agent

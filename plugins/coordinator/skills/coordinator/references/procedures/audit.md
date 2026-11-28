@@ -35,6 +35,11 @@ working day, before every handover, and whenever the ledger feels wrong.
    (an issue or a docs PR).
 10. **Profile fit:** does a recurring problem point at a profile choice
     (`references/profile.md`, "Changing the profile")? Propose one change to the owner.
+    **Owner merge asks:** `PROFILE.md` has the line `Owner approves merges into:` and a model
+    per runtime in every unit row (missing → add them: `none`, the models in use, and a
+    `DECISIONS.md` row). Every ask since the last audit for the owner's leave to merge into a
+    branch that line does not name (the owner queue in `COORDINATION.md`, your messages) is a
+    finding: drop it from the queue, merge per `review-merge.md`, report how many.
 11. **Sessions:** the app setting `auto_archive_on_pr_close` is off
     (`mcp__ccd_settings__get_settings`; on → ask the owner to turn it off). No `per-issue`
     agent session is still live after its PR merged; archive it

@@ -67,7 +67,9 @@ Review and merge the named pull request. Read the unit's row and the
    (steps 3 to 5), in one call:
    `bash "<plugin>/scripts/merge-pr.sh" <owner/repo> <n> <head sha> --session <session> --ledger <ledger> [--next "<text>"] [--per-issue "<author session name>" --repo-dir <local clone>]`
    It refuses (one line, no merge) when the PR is not open, the head is not the reviewed SHA, or
-   CI there is red, pending or has none. Otherwise it merges with the profile's method,
+   CI there is red, pending or has none, or when the base is a branch the profile's
+   `Owner approves merges into:` names (ask the owner once, then add `--owner-approved`; any
+   other merge needs no owner question). Otherwise it merges with the profile's method,
    `--delete-branch` and `--match-head-commit`, closes the linked issues when the base is not the
    default branch, records the PR as pending its Next (so the Stop guard holds the turn on both
    runtimes), and for a `per-issue` author prints the session to archive and removes its

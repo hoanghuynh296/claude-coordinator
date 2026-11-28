@@ -22,7 +22,9 @@ issues and independent review.
 
 ### 2. Units
 
-For each unit: name, repo and path, what it owns, model and effort, session mode, its
+For each unit: name, repo and path, what it owns, the model per runtime
+(`Claude: <model>, <effort>; Antigravity: <model>`, or `Antigravity: not used`; the runtimes
+offer different models, so one model column cannot be right for both), session mode, its
 verification gate, who may release it, and its release rule (groups + safety ceiling).
 
 **Session mode**
@@ -97,6 +99,11 @@ None is mandatory. Add a role when its trigger is true; remove it when it stops 
   the merge method (merge commit or squash), and what a release is (a release PR, a tag, a
   published package, a data release). With a `develop` it is always `release/vX.Y.Z` →
   PR into `main` → tag → back-merge; a repo with no `develop` is released by tag.
+- **Owner merges:** `Owner approves merges into: none | <branch>, ...`. Default `none`: the
+  coordinator merges on green CI and a passed review, and the owner approves releases only
+  (an owner asked about every merge becomes a rubber stamp and a queue). A named branch makes
+  `merge-pr.sh` refuse merges into it until the owner said yes (`--owner-approved`). The
+  coordinator never asks the owner about a merge the line does not name.
 - **Cadence:** `milestone` (work is planned in milestones with exit criteria and closed with a
   demo) or `continuous` (an ordered backlog per unit; release when the gate and the owner say
   so). A project may use milestones for one unit and a continuous backlog for another.

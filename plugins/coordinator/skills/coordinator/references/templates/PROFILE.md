@@ -12,9 +12,12 @@ Last reviewed: {{DATE}}
 
 ## 2. Units
 
-| Unit | Repo / path | Owns | Model, effort | Session | Gate (must be green to merge) | Released by | Release |
+| Unit | Repo / path | Owns | Model per runtime | Session | Gate (must be green to merge) | Released by | Release |
 |---|---|---|---|---|---|---|---|
-| <name> | <owner/repo or dir/**> | <what> | <model>, <effort> | <standing or per-issue> | <CI check that must be green, e.g. CI `tests` green; manual check if any> | <owner or coordinator> | <by feature group; ceiling 2 weeks or 15 PRs> |
+| <name> | <owner/repo or dir/**> | <what> | Claude: <model>, <effort>; Antigravity: <model> | <standing or per-issue> | <CI check that must be green, e.g. CI `tests` green; manual check if any> | <owner or coordinator> | <by feature group; ceiling 2 weeks or 15 PRs> |
+
+Model per runtime: each runtime names its own model (Antigravity runs no `claude-*` model);
+write "Antigravity: not used" when the unit never runs there.
 
 Release: by feature group (large = its own group, released whole with migration notes; small
 = rides with the open group or a patch batch; urgent fix = patch at once). The ceiling is a
@@ -41,7 +44,7 @@ merge, sends the author `PR #<n> merged. Next: <issue | handover | stand by | do
 | Role | On? | Who / how |
 |---|---|---|
 | Owner | yes | {{OWNER}} |
-| Coordinator | yes | session "Coordinator: {{PROJECT_NAME}}", <model> |
+| Coordinator | yes | session "Coordinator: {{PROJECT_NAME}}", Claude: <model>; Antigravity: <model> |
 | Platform | <yes or no> | <unit and what it owns, or why not needed> |
 | QA | <yes or no> | <per milestone, or why not needed> |
 | Reviewer | yes | subagent `coordinator:reviewer`; mandatory for the risk areas in section 6 |
@@ -50,6 +53,10 @@ merge, sends the author `PR #<n> merged. Next: <issue | handover | stand by | do
 ## 4. Flow
 
 - Integration branch: `<develop>`. Release branch: `<main>`. Merge method: <merge commit or squash>.
+- Owner approves merges into: none.
+  (Kit default `none`: the coordinator merges every PR on green CI and a passed review, and
+  the owner approves releases only. Name branches, `main, develop`, only when the owner wants
+  to approve each merge into them; `merge-pr.sh` then refuses those without `--owner-approved`.)
   After merging a `per-issue` agent's PR, the coordinator archives that agent's session; a
   `standing` session is archived only on rotation.
 - Same-session next issue (`per-issue` units): only under the kit's strict rule
