@@ -35,6 +35,9 @@ idles → `per-issue`; no release rule → groups plus a safety ceiling; decisio
 
 ## Step 4 - guards and labels
 - `bash "<plugin>/scripts/install-guards.sh" --settings --tools "<unit's Tools>" <unit-dir>...`
+  Commit `.claude/lean-tools.lock.json` with `.claude/settings.json` in the same PR: the lock is
+  what lets a later run turn a group back on. If the script warns that the lock is missing but
+  catalog entries are already there (the lock was lost), re-run with `--adopt-existing` to own them.
 - Label `task` in each repo (`unit:<unit>` too in a single-repo project).
 - One short docs PR per unit: the "how work arrives" rules in its `AGENTS.md`, and a one-line
   entry for each decision that binds it.

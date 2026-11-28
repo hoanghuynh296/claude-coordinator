@@ -218,6 +218,15 @@ lane jobs; run it locally with the template path when a change touches `bootstra
 
 ## Changes
 
+- **Unreleased**: lean-tools lock safety (#38, prerequisite of #56, v0.14.0). `lean-tools.py`
+  writes `.claude/lean-tools.lock.json` before `settings.json` and puts the old lock back when
+  `settings.json` cannot be written, so kit-added entries never look like the user's; a failed
+  write exits 1 with `lean-tools: cannot write ...` and both files as they were. A missing lock
+  while `settings.json` already holds exact catalog entries prints one warning naming them (first
+  six) and the fix: new `--adopt-existing` (`install-guards.sh --tools "<groups>"
+  --adopt-existing`) records every exact catalog match as the kit's. Output contract unchanged
+  (stdout `written` / `unchanged`). `adopt.md` step 4 says to commit the lock with the settings.
+  `agent-tools-test.sh` covers the warning, adoption, an unwritable lock and unwritable settings.
 - **Unreleased**: ledger lint budgets (#57, release group "Upgrades and parity", v0.14.0).
   `ledger-lint.sh` warns when a `coordination/handover/*.md` note is over 150 lines or 10k
   characters ("knowledge goes to the unit's docs"; `HANDOVER_MAX_LINES`,
