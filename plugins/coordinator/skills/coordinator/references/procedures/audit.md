@@ -42,7 +42,10 @@ working day, before every handover, and whenever the ledger feels wrong.
     The owner queue holds at most ONE line "Archive finished sessions: <names>" (merge several
     into one; never one item each), and no session named "(old)" is still working: one that is
     working was renamed by mistake, so rename it back or stop it.
-12. **Worktrees** (once per working day): save `mcp__ccd_session_mgmt__list_sessions`
+12. **Pending starts:** every line under "Pending starts" in `COORDINATION.md` was added in
+    the latest owner turn; one older than that is reported to the owner and started in this
+    turn when it is owner-started (staffing caps in `references/sessions.md`), else kept.
+13. **Worktrees** (once per working day): save `mcp__ccd_session_mgmt__list_sessions`
     (`include_archived: false`, `limit: 200`; it returned exactly `limit` rows → raise `limit`
     and list again, so no live session is missing) as JSON to a scratch file, then
     `bash "<plugin>/scripts/prune-worktrees.sh" <each unit repo> --sessions <file> --apply`

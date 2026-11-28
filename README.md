@@ -216,6 +216,15 @@ lane jobs; run it locally with the template path when a change touches `bootstra
 
 ## Changes
 
+- **Unreleased**: staffing caps (#53, release group "Coordinator cost", patch, v0.13.0). In a
+  week the app refused 21 starts over its caps and 16 cards for another repo's agent. New
+  `references/sessions.md` "Staffing caps" (one home): on Claude Code at most 5 agents working
+  at once and 10 starts per owner message; the rest go to the ledger's "Pending starts" and
+  start first on the next owner turn; an agent for another repo starts only in an
+  owner-started turn (`user_asked` with its folder), never as a card; Antigravity has no cap.
+  SKILL "Where the human is needed" item 5 and `milestone-start.md` step 4 link to it; the
+  COORDINATION template dates each pending start; `audit.md` reports pending starts older than
+  one owner turn. `structure-test.sh` checks the home, the links and the one-home phrases.
 - **Unreleased**: builder lockout fix (#69, release group "Coordinator cost", patch batch).
   `coordinator-guard.sh`: when a `coordinator:oneoff-builder` is refused in a worktree another
   builder claimed, the agent claim that call created is removed, so the builder can still write

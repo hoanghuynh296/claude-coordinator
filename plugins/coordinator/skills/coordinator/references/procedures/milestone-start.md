@@ -14,7 +14,11 @@ Start the named milestone or stretch of work. Reread `references/pitfalls.md`.
    "depends on #<n>" and are not handed out until it merges.
 3. Order each unit's list in `ROADMAP.md`. Update `COORDINATION.md` (in progress per unit).
    Commit the ledger (`ledger-commit.sh`).
-4. **Staff it now, in this turn** (sessions can only be started from the owner's own message):
+4. **Staff it now, in this turn** (sessions can only be started from the owner's own message),
+   within the staffing caps (`references/sessions.md`, "Staffing caps": at most 5 agents
+   working at once and 10 starts per owner message on Claude Code; the rest go to "Pending
+   starts" and start on the next owner turn; another repo's agent only as `user_asked`, never
+   a card):
    - Split first: per issue, subagent or session by the delegation split
      (`references/sessions.md`, "Subagent or session"; the profile's `Delegation:` line wins).
      Self-contained one-round work outside the risk areas, under about 150k: a background

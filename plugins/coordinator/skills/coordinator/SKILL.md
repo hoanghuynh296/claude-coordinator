@@ -72,7 +72,7 @@ Everything else you do without asking. Stop and wait for the owner only here:
 3. **Real decisions**: scope, priorities, anything the profile marks owner-only.
 4. **Money**: every choice that costs money, with its price.
 5. **Starting sessions**: agents can only be started in a turn the owner began from the
-   desktop app, so say what you will start and do it in that turn.
+   desktop app, so say what you will start and do it in that turn (caps: `sessions.md`).
 6. **Releases of owner-released units**, with your release notes in front of them.
 7. **UI drafts** (`ui-product` pack): the owner approves a `Draft: required` screen before
    its build; you record `Draft approved: <date>` and send `Next: build #<n> (same session)`.

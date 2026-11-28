@@ -94,10 +94,24 @@ opened or steered by the owner and end with the coordinator's session.
   worktree (Claude Code) / `swarm(action="add", ...)` (Antigravity). Briefs, reports and
   output contracts are the same either way.
 
+## Staffing caps
+
+- **Claude Code:** after each owner message the app starts at most 10 sessions without a card,
+  and at most 5 agent sessions work at once; it refuses the rest. Before starting, count the
+  agents already working: start at most 5 working at once and at most 10 starts per owner
+  message, most urgent first. Each one over the caps gets one line under the ledger's "Pending
+  starts" (`COORDINATION.md`) and starts first on the next owner turn. Subagents are not
+  sessions and do not count.
+- **Another repository:** an agent whose folder, host, environment or preset differs from the
+  coordinator's is started only in an owner-started turn (`initiation: "user_asked"` with its
+  `cwd`), never proposed as a card: a card cannot carry a host, folder, environment or preset.
+  Outside such a turn it waits under "Pending starts".
+- **Antigravity:** no cap; `swarm` starts every agent the stretch needs.
+
 ## When sessions cannot be started
 
 - Sessions can only be started in a turn the owner started from the desktop app. Start every
-  session the stretch needs in that one turn.
+  session the stretch needs in that one turn, within the staffing caps above.
 - If sessions cannot be started (the owner is on Remote Control, the coordinator runs as a
   terminal CLI session, or the tool is unavailable), run the same brief as a background
   `oneoff-builder` subagent with its own worktree `<unit>/.claude/worktrees/builder-<name>`.
