@@ -93,6 +93,12 @@ ag "session-start: registered -> injectSteps" session-start.sh '~{"injectSteps":
 ag "session-start: plain folder -> {}"        session-start.sh '{}' "$(start ag-other "$PL")"
 mkdir -p "$w/aglink"; printf '{\n  "version": "99.0.0"\n}\n' >"$w/aglink/plugin.json"
 COORDINATOR_AG_LINK="$w/aglink" ag "session-start: newer kit at the link -> one rotate line in the same JSON" session-start.sh '~99.0.0 is installed: rotate this session at the next safe point' "$(start ag-coord "$PL")"
+echo "--- PreInvocation: kit-notice.sh (rotate line once per newer kit; hooks-test.sh has the in-place install)"
+pre_kn() { printf '{"conversationId":"%s","hookEventName":"PreInvocation"}' "$1"; }
+ag "kit-notice: session SessionStart never recorded -> {}" kit-notice.sh '{}' "$(pre_kn ag-unseen)"
+ag "kit-notice: rotate line already given at start -> {}"  kit-notice.sh '{}' "$(pre_kn ag-coord)"
+printf '%s' "$(start ag-coord2 "$L")" | COORDINATOR_AG_LINK="$w/no-link" bash "$hooks/session-start.sh" >/dev/null
+COORDINATOR_AG_LINK="$w/aglink" ag "kit-notice: newer kit installed since the start -> injectSteps" kit-notice.sh '~{"injectSteps":[{"systemMessage":{"systemMessage":"Coordinator kit ' "$(pre_kn ag-coord2)"
 
 echo "--- PostToolUse run_command: merge-reminder.sh (silent on Antigravity, records the merge)"
 cmd() { printf '{"conversationId":"%s","cwd":"%s","hookEventName":"PostToolUse","toolCall":{"id":"t","name":"run_command","args":{"CommandLine":"%s"}}}' "$1" "$w" "$2"; }

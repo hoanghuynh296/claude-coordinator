@@ -477,19 +477,19 @@ has SKILL.md 'Silent: the merge reminder and the Next-sent note' && has SKILL.md
   && ok "SKILL lists what Antigravity does not enforce" || bad "SKILL runtime section lacks the Antigravity differences"
 grep -q 'ag-install.sh --check' "$root/README.md" && grep -q 'release tag' "$root/README.md" \
   && ok "README documents the Antigravity release install" || bad "README lacks the Antigravity release install"
-# Kit upgrade path (#54): every changelog entry not yet released ends with an Upgrade list; the
+# Kit upgrade path (#54): every changelog entry newer than 0.10.0 (audit step 14 starts there) has an Upgrade list; the
 # kit line of the SessionStart hook, audit step 14 and the release message are where it is used.
 missing="$(python3 -I - "$root/README.md" <<'PY'
 import re, sys
 text = open(sys.argv[1], encoding="utf-8").read().split("## Changes\n", 1)[1]
-text = re.split(r"^- \*\*\d+\.\d+\.\d+\*\*", text, maxsplit=1, flags=re.M)[0]
+text = re.split(r"^- \*\*0\.10\.0\*\*", text, maxsplit=1, flags=re.M)[0]
 for e in re.split(r"^- ", text, flags=re.M)[1:]:
     if "**Upgrade" not in e:
         print(" ".join(e.split())[:70])
 PY
 )"
-[[ -z "$missing" ]] && ok "every Unreleased changelog entry has an Upgrade list" || bad "Unreleased entries without **Upgrade**: $missing"
-grep -q kit_line "$plugin/hooks/session-start.sh" && grep -q 'Kit upgrade' "$skill/references/procedures/audit.md" \
+[[ -z "$missing" ]] && ok "every changelog entry since 0.11.0 has an Upgrade list" || bad "changelog entries since 0.11.0 without **Upgrade**: $missing"
+grep -q kit_line "$plugin/hooks/session-start.sh" && grep -q kit_notice "$plugin/hooks/kit-notice.sh" && grep -q 'Kit upgrade' "$skill/references/procedures/audit.md" \
   && grep -q 'Coordinator kit unit only' "$skill/references/procedures/milestone-close.md" \
   && ok "kit version notice, audit step and release message are wired" || bad "kit upgrade path incomplete (session-start kit_line, audit 'Kit upgrade', milestone-close kit step)"
 n=$(python3 -I -c 'import sys; print(len(open(sys.argv[1], encoding="utf-8").read()))' "$skill/SKILL.md")

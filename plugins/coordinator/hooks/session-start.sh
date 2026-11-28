@@ -8,7 +8,9 @@
 #   3. Not registered, and the working folder is a unit checkout inside a ledger workspace
 #      (<ledger>/products/<unit>): a short reminder of how a unit agent works.
 # Each of the three ends with one kit line (#54): the kit version this session runs, or, when a
-# newer one is installed for this runtime, that the session rotates at the next safe point.
+# newer one is installed for this runtime, that the session rotates at the next safe point. The
+# version is recorded per session (kit_running in lib.sh); kit-notice.sh compares it on later
+# owner turns, since this hook runs only at a start, resume or compaction.
 set -u
 
 # shellcheck source=lib.sh
@@ -25,7 +27,7 @@ fi
 silent() { (( ag )) && printf '{}\n'; exit 0; }
 finish() {
   local msg="$1" kl
-  kl="$(kit_line "$(cd "$(dirname "$0")/.." 2>/dev/null && pwd)" "$( (( ag )) && echo ag)" 2>/dev/null || true)"
+  kl="$(kit_line "$sid" "$( (( ag )) && echo ag)" 2>/dev/null || true)"
   [[ -n "$kl" ]] && msg+="
 $kl"
   if (( ag )); then

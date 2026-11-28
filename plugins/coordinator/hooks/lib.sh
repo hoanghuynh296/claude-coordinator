@@ -154,7 +154,14 @@ next_exempt() {
 }
 
 # Kit version (#54). No network; every helper prints nothing on any error (fail open).
-# kit_version <plugin root> [ag]: the version in the manifest of the kit this hook runs from
+# kit_root: the plugin root this hook runs from (Claude Code: $CLAUDE_PLUGIN_ROOT, the cache
+# folder of the version the session loaded; else the folder above hooks/).
+kit_root() {
+  if [[ -n "${CLAUDE_PLUGIN_ROOT:-}" && -d "${CLAUDE_PLUGIN_ROOT}" ]]; then printf '%s' "$CLAUDE_PLUGIN_ROOT"
+  else (cd "$(dirname "${BASH_SOURCE[0]}")/.." 2>/dev/null && pwd); fi
+}
+
+# kit_version <plugin root> [ag]: the version in the manifest of that kit
 # (.claude-plugin/plugin.json for Claude Code, plugin.json for Antigravity).
 kit_version() {
   local m="$1/.claude-plugin/plugin.json"
@@ -195,21 +202,61 @@ except Exception:
 ' "$f" 2>/dev/null || true
 }
 
-# version_gt <a> <b>: 0 when version a is newer than b (numeric per part; 0.12.0 > 0.9.1)
+# version_gt <a> <b>: 0 when version a is newer than b, part by part as numbers, a missing part
+# counting as 0 (0.10.0 > 0.9.0, 1.0.0.1 > 1.0.0, 1.0.0.0 == 1.0.0)
 version_gt() {
-  [[ -n "$1" && -n "$2" && "$1" != "$2" ]] || return 1
-  [[ "$(printf '%s\n%s\n' "$1" "$2" | sort -t. -k1,1n -k2,2n -k3,3n | tail -n 1)" == "$1" ]]
+  [[ "$1" =~ ^[0-9]+(\.[0-9]+)*$ && "$2" =~ ^[0-9]+(\.[0-9]+)*$ ]] || return 1
+  awk -v a="$1" -v b="$2" 'BEGIN { na = split(a, x, "."); nb = split(b, y, "."); n = na > nb ? na : nb
+    for (i = 1; i <= n; i++) { p = x[i] + 0; q = y[i] + 0; if (p > q) exit 0; if (p < q) exit 1 }
+    exit 1 }'
 }
 
-# kit_line <plugin root> [ag]: the SessionStart kit line ("" when the version is unknown)
+# The version a session runs is kept in $COORD_HOME/state/<sid>/kit-running, written by the
+# SessionStart hook for every session it speaks to (silent sessions get none, so kit-notice.sh
+# stays silent for them). Claude Code: the version of kit_root, rewritten at every start (a
+# resume after /reload-plugins runs the new cache). Antigravity: the version seen at the
+# conversation's first start, kept, because ag-install.sh checks the new tag out in place and
+# the hook's own manifest then already says the new version.
+kit_running() { # <sid> [ag]
+  [[ "$1" =~ ^[A-Za-z0-9_-]+$ ]] || return 0
+  local f="$COORD_HOME/state/$1/kit-running" v
+  if [[ -n "${2:-}" && -s "$f" ]]; then head -n 1 "$f"; return 0; fi
+  v="$(kit_version "$(kit_root)" "${2:-}")"
+  [[ -n "$v" ]] || return 0
+  mkdir -p "$COORD_HOME/state/$1" 2>/dev/null && printf '%s\n' "$v" >"$f" 2>/dev/null
+  printf '%s' "$v"
+}
+
+kit_rotate_text() { # <running> <installed>
+  printf 'Coordinator kit %s runs here; %s is installed: rotate this session at the next safe point (a coordinator: handover.md, then a replacement; an agent: once its PR is merged, tell its coordinator).' "$1" "$2"
+}
+
+# kit_line <sid> [ag]: the SessionStart kit line ("" when the version is unknown). A rotate line
+# is remembered (kit-notified), so kit-notice.sh does not repeat it.
 kit_line() {
   local run new
-  run="$(kit_version "$1" "${2:-}")"
+  run="$(kit_running "$1" "${2:-}")"
   [[ -n "$run" ]] || return 0
   new="$(kit_installed_version "${2:-}")"
   if version_gt "$new" "$run"; then
-    printf 'Coordinator kit %s runs here; %s is installed: rotate this session at the next safe point (a coordinator: handover.md, then a replacement; an agent: once its PR is merged, tell its coordinator).' "$run" "$new"
+    printf '%s\n' "$new" >"$COORD_HOME/state/$1/kit-notified" 2>/dev/null
+    kit_rotate_text "$run" "$new"
   else
     printf 'Coordinator kit %s.' "$run"
   fi
+}
+
+# kit_notice <sid> [ag]: for kit-notice.sh on each prompt - the rotate line once per newer
+# installed version, only in a session SessionStart recorded; "" otherwise. Claude Code
+# compares the hook's own root (the session's loaded version), Antigravity the recorded one.
+kit_notice() {
+  [[ "$1" =~ ^[A-Za-z0-9_-]+$ ]] || return 0
+  local d="$COORD_HOME/state/$1" run new
+  [[ -s "$d/kit-running" ]] || return 0
+  if [[ -n "${2:-}" ]]; then run="$(head -n 1 "$d/kit-running")"; else run="$(kit_version "$(kit_root)")"; fi
+  new="$(kit_installed_version "${2:-}")"
+  version_gt "$new" "$run" || return 0
+  [[ "$(head -n 1 "$d/kit-notified" 2>/dev/null)" == "$new" ]] && return 0
+  printf '%s\n' "$new" >"$d/kit-notified" 2>/dev/null || return 0
+  kit_rotate_text "$run" "$new"
 }

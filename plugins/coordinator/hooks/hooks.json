@@ -60,6 +60,11 @@
             "type": "command",
             "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/rotation-guard.sh\" prompt",
             "timeout": 30
+          },
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/kit-notice.sh\"",
+            "timeout": 10
           }
         ]
       }

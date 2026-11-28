@@ -62,7 +62,8 @@ working day, before every handover, and whenever the ledger feels wrong.
     worktree (for example `apps/*/AGENTS.md`) go in the profile and are passed as `--discard`.
 14. **Kit upgrade** (per project; also when a kit release message arrives):
     - **Running kit:** the SessionStart line `Coordinator kit <v>`. A line `... <new> is
-      installed: rotate this session at the next safe point` → rotate (`handover.md`, then a
+      installed: rotate this session at the next safe point` (at a start, resume, compaction
+      or owner turn) → rotate (`handover.md`, then a
       replacement) at the next owner desktop turn; agents on the old kit rotate once their PR
       is merged. Installed older than the newest release (`gh release view --repo
       hoanghuynh296/claude-coordinator --json tagName`; Antigravity: `ag-install.sh --check`
