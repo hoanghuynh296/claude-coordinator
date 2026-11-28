@@ -77,6 +77,8 @@ Everything else runs without you. The coordinator stops and waits only for:
 5. **Starting agent sessions**: they can only be started in a turn you began from the
    desktop app, so the coordinator asks you to say "go" there.
 6. **Releases of the units your profile gives you**, with the release notes in front of you.
+   Merges are not asked about unless your profile's `Owner approves merges into:` names the
+   branch (default none: the coordinator merges on green CI and a passed review).
 7. **Checks only a human can do** (a real device, a real customer flow). Skipped ones are
    listed as `UNVERIFIED` in the release notes.
 
@@ -162,7 +164,7 @@ id and must register again.
 | `ledger-commit.sh <ledger> "<message>" [path...]` | every ledger commit in one call: lint (errors only, nothing committed, exit 1), stage and commit only `COORDINATION.md`, `coordination/` and the extra paths (other changes stay unstaged and are counted), `pull --rebase --autostash`, push, one line `ledger-commit: <sha> pushed to <upstream> (<n> file(s))`. Rebase conflict: aborted, commit kept local (3); refused push (4); no upstream: commit only |
 | `install-guards.sh`, `pre-push-guard.sh` | see above |
 | `next-clear.sh <session> <owner/repo#N> <reason>` | clear a merged PR the Stop hook waits on, when its author cannot get the Next message; the reason is appended to `coordination/next-cleared.md` in the ledger. `--list` shows what is pending; `--handover` prints it and drops the session's state (written into the handover note); `--add <owner/repo#N>...` lets the replacement take it over |
-| `merge-pr.sh <owner/repo> <N> <head sha> [--session] [--ledger] [--next] [--per-issue <name> --repo-dir <clone>]` | the mechanical part of review-merge in one call, at most 6 lines: refuses (exit 1, no merge) when the PR is not open, the head moved, or CI is red, pending or absent; merges with the profile method, `--delete-branch`, `--match-head-commit`; closes linked issues off the default branch; records the pending Next for the Stop guard (heads `release/*`, `backmerge/*`, `coordinator/*` exempt); prints the exact `PR #<n> merged. Next: ...` line, and for a per-issue author the session to archive and its worktree removed (`prune-worktrees.sh`) |
+| `merge-pr.sh <owner/repo> <N> <head sha> [--session] [--ledger] [--next] [--per-issue <name> --repo-dir <clone>] [--owner-approved]` | the mechanical part of review-merge in one call, at most 6 lines: refuses (exit 1, no merge) when the PR is not open, the head moved, CI is red, pending or absent, or the base is a branch the profile's `Owner approves merges into:` names and `--owner-approved` is not given; merges with the profile method, `--delete-branch`, `--match-head-commit`; closes linked issues off the default branch; records the pending Next for the Stop guard (heads `release/*`, `backmerge/*`, `coordinator/*` exempt); prints the exact `PR #<n> merged. Next: ...` line, and for a per-issue author the session to archive and its worktree removed (`prune-worktrees.sh`) |
 | `ci-watch.sh <owner/repo> <N> [<sha>]` | watch a PR's CI until it ends and print one line: `green` (exit 0), `red: <checks> <link>` (1, at the first failure), `error` (2), `stale-head` when the head is not or no longer the reported SHA (3), `timeout` (4, `CI_WATCH_DEADLINE`, default 90 min), `no-checks` (5, `CI_WATCH_NOCHECKS`, default 15 min), not open (6). The coordinator runs it with `run_in_background` on every "PR ready": its exit wakes the coordinator when CI ends |
 | `register.sh <session> <ledger> [unit...] [--allow glob]... [--allow-none] [--no-guard]` | register or `--unregister` a coordinator session |
 | `prune-worktrees.sh <root>... (--sessions <file> \| --no-session-check) [--apply] [--min-age-hours N] [--discard <glob>]...` | remove finished agent worktrees (`.claude/worktrees/*`) under the roots: only a registered, unlocked worktree with no change for N hours (default 6), a clean `git status` (or only changes matching `--discard`), HEAD in a remote branch, and (`--sessions`: the `list_sessions` JSON) no live session in it or on its branch and no open PR for its branch (`gh`; a failed lookup keeps it). `git worktree remove`, branches kept, stray folders reported and kept; prints the space freed. Dry run unless `--apply` |
@@ -227,6 +229,21 @@ lane jobs; run it locally with the template path when a change touches `bootstra
   queue and items still live ("not done", or waits / open / needs / until / check /
   `UNVERIFIED` / a `#ref` after the finished word) never error. Upgrading changes no ledger's
   exit code. `state-files.md` documents the rule; `ledger-lint-test.sh` covers both rules.
+- **Unreleased**: profile names the model per runtime and who approves merges (#58, release
+  group "Upgrades and parity", v0.14.0). One coordinator asked the owner 54 times in a week
+  for leave to merge, though no profile said so; a unit table with one model column could not
+  hold both runtimes' models. The PROFILE template's unit table has `Model per runtime`
+  (`Claude: <model>, <effort>; Antigravity: <model>`, also for the coordinator role), and Flow
+  has `Owner approves merges into: none` (kit default: the coordinator merges on green CI and
+  a passed review; the owner approves releases only). `references/profile.md` explains both;
+  SKILL "Where the human is needed" item 6 and `review-merge.md` step 6 ask the owner only
+  about the branches that line names; `merge-pr.sh` reads the line like `Merge method:` and
+  refuses a named base without `--owner-approved`; `audit.md` step 10 flags owner merge asks
+  the profile does not back and profiles missing either line. `merge-pr-test.sh` and
+  `structure-test.sh` cover it. Same on Claude Code and Antigravity (text and a bash script).
+  **Upgrade (each project):** add `- Owner approves merges into: none.` under `PROFILE.md`
+  "Flow" (or the branches the owner names, with a `DECISIONS.md` row), and write every unit's
+  and the coordinator's model as `Claude: <model>, <effort>; Antigravity: <model>`.
 - **Unreleased**: staffing caps (#53, release group "Coordinator cost", patch, v0.13.0). In a
   week the app refused 21 starts over its caps and 16 cards for another repo's agent. New
   `references/sessions.md` "Staffing caps" (one home): on Claude Code at most 5 agents working

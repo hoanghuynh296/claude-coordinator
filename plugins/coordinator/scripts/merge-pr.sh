@@ -6,9 +6,12 @@
 # Usage: merge-pr.sh <owner/repo> <N> <head sha> [--session <id>] [--ledger <dir>]
 #                    [--method merge|squash|rebase] [--next "<text>"]
 #                    [--per-issue "<author session name>"] [--repo-dir <local clone>]
+#                    [--owner-approved]
 #
 #   1. refuses, with one line why and no merge (exit 1), when the PR is not open, its head is not
-#      <head sha> (full or a prefix of 7+), or CI on that head is red, pending or has no checks
+#      <head sha> (full or a prefix of 7+), or CI on that head is red, pending or has no checks,
+#      or its base is a branch the profile's "Owner approves merges into:" line names (none, a
+#      <placeholder> or no line: no branch) and --owner-approved is not given
 #   2. `gh pr merge <N> --<method> --delete-branch --match-head-commit <sha>`; the method is
 #      --method, else the first word after "Merge method:" in <ledger>/coordination/PROFILE.md
 #      (squash or rebase; a <placeholder> is ignored), else merge
@@ -42,13 +45,14 @@ set -uo pipefail
 here="$(cd "$(dirname "$0")" && pwd -P)"
 gh="${COORDINATOR_GH:-gh}"
 
-usage() { sed -n '6,8p' "$0" | sed 's/^# \{0,1\}//' >&2; exit 2; }
+usage() { sed -n '6,9p' "$0" | sed 's/^# \{0,1\}//' >&2; exit 2; }
 die() { echo "merge-pr: $*"; exit 2; }
 
 repo="${1:-}"; num="${2:-}"; sha="${3:-}"
 [[ "$repo" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ && "$num" =~ ^[0-9]+$ && "$sha" =~ ^[0-9a-fA-F]{7,40}$ ]] || usage
 shift 3
 sid="${COORDINATOR_SESSION_ID:-}"; ledger=""; method=""; next="done"; per_issue=""; repo_dir=""
+owner_ok=0
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --session) [[ $# -ge 2 ]] || usage; sid="$2"; shift 2 ;;
@@ -57,16 +61,32 @@ while [[ $# -gt 0 ]]; do
     --next) [[ $# -ge 2 && -n "$2" ]] || usage; next="$2"; shift 2 ;;
     --per-issue) [[ $# -ge 2 && -n "$2" ]] || usage; per_issue="$2"; shift 2 ;;
     --repo-dir) [[ $# -ge 2 && -d "$2" ]] || usage; repo_dir="$2"; shift 2 ;;
+    --owner-approved) owner_ok=1; shift ;;
     -h|--help) usage ;;
     *) usage ;;
   esac
 done
 command -v python3 >/dev/null 2>&1 || die "python3 missing"
 next="${next//$'\n'/ }"
+prof="${ledger:+$ledger/coordination/PROFILE.md}"
+[[ -n "$prof" && -f "$prof" ]] || prof=""
+# Branches whose merges the owner approves: the words after "Owner approves merges into:",
+# split on commas and spaces, each without backticks, quotes, asterisks or a trailing period;
+# "none", a <placeholder> or no line means none (the kit default: the coordinator merges).
+owner_branches=""
+if [[ -n "$prof" ]]; then
+  val="$(sed -n 's/.*[Oo]wner approves merges into:[[:space:]]*//p' "$prof" | head -n 1)"
+  set -f
+  for w in $(printf '%s' "$val" | tr ',' ' '); do
+    w="$(printf '%s' "$w" | tr -d '`"*'"'")"; w="${w%.}"; w="${w%;}"
+    case "$w" in "") continue ;; "<"*|[Nn]one|"("*) break ;; esac
+    owner_branches+=" $w"
+  done
+  set +f
+fi
 if [[ -z "$method" ]]; then
   method=merge
-  prof="${ledger:+$ledger/coordination/PROFILE.md}"
-  if [[ -n "$prof" && -f "$prof" ]]; then
+  if [[ -n "$prof" ]]; then
     # The first word after "Merge method:", without leading spaces, backticks, quotes or
     # asterisks (`squash`, "squash", **squash**, **Merge method:** squash); a template
     # placeholder (<...>) counts as unset.
@@ -151,6 +171,10 @@ esac
 fact() { printf '%s\n' "$facts" | sed -n "s/^$1=//p" | head -n 1; }
 head="$(fact head)"; headref="$(fact headref)"; base="$(fact base)"; default="$(fact default)"
 author="$(fact author)"; issues="$(fact issues)"; key="$(fact key)"
+if [[ $owner_ok -eq 0 && " $owner_branches " == *" $base "* ]]; then
+  echo "merge-pr: refused: merges into $base need the owner's approval (PROFILE.md \"Owner approves merges into:\"); ask once, then rerun with --owner-approved"
+  exit 1
+fi
 
 # Record the PR as pending its Next (registered coordinator only) and print the line to send.
 reg_ok=0; [[ -n "$sid" ]] && registration_file "$sid" >/dev/null && reg_ok=1

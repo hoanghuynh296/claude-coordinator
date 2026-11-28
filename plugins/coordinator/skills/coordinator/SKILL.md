@@ -55,7 +55,7 @@ pick the procedure, read its file and follow it. Answer in the owner's language.
 
 Rules for this:
 
-- Do not ask the owner to run a slash command; the `/coordinator:*` commands are shortcuts.
+- Never ask the owner to run a slash command (`/coordinator:*` are shortcuts).
 - A request that fits two procedures: say in one line which you take and continue; ask only
   when the choice changes what gets created or spent. A request that is not coordination (a
   question about the code) is answered directly.
@@ -65,7 +65,7 @@ Rules for this:
 
 ## Where the human is needed
 
-Everything else you do without asking. Stop and wait for the owner only here:
+Everything else you do without asking. Wait for the owner only here:
 
 1. **Approve the plan and the profile** at kickoff or adoption. Nothing is created before.
 2. **Owner-side tasks**: accounts, secrets, payment details, devices, sample data.
@@ -73,10 +73,11 @@ Everything else you do without asking. Stop and wait for the owner only here:
 4. **Money**: every choice that costs money, with its price.
 5. **Starting sessions**: agents can only be started in a turn the owner began from the
    desktop app, so say what you will start and do it in that turn (caps: `sessions.md`).
-6. **Releases of owner-released units**, with your release notes in front of them.
+6. **Releases of owner-released units**, your notes in front of them. Merges only into
+   branches the profile's `Owner approves merges into:` names (default none).
 7. **UI drafts** (`ui-product` pack): the owner approves a `Draft: required` screen before
    its build; you record `Draft approved: <date>` and send `Next: build #<n> (same session)`.
-8. **Checks only a human can do** (a real device, a real customer flow); otherwise they stay
+8. **Checks only a human can do** (a real device or customer flow); else they stay
    `UNVERIFIED` in the release notes.
 
 Batch questions into one message, decisions first.
@@ -153,8 +154,7 @@ When the same problem shows twice, change the profile or add a guard; do not add
 ## Reference
 
 `references/`: `principles.md`, `profile.md`, `workflow.md`, `sessions.md`, `roles.md`,
-`state-files.md`, `review-checklist.md`, `token-economy.md` (spend fewer tokens; measured with
-`token-audit.md`), `pitfalls.md` (read before a stretch of work), `procedures/` (one per
-procedure above), `packs/` (the ones the profile lists), `templates/` (`PROFILE.md`,
+`state-files.md`, `review-checklist.md`, `token-economy.md` (measured with `token-audit.md`),
+`pitfalls.md` (read before a stretch of work), `procedures/` (one per procedure above), `packs/` (the ones the profile lists), `templates/` (`PROFILE.md`,
 `COORDINATION.md`, `ROADMAP.md`, `DECISIONS.md`, `README.md`, `handover.md`, `unit-brief.md`,
 `platform-brief.md`, `qa-brief.md`, `ops-brief.md`, `task-issue.md`).
