@@ -137,6 +137,69 @@ expect_lint "non-release heading starting with Group is ignored" ok "$w/g6" "1 w
 fresh g7; printf '| core | idle since 2020-01-01 | nothing |\n' >> "$w/g7/COORDINATION.md"
 expect_lint "non-unit row with an old since-date gives no ceiling warning" ok "$w/g7" "1 warning(s)"
 
+# Finished work (#57): a warning by default, with each line's age, oldest first; an error only
+# when the ledger sets FINISHED_DAYS. A line's date: its last commit (git blame), else "Updated:".
+days_ago() { python3 -c "import datetime,sys;print(datetime.date.today()-datetime.timedelta(days=int(sys.argv[1])))" "$1"; }
+gcommit() { # dir days-ago message
+  ( cd "$1" && git add -A && GIT_AUTHOR_DATE="$(days_ago "$2")T12:00:00" GIT_COMMITTER_DATE="$(days_ago "$2")T12:00:00" \
+    git -c user.name=t -c user.email=t@t commit -qm "$3" ); }
+fresh f1; ( cd "$w/f1" && git init -q . ); gcommit "$w/f1" 30 init
+for n in 1 2 3; do echo "- web PR #1$n merged" >> "$w/f1/COORDINATION.md"; done; gcommit "$w/f1" 12 old
+for n in 4 5 6; do echo "- web PR #1$n merged" >> "$w/f1/COORDINATION.md"; done; gcommit "$w/f1" 3 newer
+expect_lint "default: old finished lines are a warning only" ok "$w/f1" "0 error(s)"
+expect_lint "the warning gives each line's age, oldest first" ok "$w/f1" "oldest first: line 3 (30 days), line 35 (12 days)"
+printf 'FINISHED_DAYS=7\n' > "$w/f1/.ledger-lint"
+expect_lint "FINISHED_DAYS=7: finished item older than 7 days is an error" fail "$w/f1" "COORDINATION.md:35: finished work 12 days old"
+expect_lint "the error names the FINISHED_DAYS=0 escape" fail "$w/f1" "set FINISHED_DAYS=0 in .ledger-lint"
+expect_lint "template prose (merged PRs) is never an error" fail "$w/f1" "3 error(s)"
+out="$(FINISHED_DAYS=20 bash "$scripts/ledger-lint.sh" "$w/f1" 2>&1)" && { pass=$((pass+1)); echo "PASS FINISHED_DAYS from the environment wins"; } \
+  || { failn=$((failn+1)); echo "FAIL FINISHED_DAYS env: $out"; }
+printf 'FINISHED_DAYS=0\n' > "$w/f1/.ledger-lint"
+expect_lint "FINISHED_DAYS=0 keeps it a warning" ok "$w/f1" "0 error(s)"
+
+# Live lines that mention merged/done never error, even with FINISHED_DAYS set and 20 days old.
+fresh f2; ( cd "$w/f2" && git init -q . ); printf 'FINISHED_DAYS=7\n' > "$w/f2/.ledger-lint"
+cat >> "$w/f2/COORDINATION.md" <<'L'
+| core | M3 done | #40, agent | nothing |
+- PR #193 merged; the 2nd runner waits on the disk check
+- api M2 is not done
+- web PR #7 merged, UNVERIFIED on a real phone
+- docs merged, next #51
+- api PR #9 merged
+  waiting on the release tag
+## Owner queue (in order)
+1. Approve the release after PR #8 merged.
+L
+gcommit "$w/f2" 20 live
+expect_lint "live lines with merged/done are never errors" ok "$w/f2" "0 error(s)"
+printf '## Notes\n- app PR #2 merged\n' >> "$w/f2/COORDINATION.md"; gcommit "$w/f2" 20 done
+expect_lint "a plain finished item next to them is the one error" fail "$w/f2" "1 error(s)"
+# a multi-line item is dated by its newest line
+fresh f3; ( cd "$w/f3" && git init -q . ); printf 'FINISHED_DAYS=7\n' > "$w/f3/.ledger-lint"
+echo "- api PR #3 merged" >> "$w/f3/COORDINATION.md"; gcommit "$w/f3" 20 old
+echo "  and the staging deploy is green" >> "$w/f3/COORDINATION.md"; gcommit "$w/f3" 2 newer
+expect_lint "multi-line item dated by its newest line" ok "$w/f3" "0 error(s)"
+echo "- api PR #4 merged" >> "$w/f3/COORDINATION.md"
+expect_lint "an uncommitted finished item is new" ok "$w/f3" "0 error(s)"
+# outside git: dated by "Updated:"
+fresh f4; sed -i.bak "s/^Updated: .*/Updated: $(days_ago 9)/" "$w/f4/COORDINATION.md"; rm "$w/f4/COORDINATION.md.bak"
+echo "- web PR #12 merged" >> "$w/f4/COORDINATION.md"
+expect_lint "outside git, default: no error" ok "$w/f4" "0 error(s)"
+printf 'FINISHED_DAYS=7\n' > "$w/f4/.ledger-lint"
+expect_lint "outside git, FINISHED_DAYS=7: dated by Updated:" fail "$w/f4" "finished work 9 days old"
+
+# Handover notes over 150 lines or 10k characters are a warning (#57).
+fresh h1; for i in $(seq 1 151); do echo "- line $i" >> "$w/h1/coordination/handover/web.md"; done
+expect_lint "handover over 150 lines is a warning" ok "$w/h1" "knowledge goes to the unit's docs"
+printf 'HANDOVER_MAX_LINES=200\n' > "$w/h1/.ledger-lint"
+expect_lint "HANDOVER_MAX_LINES from .ledger-lint" ok "$w/h1" "1 warning(s)"
+fresh h2; python3 -c "print('x' * 10001)" > "$w/h2/coordination/handover/coordinator.md"
+expect_lint "handover over 10k characters is a warning" ok "$w/h2" "10002 characters"
+out="$(HANDOVER_MAX_CHARS=20000 bash "$scripts/ledger-lint.sh" "$w/h2" 2>&1)"
+[[ "$out" != *"unit's docs"* ]] && { pass=$((pass+1)); echo "PASS HANDOVER_MAX_CHARS from the environment"; } || { failn=$((failn+1)); echo "FAIL HANDOVER_MAX_CHARS env: $out"; }
+fresh h3; for i in $(seq 1 150); do echo "- line $i" >> "$w/h3/coordination/handover/web.md"; done
+expect_lint "handover at 150 lines is clean" ok "$w/h3" "1 warning(s)"
+
 [[ -n "${KEEP:-}" ]] || rm -rf "${w:?}"
 echo "passed $pass, failed $failn"
 [[ $failn -eq 0 ]]
