@@ -4,16 +4,22 @@
 #   - the repo has `git config coordinator.reportTo "Coordinator: <project>"` (set by
 #     scripts/install-guards.sh --agent <project>), and
 #   - the session is not a registered coordinator, and
-#   - the session is an agent of that coordinator: its transcript names "Coordinator: <project>"
-#     (the brief does) or it has sent a report already (report-sent.sh).
-# Then, when the current branch has an open PR (gh, 10 s deadline) and no report of this session
-# covers its head, the stop is blocked: send `PR ready:` (head, CI state) to the coordinator.
+#   - the session is an agent of that coordinator: a user message of its transcript (never an
+#     attachment such as CLAUDE.md / AGENTS.md, never a tool result) holds the brief's line
+#     "Your coordinator is the session **Coordinator: <project>**", or it has sent a report
+#     already (report-sent.sh), and
+#   - the branch is not an integration or release branch: main, master, develop, release/*,
+#     backmerge/*, and those in `git config coordinator.protectedBranches`.
+# Then, when the branch has an open PR (gh, 10 s deadline) and no report of this session covers
+# its head, the stop is blocked: send `PR ready:` (head, CI state) to the coordinator.
 # A report covers the head when it is a `PR ready:` naming the head SHA (7+ hex chars), or a
-# `blocked:` / `Draft ready:` / handover report sent after the head commit. `Next: done` and
-# `stand by` come after a merge (no open PR) or after a reported head, so they pass.
+# `blocked:` / `Draft ready:` / `handover` report sent while that head was the pushed one.
+# `Next: done` and `stand by` come after a merge (no open PR) or a reported head, so they pass.
+# No gh call when the last report is a `PR ready:` naming the local HEAD and HEAD is pushed.
 # At most COORDINATOR_REPORT_MAX_BLOCKS (default 3) blocks per turn, then a warning.
-# Fails open: no git, no gh, gh error or timeout, no transcript, any error -> no output (on
-# Antigravity {"decision":"stop"}). COORDINATOR_REPORT_GUARD=off switches it off.
+# Fails open: no git, no gh, gh error or timeout, no transcript, no python3 (then only a sent
+# report marks an agent), any error -> no output (on Antigravity {"decision":"stop"}).
+# COORDINATOR_REPORT_GUARD=off switches it off.
 set -u
 
 # shellcheck source=lib.sh
@@ -32,11 +38,18 @@ dir="$(json_get "$input" cwd)"
 top="$(git -C "$dir" rev-parse --show-toplevel 2>/dev/null)" || silent
 to="$(git -C "$top" config --get coordinator.reportTo 2>/dev/null)" || silent
 [[ -n "$to" ]] || silent
+branch="$(git -C "$top" symbolic-ref --short -q HEAD 2>/dev/null)" || silent
+[[ -n "$branch" ]] || silent
+case "$branch" in main|master|develop|release/*|backmerge/*) silent ;; esac
+for p in $(git -C "$top" config --get coordinator.protectedBranches 2>/dev/null); do
+  [[ "$branch" == "$p" ]] && silent
+done
 d="$(state_dir "$sid")" || silent
 reports="$d/reports"
 
-# Agent of this coordinator? A sent report, or the transcript (the brief) names it.
+# Agent of this coordinator? A sent report, or the brief's line in a user message.
 if [[ ! -s "$reports" ]]; then
+  command -v python3 >/dev/null 2>&1 || silent
   tr="$(json_get "$input" transcript_path)"
   if [[ -z "$tr" || ! -f "$tr" ]]; then
     tr="${ANTIGRAVITY_BRAIN_DIR:-$HOME/.gemini/antigravity/brain}/$sid/.system_generated/logs/transcript.jsonl"
@@ -46,11 +59,48 @@ if [[ ! -s "$reports" ]]; then
     fi
   fi
   [[ -n "$tr" && -f "$tr" ]] || silent
-  grep -qF -- "$to" "$tr" 2>/dev/null || silent
+  python3 -I - "$tr" "$to" <<'PY' 2>/dev/null || silent
+import json, re, sys
+n = re.escape(sys.argv[2])   # bold as in the brief template, or plain and ending the clause
+pat = re.compile(r"Your coordinator is the session (?:\*\*" + n + r"\*\*|" + n + r"(?=[;.,)]|[ \t]*$))", re.M)
+def text_of(c):   # a user message's own text; None for tool results
+    if isinstance(c, str):
+        return c
+    if isinstance(c, list):
+        if any(isinstance(b, dict) and b.get("type") == "tool_result" for b in c):
+            return None
+        return "\n".join(b.get("text", "") for b in c if isinstance(b, dict) and b.get("type") == "text")
+    return None
+with open(sys.argv[1], encoding="utf-8", errors="replace") as fh:
+    for line in fh:
+        try:
+            r = json.loads(line)
+        except ValueError:
+            continue
+        if not isinstance(r, dict):
+            continue
+        t = None
+        if r.get("type") == "user" and not r.get("isMeta") and not r.get("isSidechain"):
+            m = r.get("message")
+            t = text_of(m.get("content")) if isinstance(m, dict) else None
+        elif r.get("type") == "USER_INPUT":   # Antigravity
+            t = r.get("content") if isinstance(r.get("content"), str) else None
+        if t and pat.search(t):
+            sys.exit(0)
+sys.exit(1)
+PY
 fi
 
-branch="$(git -C "$top" symbolic-ref --short -q HEAD 2>/dev/null)" || silent
-[[ -n "$branch" ]] || silent
+head_local="$(git -C "$top" rev-parse -q --verify HEAD 2>/dev/null)" || head_local=""
+pushed="$(git -C "$top" rev-parse -q --verify '@{push}' 2>/dev/null)" \
+  || pushed="$(git -C "$top" rev-parse -q --verify "refs/remotes/origin/$branch" 2>/dev/null)" || pushed=""
+# Reported and pushed: no gh call.
+if [[ -n "$head_local" && "$head_local" == "$pushed" && -s "$reports" ]] && tail -n 1 "$reports" | awk -v h="$head_local" '
+    $2 == "ready" { for (i = 4; i <= NF; i++) if (index(h, $i) == 1) found = 1 }
+    END { exit !found }'; then
+  rm -f "$d/report-blocks"; silent
+fi
+
 gh="${COORDINATOR_GH:-gh}"
 command -v "$gh" >/dev/null 2>&1 || silent
 out="$d/report-gh.$$"
@@ -67,11 +117,11 @@ rm -f "$out"
 head="$(printf '%s' "$head" | tr 'A-F' 'a-f')"
 short="${head:0:7}"
 
-# Covered? A PR ready naming the head, or a later blocked / draft / handover report.
-ct="$(git -C "$top" show -s --format=%ct "$head" 2>/dev/null)"; [[ "$ct" =~ ^[0-9]+$ ]] || ct=0
-if [[ -f "$reports" ]] && awk -v h="$head" -v ct="$ct" '
-    $2 == "ready" { for (i = 3; i <= NF; i++) if (index(h, $i) == 1) found = 1 }
-    $2 != "ready" && $1 + 0 >= ct + 0 { found = 1 }
+# Covered? A PR ready naming the head, or a blocked / draft / handover report sent while the
+# head was the pushed one.
+if [[ -f "$reports" ]] && awk -v h="$head" '
+    $2 == "ready" { for (i = 4; i <= NF; i++) if (index(h, $i) == 1) found = 1 }
+    $2 != "ready" && $3 == h { found = 1 }
     END { exit !found }' "$reports"; then
   rm -f "$d/report-blocks"; silent
 fi
