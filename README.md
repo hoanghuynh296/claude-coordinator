@@ -162,9 +162,10 @@ files, review checklist, pitfalls, packs, templates) and two agents: `coordinato
 | CI watch reminder (UserPromptSubmit hook, and PostToolUse on `ReadNotifications` / `FetchInboxMessage`) | a registered coordinator receiving "PR ready" and forgetting to start the background CI watch: it is reminded in that turn, with a ready-to-run `ci-watch.sh` command for each PR link in the message. A reminder, never a block |
 | Next guard (Stop hook) | a coordinator ending its turn while a merged PR's author has not been told `PR #N merged. Next: ...`: the stop is blocked with the PRs and the message format; at most 3 blocks per turn, then a warning. `scripts/next-clear.sh <session> <owner/repo#N> "<reason>"` clears a PR whose author cannot be messaged, logging the reason to the ledger's `coordination/next-cleared.md` |
 | Rotation guard (UserPromptSubmit and Stop hooks; Antigravity: PreInvocation and Stop) | a coordinator working on past its thresholds. It measures the registered coordinator's own context from its transcript (`check-context.sh --role coordinator --profile <ledger> --porcelain`: PROFILE Budgets, else 300k / 450k), with no tool call and no output below soft. Past soft every owner turn gets one line, `Coordinator at <k>k / soft <s>k: rotate now (procedure handover.md, then a replacement)`, which also says to wait for background subagents still running. Past hard the end of an owner-started turn is blocked until `coordination/handover/coordinator.md` is committed in this session (on Remote Control the coordinator also makes the rotation the first Owner queue item; only the handover lifts the block). Let through: a merge in flight (pending Next, or a background `ci-watch.sh`) once with the reminder (not on Antigravity, which has no turn id); running subagents after one block that names them, so the turn can end and wait for their reports; turns the owner did not start; at most 3 blocks per turn. Fails open (no python3, no transcript, unreadable profile, a failed transcript scan, any error) |
+| Report guard (agent-side Stop hook; Antigravity: Stop via `ag-chain.sh`) | an agent ending its turn while its branch's open PR head was never reported. On in a unit clone after `install-guards.sh --agent <project>` (`git config coordinator.reportTo "Coordinator: <project>"`), and only in an agent session of that coordinator: a user message of the transcript (never a CLAUDE.md / AGENTS.md attachment or a tool result) holds the brief's line `Your coordinator is the session **Coordinator: <project>**`, or the session has sent a report. Never in a registered coordinator, never on `main`, `master`, `develop`, `release/*`, `backmerge/*` or the clone's `coordinator.protectedBranches`. When `gh` finds an open PR for the branch (10 s deadline) and no message of this session covers its head, the stop is blocked: send `PR ready: #<n> <head>, CI <state>` to the coordinator and post it as a PR comment. Covered: a `PR ready:` naming the head SHA, or a `blocked:` / `Draft ready:` / `handover` report sent while that head was the pushed one (`report-sent.sh`, PostToolUse on `SendMessage` / `send_message`, records each report with the pushed head). No gh call once the last report names the local HEAD and it is pushed. At most 3 blocks per turn; fails open (no gh, gh error or timeout, no transcript); `COORDINATOR_REPORT_GUARD=off` switches it off |
 | `scripts/ledger-lint.sh <ledger>` | a ledger out of shape: missing files, over the size budget, session ids or home paths, decision ids cited but not defined, leftover placeholders. Warns on a stale date, on history in the live ledger, on an undated delegation |
 | `scripts/pre-push-guard.sh` (git pre-push hook) | pushing to a branch whose pull request is already merged or closed; optional local protection of release branches |
-| `scripts/install-guards.sh [--settings] [--tools "<groups>"] <repo>...` | installs the pre-push guard in each clone; `--settings` turns on delete-branch-on-merge on GitHub; `--tools` merges the lean agent tool set (every optional group of `scripts/agent-tools.json` not listed is turned off) into the repo's `.claude/settings.json` |
+| `scripts/install-guards.sh [--settings] [--tools "<groups>"] [--agent <project>] <repo>...` | installs the pre-push guard in each clone; `--agent` turns on the report guard; `--settings` turns on delete-branch-on-merge on GitHub; `--tools` merges the lean agent tool set (every optional group of `scripts/agent-tools.json` not listed is turned off) into the repo's `.claude/settings.json` |
 
 Runtimes: what each one enforces is listed in SKILL.md "Two runtimes" and pinned by
 `tests/parity-test.sh` (every hook gets an Antigravity payload and must give its answer or its
@@ -172,7 +173,7 @@ documented silence). Claude Code runs the rotation guard from `hooks/hooks.json`
 Stop, next to the CI watch reminder and the Next guard). Antigravity runs one command per event,
 so its `hooks.json` runs `hooks/ag-chain.sh`, which feeds the same input to each hook and merges
 the answers (PreInvocation: the CI watch reminder and the rotation line as `injectSteps`; Stop:
-the first block of the Next guard or the rotation guard wins). Antigravity transcripts carry no
+the first block of the Next guard, the rotation guard or the report guard wins; PostToolUse on `send_message`: `ag-chain.sh post` runs the Next-sent hook and `report-sent.sh`). Antigravity transcripts carry no
 turn origin and no background tasks: every turn counts as the owner's, none as running a
 subagent, "this session" starts at the registration time, and a merge in flight is not let
 through (no turn id to limit it to one turn; the 3-block cap still applies). Where the hooks do not run at all,
@@ -240,6 +241,7 @@ bash tests/agent-tools-test.sh     # install-guards --tools: merge, idempotent, 
 bash tests/check-context-test.sh   # ok / SOFT / HARD levels, roles, PROFILE Budgets, env and args, window cap, --porcelain
 bash tests/rotation-guard-test.sh  # rotation guard: ok / soft / hard, Budgets, owner turns, subagents, merges in flight, handover and owner-queue escapes, fail-open, Antigravity, ag-chain
 bash tests/prune-worktrees-test.sh # dirty, unpushed, live, open PR, young, locked, stray kept; clean pushed old removed; --discard
+bash tests/report-guard-test.sh    # agent report guard: opt-in, coordinator / owner (AGENTS.md attachments) / unregistered silent, integration and release branches, head SHA rule, pushed head, blocked / handover / draft, new head, cap, fail-open, Antigravity, ag-chain stop and post
 ```
 
 Gate for a kit PR: CI `tests` green (`.github/workflows/tests.yml` runs every `tests/*-test.sh`
@@ -269,6 +271,22 @@ lane jobs; run it locally with the template path when a change touches `bootstra
   queue and items still live ("not done", or waits / open / needs / until / check /
   `UNVERIFIED` / a `#ref` after the finished word) never error. Upgrading changes no ledger's
   exit code. `state-files.md` documents the rule; `ledger-lint-test.sh` covers both rules.
+- **Unreleased**: agent-side report guard (#10, prerequisite of #59, v0.14.0 "Upgrades and
+  parity"). Agents ended turns with a PR pushed and no report, so the coordinator never learned
+  it was ready and both sides idled. New Stop hook `hooks/report-guard.sh` (Claude Code Stop;
+  Antigravity Stop through `ag-chain.sh`): in an agent session of a unit turned on with
+  `install-guards.sh --agent <project>`, when the branch has an open PR whose head no report
+  of this session covers, the stop is blocked with "send PR ready (head, CI state) to
+  Coordinator: <project>, and post it as a PR comment". New PostToolUse hook
+  `hooks/report-sent.sh` records `PR ready:` / `blocked:` / `Draft ready:` / handover reports;
+  `ag-chain.sh` gains a `post` mode so Antigravity's `send_message` runs it next to the
+  Next-sent hook. An agent is known by the brief's line "Your coordinator is the session
+  **Coordinator: <project>**" in a user message (attachments such as AGENTS.md and tool results
+  do not count) or a sent report; `blocked:` / `Draft ready:` / `handover` reports cover the
+  head that was pushed when they were sent; no gh call once the pushed HEAD was reported.
+  Silent in coordinator and non-agent sessions, on integration and release branches, without
+  a PR, and on any error; at most 3 blocks per turn. The unit brief asks for the PR comment; `adopt.md` step 4
+  passes `--agent`. `report-guard-test.sh` covers it.
 - **Unreleased**: profile names the model per runtime and who approves merges (#58, release
   group "Upgrades and parity", v0.14.0). One coordinator asked the owner 54 times in a week
   for leave to merge, though no profile said so; a unit table with one model column could not

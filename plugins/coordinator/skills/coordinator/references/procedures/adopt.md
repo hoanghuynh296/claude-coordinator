@@ -34,10 +34,12 @@ idles → `per-issue`; no release rule → groups plus a safety ceiling; decisio
 - Run `bash "<plugin>/scripts/ledger-lint.sh" <ledger-dir>` until it passes.
 
 ## Step 4 - guards and labels
-- `bash "<plugin>/scripts/install-guards.sh" --settings --tools "<unit's Tools>" <unit-dir>...`
+- `bash "<plugin>/scripts/install-guards.sh" --settings --tools "<unit's Tools>" --agent "<project>" <unit-dir>...`
   Commit `.claude/lean-tools.lock.json` with `.claude/settings.json` in the same PR: the lock is
   what lets a later run turn a group back on. If the script warns that the lock is missing but
   catalog entries are already there (the lock was lost), re-run with `--adopt-existing` to own them.
+  `--agent`: the report guard, a Stop hook that keeps an agent from ending its turn while its
+  open PR head was never reported `PR ready:` to "Coordinator: <project>".
 - Label `task` in each repo (`unit:<unit>` too in a single-repo project).
 - One short docs PR per unit: the "how work arrives" rules in its `AGENTS.md`, and a one-line
   entry for each decision that binds it.

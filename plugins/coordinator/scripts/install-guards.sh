@@ -21,13 +21,17 @@
 #                    through a PR so new worktrees get them. Needs python3.
 #   --adopt-existing with --tools: when the lock was lost, record the entries that match the
 #                    catalog exactly as the kit's (lean-tools.py warns when it sees them).
+#   --agent <project> turn on the agent report guard (hooks/report-guard.sh): set
+#                    `git config coordinator.reportTo "Coordinator: <project>"` (shared by the
+#                    clone's worktrees). An agent of that coordinator then cannot end a turn
+#                    while its branch's open PR head was never reported `PR ready:`.
 #
 # Hooks are local to a clone: run this again on every new machine and for every new clone.
 set -euo pipefail
 
-usage() { sed -n '2,25p' "$0" | sed 's/^# \{0,1\}//'; exit 2; }
+usage() { sed -n '2,29p' "$0" | sed 's/^# \{0,1\}//'; exit 2; }
 
-settings=0; force=0; protect=""; tools=""; tools_set=0; adopt=(); repos=()
+settings=0; force=0; protect=""; tools=""; tools_set=0; adopt=(); agent=""; repos=()
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --settings) settings=1; shift ;;
@@ -35,6 +39,7 @@ while [[ $# -gt 0 ]]; do
     --protect) protect="${2:?--protect needs a list}"; shift 2 ;;
     --tools) tools="${2:?--tools needs the groups to keep (or none)}"; tools_set=1; shift 2 ;;
     --adopt-existing) adopt=(--adopt-existing); shift ;;
+    --agent) agent="${2:?--agent needs the project name}"; agent="${agent#Coordinator: }"; shift 2 ;;
     -h|--help) usage ;;
     --*) echo "unknown option: $1" >&2; usage ;;
     *) repos+=("$1"); shift ;;
@@ -105,6 +110,11 @@ HOOK
   if [[ -n "$protect" ]]; then
     git -C "$repo" config coordinator.protectedBranches "$protect"
     echo "    protected branches (local pushes refused): $protect"
+  fi
+
+  if [[ -n "$agent" ]]; then
+    git -C "$repo" config coordinator.reportTo "Coordinator: $agent"
+    echo "    agent report guard on: an open PR must be reported to \"Coordinator: $agent\""
   fi
 
   if [[ $tools_set -eq 1 ]]; then

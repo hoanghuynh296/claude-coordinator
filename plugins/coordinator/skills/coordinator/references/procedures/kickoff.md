@@ -45,7 +45,7 @@ approves in a later message.**
   (their job and OWNERSHIP row), rerun it so a removed lane is no longer required.
   For other shapes create the repos with `gh repo create`, add the integration branch, and
   give each unit an `AGENTS.md`.
-- Guards: `bash "<plugin>/scripts/install-guards.sh" --settings --tools "<unit's Tools>" <unit-dir>...`
+- Guards: `bash "<plugin>/scripts/install-guards.sh" --settings --tools "<unit's Tools>" --agent "<project>" <unit-dir>...` (`--agent`: the report guard, see `adopt.md` step 4)
   (pre-push guard, delete-branch-on-merge, lean agent tool set; one run per unit, then commit
   its `.claude/settings.json` and `.claude/lean-tools.lock.json` through a PR). Releases follow one standard: `release/vX.Y.Z`
   from `develop` → PR into `main` → tag → back-merge `main` into `develop`, so `develop` is
